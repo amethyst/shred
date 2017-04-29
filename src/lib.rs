@@ -11,8 +11,10 @@ extern crate rayon;
 
 mod bitset;
 mod cell;
+mod dispatch;
 mod res;
 mod task;
 
+pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 pub use task::{Task, TaskData};
