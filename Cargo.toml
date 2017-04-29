@@ -1,0 +1,14 @@
+[package]
+name = "shred"
+version = "0.1.0"
+authors = ["torkleyy"]
+
+[dependencies]
+fnv = "1"
+mopa = "0.2"
+shred-derive = { path = "shred-derive" }
+
+[dependencies.rayon]
+version = "0.7"
+features = ["unstable"]
+
