@@ -17,27 +17,6 @@ mod res;
 
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 
-/// Specifies which kind of access
-/// a [`Task`] needs to a [`Resource`]
-/// in order to be executed or a logical
-/// dependency on another `Task`s result.
-///
-/// [`Task`]: trait.Task.html
-/// [`Resource`]: trait.Resource.html
-pub enum Dependency {
-    // TODO: split up in separate lists
-    /// The `Task` operates read-only
-    /// on the specified dependency.
-    Read(ResourceId),
-    /// The `Task` may read and write
-    /// from/to the specified dependency
-    /// because it has exclusive access.
-    Write(ResourceId),
-    /// The `Task` logically depends
-    /// on the work done by another one.
-    Task(usize),
-}
-
 /// A `Task`, executed with a
 /// set of required [`Resource`]s.
 ///
