@@ -1,8 +1,6 @@
 //! **Sh**ared **re**source **d**ispatcher
 //!
 
-#![allow(dead_code)]
-#![allow(unused_variables)]
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 

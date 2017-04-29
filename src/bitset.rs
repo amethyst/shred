@@ -21,16 +21,12 @@ impl AtomicBitSet {
     }
 
     pub fn get(&self, index: usize) -> bool {
-        // TODO: OPTIMIZE: Ordering
-
         let (index, mask) = Self::mask(index);
 
         self.data[index].load(Ordering::Acquire) & mask != 0
     }
 
     pub fn set(&self, index: usize, value: bool) {
-        // TODO: OPTIMIZE: Ordering
-
         let (index, mask) = Self::mask(index);
 
         if value {

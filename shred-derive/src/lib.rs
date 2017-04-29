@@ -6,9 +6,11 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Body, Field, Ident, VariantData};
+use syn::{Body, Field, Ident, MacroInput, VariantData};
 use quote::Tokens;
 
+/// Used to `#[derive]` the trait
+/// `TaskData`.
 #[proc_macro_derive(TaskData)]
 pub fn task_data(input: TokenStream) -> TokenStream {
     let s = input.to_string();
@@ -16,99 +18,23 @@ pub fn task_data(input: TokenStream) -> TokenStream {
 
     let gen = impl_task_data(&ast);
 
-    //panic!("Debug: {}", gen.into_string());
     gen.parse().expect("Invalid")
 }
 
-fn impl_task_data(ast: &syn::MacroInput) -> Tokens {
+fn impl_task_data(ast: &MacroInput) -> Tokens {
     let name = &ast.ident;
+    let fields = get_fields(ast);
 
-    let fields: &Vec<Field> = match ast.body {
-        Body::Struct(VariantData::Struct(ref x)) => x,
-        _ => panic!("Only structs with named fields supported"),
-    };
-
-    // TODO: CLEAN UP and better error messages
-
-    let identifier: Vec<_> = fields
-        .iter()
-        .map(|x| x.ident.clone().unwrap())
-        .collect();
-    let method: Vec<Ident> = fields
-        .iter()
-        .map(|x| {
-                 use syn::Ty;
-
-                 match x.ty {
-                     Ty::Path(_, ref path) => path.segments.last().unwrap().clone().ident,
-                     _ => panic!("Only Fetch and FetchMut types allowed"),
-                 }
-             })
-        .map(|x| {
-                 match x.as_ref() {
-                         "Fetch" => "fetch",
-                         "FetchMut" => "fetch_mut",
-                         _ => panic!("Only Fetch and FetchMut supported"),
-                     }
-                     .into()
-             })
-        .collect();
-
-    let reads: Vec<_> = fields
-        .iter()
-        .filter_map(|x| {
-            use syn::{PathParameters, PathSegment, Ty};
-
-            let field: &Field = x;
-
-            if let Ty::Path(_, ref path) = field.ty {
-                let last: PathSegment = path.segments.last().unwrap().clone();
-
-                if last.ident.as_ref() == "Fetch" {
-                    if let PathParameters::AngleBracketed(x) = last.parameters {
-                        let ref ty: Ty = x.types[0];
-
-                        return Some(quote! { #ty });
-                    }
-                } else {
-                    return None;
-                }
-            }
-
-            panic!("Should have panicked already")
-        })
-        .collect();
-
-    let writes: Vec<_> = fields
-        .iter()
-        .filter_map(|x| {
-            use syn::{PathParameters, PathSegment, Ty};
-
-            let field: &Field = x;
-
-            if let Ty::Path(_, ref path) = field.ty {
-                let last: PathSegment = path.segments.last().unwrap().clone();
-
-                if last.ident.as_ref() == "FetchMut" {
-                    if let PathParameters::AngleBracketed(x) = last.parameters {
-                        let ref ty: Ty = x.types[0];
-
-                        return Some(quote! { #ty });
-                    }
-                } else {
-                    return None;
-                }
-            }
-
-            panic!("Should have panicked already")
-        })
-        .collect();
+    let identifiers = gen_identifiers(fields);
+    let methods = gen_methods(fields);
+    let reads = collect_field_ty_params(fields, "Fetch");
+    let writes = collect_field_ty_params(fields, "FetchMut");
 
     quote! {
         impl<'a> ::shred::TaskData<'a> for #name<'a> {
             fn fetch(res: &'a ::shred::Resources) -> #name<'a> {
                 #name {
-                    #( #identifier: unsafe { res.#method() }, )*
+                    #( #identifiers: unsafe { res.#methods() }, )*
                 }
             }
 
@@ -124,5 +50,68 @@ fn impl_task_data(ast: &syn::MacroInput) -> Tokens {
                 vec![ #( TypeId::of::<#writes>() ),* ]
             }
         }
+    }
+}
+
+fn collect_field_ty_params(fields: &Vec<Field>, with_type: &str) -> Vec<Tokens> {
+    fields
+        .iter()
+        .filter_map(|x| {
+            use syn::{PathParameters, PathSegment, Ty};
+
+            let field: &Field = x;
+
+            if let Ty::Path(_, ref path) = field.ty {
+                let last: PathSegment = path.segments.last().unwrap().clone();
+
+                if last.ident.as_ref() == with_type {
+                    if let PathParameters::AngleBracketed(x) = last.parameters {
+                        let ref ty: Ty = x.types[0];
+
+                        return Some(quote! { #ty });
+                    }
+                } else {
+                    return None;
+                }
+            }
+
+            panic!("Should have panicked already")
+        })
+        .collect()
+}
+
+fn gen_identifiers(fields: &Vec<Field>) -> Vec<Ident> {
+    fields
+        .iter()
+        .map(|x| x.ident.clone().unwrap())
+        .collect()
+}
+
+fn gen_methods(fields: &Vec<Field>) -> Vec<Ident> {
+    fields
+        .iter()
+        .map(|x| {
+            use syn::Ty;
+
+            match x.ty {
+                Ty::Path(_, ref path) => path.segments.last().unwrap().clone().ident,
+                _ => panic!("Only Fetch and FetchMut types allowed"),
+            }
+        })
+        .map(|x| {
+            match x.as_ref() {
+                "Fetch" => "fetch",
+                "FetchMut" => "fetch_mut",
+                _ => panic!("Only Fetch and FetchMut supported"),
+            }
+                .into()
+        })
+        .collect()
+}
+
+fn get_fields(ast: &MacroInput) -> &Vec<Field> {
+    match ast.body {
+        Body::Struct(VariantData::Struct(ref x)) => x,
+        _ => panic!("Only structs with named fields supported"),
     }
 }
