@@ -107,7 +107,7 @@ pub type ResourceId = TypeId;
 /// provides methods to access to
 /// the contained resources.
 pub struct Resources {
-    resources: FnvHashMap<TypeId, TrustCell<Box<Resource>>>,
+    resources: FnvHashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
 
 impl Resources {
