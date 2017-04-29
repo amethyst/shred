@@ -22,8 +22,8 @@ pub struct AutoBundle<'a> {
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA);
-    res.add(ResB);
+    res.add(ResA, 0);
+    res.add(ResB, 0);
 
 
     let mut bundle = AutoBundle::fetch(&res);

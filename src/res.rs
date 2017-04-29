@@ -1,10 +1,11 @@
 //! Module for resource related types
 
 use std::any::TypeId;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use fnv::FnvHashMap;
+use fnv::{FnvHasher, FnvHashMap};
 use mopa::Any;
 
 use cell::{Ref, RefMut, TrustCell};
@@ -101,7 +102,7 @@ mopafy!(Resource);
 /// id at the moment.
 ///
 /// [`Resource`]: trait.Resource.html
-pub type ResourceId = TypeId;
+pub type ResourceId = (TypeId, u64);
 
 /// A resource container, which
 /// provides methods to access to
@@ -150,14 +151,17 @@ impl Resources {
     /// use shred::Resources;
     ///
     /// let mut res = Resources::new();
-    /// res.add(MyRes(5));
+    /// res.add(MyRes(5), 0);
     /// ```
-    pub fn add<R>(&mut self, r: R)
-        where R: Resource
+    pub fn add<R, ID>(&mut self, r: R, id: ID)
+        where R: Resource,
+              ID: Hash + Eq
     {
         use std::collections::hash_map::Entry;
+        use std::hash::Hasher;
 
-        let entry = self.resources.entry(TypeId::of::<R>());
+        let id = fnv_hash(id);
+        let entry = self.resources.entry((TypeId::of::<R>(), id));
 
         if let Entry::Vacant(e) = entry {
             e.insert(TrustCell::new(Box::new(r)));
@@ -178,8 +182,11 @@ impl Resources {
     ///
     /// Panics if the resource is being accessed mutably.
     /// Also panics if there is no such resource.
-    pub unsafe fn fetch<T: Resource>(&self) -> Fetch<T> {
-        let c = self.fetch_internal(TypeId::of::<T>());
+    pub unsafe fn fetch<T, ID>(&self, id: ID) -> Fetch<T>
+        where T: Resource,
+              ID: Hash + Eq
+    {
+        let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         Fetch {
             inner: c.borrow(),
@@ -190,8 +197,11 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_mut<T: Resource>(&self) -> FetchMut<T> {
-        let c = self.fetch_internal(TypeId::of::<T>());
+    pub unsafe fn fetch_mut<T, ID>(&self, id: ID) -> FetchMut<T>
+        where T: Resource,
+              ID: Hash + Eq
+    {
+        let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         FetchMut {
             inner: c.borrow_mut(),
@@ -202,8 +212,10 @@ impl Resources {
     /// Fetches the resource with the specified type id.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_id(&self, id: ResourceId) -> FetchId {
-        let c = self.fetch_internal(id);
+    pub unsafe fn fetch_id<ID>(&self, id: TypeId, comp_id: ID) -> FetchId
+        where ID: Hash + Eq
+    {
+        let c = self.fetch_internal(id, comp_id);
 
         FetchId { inner: c.borrow() }
     }
@@ -211,15 +223,27 @@ impl Resources {
     /// Fetches the resource with the specified type id mutably.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_id_mut(&self, id: ResourceId) -> FetchIdMut {
-        let c = self.fetch_internal(id);
+    pub unsafe fn fetch_id_mut<ID>(&self, id: TypeId, comp_id: ID) -> FetchIdMut
+        where ID: Hash + Eq
+    {
+        let c = self.fetch_internal(id, comp_id);
 
         FetchIdMut { inner: c.borrow_mut() }
     }
 
-    fn fetch_internal(&self, id: ResourceId) -> &TrustCell<Box<Resource>> {
+    fn fetch_internal<ID>(&self, id: TypeId, cid: ID) -> &TrustCell<Box<Resource>>
+        where ID: Hash + Eq
+    {
         self.resources
-            .get(&id)
+            .get(&(id, fnv_hash(cid)))
             .expect("No resource with the given id")
     }
+}
+
+fn fnv_hash<H: Hash>(h: H) -> u64 {
+    use std::hash::Hasher;
+
+    let mut hasher = FnvHasher::default();
+    Hash::hash(&h, &mut hasher);
+    hasher.finish()
 }

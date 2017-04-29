@@ -22,24 +22,24 @@ struct ExampleBundle<'a> {
 impl<'a> TaskData<'a> for ExampleBundle<'a> {
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
-            a: unsafe { res.fetch() },
-            b: unsafe { res.fetch_mut() },
+            a: unsafe { res.fetch(0) },
+            b: unsafe { res.fetch_mut(0) },
         }
     }
 
     unsafe fn reads() -> Vec<ResourceId> {
-        vec![TypeId::of::<ResA>()]
+        vec![(TypeId::of::<ResA>(), 0)]
     }
 
     unsafe fn writes() -> Vec<ResourceId> {
-        vec![TypeId::of::<ResB>()]
+        vec![(TypeId::of::<ResB>(), 0)]
     }
 }
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA);
-    res.add(ResB);
+    res.add(ResA, 0);
+    res.add(ResB, 0);
 
 
     let mut bundle = ExampleBundle::fetch(&res);

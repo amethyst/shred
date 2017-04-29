@@ -34,20 +34,20 @@ fn impl_task_data(ast: &MacroInput) -> Tokens {
         impl<'a> ::shred::TaskData<'a> for #name<'a> {
             fn fetch(res: &'a ::shred::Resources) -> #name<'a> {
                 #name {
-                    #( #identifiers: unsafe { res.#methods() }, )*
+                    #( #identifiers: unsafe { res.#methods(0) }, )*
                 }
             }
 
             unsafe fn reads() -> Vec<::shred::ResourceId> {
                 use std::any::TypeId;
 
-                vec![ #( TypeId::of::<#reads>() ),* ]
+                vec![ #( (TypeId::of::<#reads>(), 0) ),* ]
             }
 
             unsafe fn writes() -> Vec<::shred::ResourceId> {
                 use std::any::TypeId;
 
-                vec![ #( TypeId::of::<#writes>() ),* ]
+                vec![ #( (TypeId::of::<#writes>(), 0) ),* ]
             }
         }
     }
