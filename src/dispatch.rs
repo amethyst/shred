@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use fnv::FnvHashMap;
 use rayon::Scope;
 
+use bitset::AtomicBitSet;
 use {ResourceId, Task, TaskData};
 
 pub struct Dependencies {
@@ -11,37 +14,12 @@ pub struct Dependencies {
     writes: Vec<Vec<ResourceId>>,
 }
 
-pub struct Dispatcher {}
-
-pub struct DispatcherBuilder {
-    dependencies: Dependencies,
-    map: FnvHashMap<String, usize>,
-    tasks: Vec<TaskInfo>,
-}
-
-impl DispatcherBuilder {
-    pub fn new() -> Self {
-        DispatcherBuilder {
-            dependencies: Dependencies {
-                dependencies: Vec::new(),
-                rev_reads: FnvHashMap::default(),
-                rev_writes: FnvHashMap::default(),
-                reads: Vec::new(),
-                writes: Vec::new(),
-            },
-            map: FnvHashMap::default(),
-            tasks: Vec::new(),
-        }
-    }
-
-    pub fn add<'a, T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
-        where T: Task,
-              T::TaskData: TaskData<'a>
-    {
-        let id = self.tasks.len();
-        let reads = unsafe { T::TaskData::reads() };
-        let writes = unsafe { T::TaskData::writes() };
-
+impl Dependencies {
+    pub fn add(&mut self,
+               id: usize,
+               reads: Vec<ResourceId>,
+               writes: Vec<ResourceId>,
+               dependencies: Vec<usize>) {
         for read in &reads {
             self.rev_reads
                 .entry(*read)
@@ -56,6 +34,50 @@ impl DispatcherBuilder {
                 .push(id);
         }
 
+        self.reads.push(reads);
+        self.writes.push(writes);
+        self.dependencies.push(dependencies);
+    }
+}
+
+pub struct Dispatcher {
+    dependencies: Dependencies,
+    fulfilled: Vec<usize>,
+    running: Arc<AtomicBitSet>,
+    tasks: Vec<TaskInfo>,
+}
+
+pub struct DispatcherBuilder {
+    dependencies: Dependencies,
+    fulfilled: Vec<usize>,
+    map: FnvHashMap<String, usize>,
+    tasks: Vec<TaskInfo>,
+}
+
+impl DispatcherBuilder {
+    pub fn new() -> Self {
+        DispatcherBuilder {
+            dependencies: Dependencies {
+                dependencies: Vec::new(),
+                rev_reads: FnvHashMap::default(),
+                rev_writes: FnvHashMap::default(),
+                reads: Vec::new(),
+                writes: Vec::new(),
+            },
+            fulfilled: Vec::new(),
+            map: FnvHashMap::default(),
+            tasks: Vec::new(),
+        }
+    }
+
+    pub fn add<'a, T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
+        where T: Task,
+              T::TaskData: TaskData<'a>
+    {
+        let id = self.tasks.len();
+        let reads = unsafe { T::TaskData::reads() };
+        let writes = unsafe { T::TaskData::writes() };
+
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {
                      *self.map
@@ -64,13 +86,35 @@ impl DispatcherBuilder {
                  })
             .collect();
 
+        for dependency in &dependencies {
+            let dependency: &mut TaskInfo = &mut self.tasks[*dependency];
+            dependency.dependents.push(id);
+        }
+
+        self.dependencies.add(id, reads, writes, dependencies);
         self.map.insert(name.to_owned(), id);
+
+        if dep.is_empty() {
+            self.fulfilled.push(id);
+        }
+
+        self.tasks.push(TaskInfo {
+            closure: Box::new(|| { unimplemented!() }),
+            dependents: Vec::new(),
+        });
 
         self
     }
 
-    pub fn finish() -> Dispatcher {
-        unimplemented!()
+    pub fn finish(self) -> Dispatcher {
+        let size = self.tasks.len();
+
+        Dispatcher {
+            dependencies: self.dependencies,
+            fulfilled: self.fulfilled,
+            running: Arc::new(AtomicBitSet::with_size(size)),
+            tasks: self.tasks,
+        }
     }
 }
 
