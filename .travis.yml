@@ -19,7 +19,7 @@ before_script:
 script:
 - |
   travis-cargo build &&
-  travis-cargo test &&
+  travis-cargo test 
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify
