@@ -3,6 +3,12 @@
 Dispatches tasks in parallel which need read access to some resources, 
 and write access to others.
 
+## Usage
+
+### Required Rust version
+
+`1.15 stable`
+
 ## Features
 
 * lock-free
