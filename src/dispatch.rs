@@ -3,28 +3,34 @@ use rayon::Scope;
 
 use {ResourceId, Task, TaskData};
 
-pub struct Dispatcher {}
-
-pub struct DispatcherBuilder {
+pub struct Dependencies {
     dependencies: Vec<Vec<usize>>,
     rev_reads: FnvHashMap<ResourceId, Vec<usize>>,
     rev_writes: FnvHashMap<ResourceId, Vec<usize>>,
-    map: FnvHashMap<String, usize>,
     reads: Vec<Vec<ResourceId>>,
-    tasks: Vec<TaskInfo>,
     writes: Vec<Vec<ResourceId>>,
+}
+
+pub struct Dispatcher {}
+
+pub struct DispatcherBuilder {
+    dependencies: Dependencies,
+    map: FnvHashMap<String, usize>,
+    tasks: Vec<TaskInfo>,
 }
 
 impl DispatcherBuilder {
     pub fn new() -> Self {
         DispatcherBuilder {
-            dependencies: Vec::new(),
-            rev_reads: FnvHashMap::default(),
-            rev_writes: FnvHashMap::default(),
+            dependencies: Dependencies {
+                dependencies: Vec::new(),
+                rev_reads: FnvHashMap::default(),
+                rev_writes: FnvHashMap::default(),
+                reads: Vec::new(),
+                writes: Vec::new(),
+            },
             map: FnvHashMap::default(),
-            reads: Vec::new(),
             tasks: Vec::new(),
-            writes: Vec::new(),
         }
     }
 
@@ -53,8 +59,8 @@ impl DispatcherBuilder {
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {
                      *self.map
-                         .get(x.to_owned())
-                         .expect("No such task registered")
+                          .get(x.to_owned())
+                          .expect("No such task registered")
                  })
             .collect();
 
