@@ -6,6 +6,7 @@ use rayon::Scope;
 use bitset::AtomicBitSet;
 use {ResourceId, Task, TaskData};
 
+#[derive(Default)]
 pub struct Dependencies {
     dependencies: Vec<Vec<usize>>,
     rev_reads: FnvHashMap<ResourceId, Vec<usize>>,
@@ -47,6 +48,7 @@ pub struct Dispatcher {
     tasks: Vec<TaskInfo>,
 }
 
+#[derive(Default)]
 pub struct DispatcherBuilder {
     dependencies: Dependencies,
     fulfilled: Vec<usize>,
@@ -56,18 +58,7 @@ pub struct DispatcherBuilder {
 
 impl DispatcherBuilder {
     pub fn new() -> Self {
-        DispatcherBuilder {
-            dependencies: Dependencies {
-                dependencies: Vec::new(),
-                rev_reads: FnvHashMap::default(),
-                rev_writes: FnvHashMap::default(),
-                reads: Vec::new(),
-                writes: Vec::new(),
-            },
-            fulfilled: Vec::new(),
-            map: FnvHashMap::default(),
-            tasks: Vec::new(),
-        }
+        DispatcherBuilder::default()
     }
 
     pub fn add<'a, T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
