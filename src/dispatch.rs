@@ -45,7 +45,7 @@ impl Dependencies {
 /// tasks to be executed in parallel.
 pub struct Dispatcher<'r, 't> {
     dependencies: Dependencies,
-    fulfilled: Vec<usize>,
+    ready: Vec<usize>,
     running: Arc<AtomicBitSet>,
     tasks: Vec<TaskInfo<'r, 't>>,
     thread_pool: Arc<ThreadPool>,
@@ -63,7 +63,7 @@ impl<'r, 't> Dispatcher<'r, 't> {
 #[derive(Default)]
 pub struct DispatcherBuilder<'r, 't> {
     dependencies: Dependencies,
-    fulfilled: Vec<usize>,
+    ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
     tasks: Vec<TaskInfo<'r, 't>>,
     thread_pool: Option<Arc<ThreadPool>>,
@@ -115,7 +115,7 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
         self.map.insert(name.to_owned(), id);
 
         if dep.is_empty() {
-            self.fulfilled.push(id);
+            self.ready.push(id);
         }
 
         let info = TaskInfo {
@@ -145,7 +145,7 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
 
         Dispatcher {
             dependencies: self.dependencies,
-            fulfilled: self.fulfilled,
+            ready: self.ready,
             running: Arc::new(AtomicBitSet::with_size(size)),
             tasks: self.tasks,
             thread_pool: self.thread_pool
