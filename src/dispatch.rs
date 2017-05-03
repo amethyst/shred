@@ -41,6 +41,8 @@ impl Dependencies {
     }
 }
 
+/// The dispatcher struct, allowing
+/// tasks to be executed in parallel.
 pub struct Dispatcher<'r, 't> {
     dependencies: Dependencies,
     fulfilled: Vec<usize>,
@@ -50,9 +52,14 @@ pub struct Dispatcher<'r, 't> {
 }
 
 impl<'r, 't> Dispatcher<'r, 't> {
-    pub fn dispatch(&mut self, res: &'r mut Resources) {}
+    /// Dispatches the tasks given the
+    /// resources to operate on.
+    pub fn dispatch(&mut self, _res: &'r mut Resources) {}
 }
 
+/// Builder for the [`Dispatcher`].
+///
+/// [`Dispatcher`]: struct.Dispatcher.html
 #[derive(Default)]
 pub struct DispatcherBuilder<'r, 't> {
     dependencies: Dependencies,
@@ -63,11 +70,27 @@ pub struct DispatcherBuilder<'r, 't> {
 }
 
 impl<'r, 't> DispatcherBuilder<'r, 't> {
+    /// Creates a new `DispatcherBuilder` by
+    /// using the `Default` implementation.
+    ///
+    /// The default behaviour is to create
+    /// a thread pool on `finish`.
+    /// If you already have a rayon `ThreadPool`,
+    /// it's highly recommended to configure
+    /// this builder to use it with `with_pool`
+    /// instead.
     pub fn new() -> Self {
         DispatcherBuilder::default()
     }
 
-    pub fn add<T>(mut self, mut task: T, name: &str, dep: &[&str]) -> Self
+    /// Adds a new task with a given name and a list of dependencies.
+    /// Please not that the dependency should be added before
+    /// you add the depending task.
+    ///
+    /// # Panics
+    ///
+    /// * if the specified dependency does not exist
+    pub fn add<T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
         where T: Task + 't,
               T::TaskData: TaskData<'r>
     {
@@ -104,12 +127,19 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
         self
     }
 
+    /// Attach a rayon thread pool to the builder
+    /// and use that instead of creating one.
     pub fn with_pool(mut self, pool: Arc<ThreadPool>) -> Self {
         self.thread_pool = Some(pool);
 
         self
     }
 
+    /// Builds the `Dispatcher`.
+    ///
+    /// In the future, this method will
+    /// precompute useful information in
+    /// order to speed up dispatching.
     pub fn finish(self) -> Dispatcher<'r, 't> {
         let size = self.tasks.len();
 

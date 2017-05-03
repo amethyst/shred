@@ -158,7 +158,6 @@ impl Resources {
               ID: Hash + Eq
     {
         use std::collections::hash_map::Entry;
-        use std::hash::Hasher;
 
         let id = fnv_hash(id);
         let entry = self.resources.entry((TypeId::of::<R>(), id));
