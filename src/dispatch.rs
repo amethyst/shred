@@ -16,11 +16,11 @@ struct Dependencies {
 }
 
 impl Dependencies {
-    pub fn add(&mut self,
-               id: usize,
-               reads: Vec<ResourceId>,
-               writes: Vec<ResourceId>,
-               dependencies: Vec<usize>) {
+    fn add(&mut self,
+           id: usize,
+           reads: Vec<ResourceId>,
+           writes: Vec<ResourceId>,
+           dependencies: Vec<usize>) {
         for read in &reads {
             self.rev_reads
                 .entry(*read)
@@ -188,8 +188,9 @@ impl<'a> DispatcherBuilder<'a> {
     /// # Panics
     ///
     /// * if the specified dependency does not exist
-    pub fn add<T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
-        where T: Task + Send + 'a,
+    pub fn add<I, T>(mut self, task: I, name: &str, dep: &[&str]) -> Self
+        where I: Into<T>,
+              T: Task + Send + 'a,
               T::TaskData: TaskData<'a>
     {
         let id = self.tasks.len();
@@ -218,7 +219,7 @@ impl<'a> DispatcherBuilder<'a> {
 
         let info = TaskInfo {
             dependents: Vec::new(),
-            exec: Box::new(TaskDispatch::new(id, task)),
+            exec: Box::new(TaskDispatch::new(id, task.into())),
         };
         self.tasks.push(info);
 

@@ -1,4 +1,37 @@
+use std::marker::PhantomData;
+
 use {ResourceId, Resources};
+
+/// A wrapper around a closure
+/// to allow passing closures as
+/// a task using `.into()`.
+pub struct Closure<F, D> {
+    inner: F,
+    phantom: PhantomData<*const D>,
+}
+
+impl<'a, F, D> From<F> for Closure<F, D>
+    where F: FnMut(D),
+          D: TaskData<'a>
+{
+    fn from(f: F) -> Self {
+        Closure {
+            inner: f,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a, F, D> Task for Closure<F, D>
+    where F: FnMut(D),
+          D: TaskData<'a>
+{
+    type TaskData = D;
+
+    fn work(&mut self, bundle: Self::TaskData) {
+        (self.inner)(bundle);
+    }
+}
 
 /// A `Task`, executed with a
 /// set of required [`Resource`]s.
