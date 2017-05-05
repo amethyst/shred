@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fnv::FnvHashMap;
-use rayon::{Configuration, Scope, ThreadPool};
+use rayon::{Configuration, Scope, ThreadPool, scope};
 
 use bitset::AtomicBitSet;
 use {ResourceId, Resources, Task, TaskData};
@@ -43,33 +43,131 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// tasks to be executed in parallel.
-pub struct Dispatcher<'r, 't> {
+pub struct Dispatcher<'a> {
     dependencies: Dependencies,
     ready: Vec<usize>,
-    running: Arc<AtomicBitSet>,
-    tasks: Vec<TaskInfo<'r, 't>>,
+    running: AtomicBitSet,
+    tasks: Vec<TaskInfo<'a>>,
     thread_pool: Arc<ThreadPool>,
 }
 
-impl<'r, 't> Dispatcher<'r, 't> {
+impl<'a> Dispatcher<'a> {
     /// Dispatches the tasks given the
     /// resources to operate on.
-    pub fn dispatch(&mut self, _res: &'r mut Resources) {}
+    pub fn dispatch(&'a mut self, res: &'a mut Resources) {
+        let dependencies = &self.dependencies;
+        let ready = self.ready.clone();
+        let running = &self.running;
+        let tasks = &mut self.tasks;
+
+        self.thread_pool
+            .install(|| {
+                scope(move |scope| {
+                          Self::dispatch_inner(dependencies, ready, res, running, scope, tasks)
+                      })
+            });
+
+        self.running.clear();
+    }
+
+    fn dispatch_inner<'s>(dependencies: &Dependencies,
+                          mut ready: Vec<usize>,
+                          res: &'a mut Resources,
+                          running: &'a AtomicBitSet,
+                          scope: &Scope<'s>,
+                          tasks: &'a mut Vec<TaskInfo<'a>>)
+        where 'a: 's
+    {
+        let mut start_count = 0;
+        let num_tasks = tasks.len();
+        let mut tasks: Vec<_> = tasks.iter_mut().map(|x| Some(x)).collect();
+
+        while start_count < num_tasks {
+            if let Some(index) = Self::find_runnable_task(&ready, dependencies, running) {
+                let task: &mut TaskInfo = tasks[index].take().expect("Already executed");
+                task.exec.exec(scope, res, running);
+
+                start_count += 1;
+
+                // okay, now that we started executing our task,
+                // we remove the old one and add the ones which are
+                // potentially ready
+
+                let rem_pos = ready.iter().position(|x| *x == index).unwrap();
+                ready.remove(rem_pos);
+
+                for dependent in &task.dependents {
+                    ready.push(*dependent);
+                }
+            }
+        }
+    }
+
+    fn find_runnable_task(ready: &Vec<usize>,
+                          dependencies: &Dependencies,
+                          running: &AtomicBitSet)
+                          -> Option<usize> {
+        // Uh, this is probably
+        // the worst code in
+        // the history of Rust libraries
+
+        'search: for &id in ready {
+            for &dependency in &dependencies.dependencies[id] {
+                if running.get(dependency) {
+                    continue 'search;
+                }
+            }
+
+            for &write in &dependencies.writes[id] {
+                // A write is only allowed
+                // if there are neither
+                // writes nor reads.
+
+                for &sys in &dependencies.rev_writes[&write] {
+                    if sys != id && running.get(sys) {
+                        continue 'search;
+                    }
+                }
+
+                for &sys in &dependencies.rev_reads[&write] {
+                    if sys != id && running.get(sys) {
+                        continue 'search;
+                    }
+                }
+            }
+
+            for &read in &dependencies.reads[id] {
+                // Unlimited reads can be performed
+                // simultaneously, but no read is
+                // allowed if there is also a write.
+
+                for &sys in &dependencies.rev_writes[&read] {
+                    if sys != id && running.get(sys) {
+                        continue 'search;
+                    }
+                }
+            }
+
+            return Some(id);
+        }
+
+        None
+    }
 }
 
 /// Builder for the [`Dispatcher`].
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
 #[derive(Default)]
-pub struct DispatcherBuilder<'r, 't> {
+pub struct DispatcherBuilder<'a> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
-    tasks: Vec<TaskInfo<'r, 't>>,
+    tasks: Vec<TaskInfo<'a>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
-impl<'r, 't> DispatcherBuilder<'r, 't> {
+impl<'a> DispatcherBuilder<'a> {
     /// Creates a new `DispatcherBuilder` by
     /// using the `Default` implementation.
     ///
@@ -91,8 +189,8 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
     ///
     /// * if the specified dependency does not exist
     pub fn add<T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
-        where T: Task + 't,
-              T::TaskData: TaskData<'r>
+        where T: Task + Send + 'a,
+              T::TaskData: TaskData<'a>
     {
         let id = self.tasks.len();
         let reads = unsafe { T::TaskData::reads() };
@@ -120,7 +218,7 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
 
         let info = TaskInfo {
             dependents: Vec::new(),
-            exec: Box::new(TaskDispatch::new(id, task)) as Box<ExecTask>,
+            exec: Box::new(TaskDispatch::new(id, task)),
         };
         self.tasks.push(info);
 
@@ -140,13 +238,13 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn finish(self) -> Dispatcher<'r, 't> {
+    pub fn finish(self) -> Dispatcher<'a> {
         let size = self.tasks.len();
 
         Dispatcher {
             dependencies: self.dependencies,
             ready: self.ready,
-            running: Arc::new(AtomicBitSet::with_size(size)),
+            running: AtomicBitSet::with_size(size),
             tasks: self.tasks,
             thread_pool: self.thread_pool
                 .unwrap_or_else(|| Self::create_thread_pool()),
@@ -161,10 +259,8 @@ impl<'r, 't> DispatcherBuilder<'r, 't> {
     }
 }
 
-trait ExecTask<'r> {
-    fn exec<'b, 's, 'a>(&'b mut self, &'s Scope<'s>, &'r Resources, &'a AtomicBitSet)
-        where 'a: 's,
-              'b: 's;
+trait ExecTask<'a> {
+    fn exec<'s>(&'a mut self, &Scope<'s>, &'a Resources, &'a AtomicBitSet) where 'a: 's;
 }
 
 struct TaskDispatch<T> {
@@ -178,16 +274,12 @@ impl<T> TaskDispatch<T> {
     }
 }
 
-impl<'r, T> ExecTask<'r> for TaskDispatch<T>
+impl<'a, T> ExecTask<'a> for TaskDispatch<T>
     where T: Task,
-          T::TaskData: TaskData<'r>
+          T::TaskData: TaskData<'a>
 {
-    fn exec<'b, 's, 'a>(&'b mut self,
-                        scope: &'s Scope<'s>,
-                        res: &'r Resources,
-                        running: &'a AtomicBitSet)
-        where 'a: 's,
-              'b: 's
+    fn exec<'s>(&'a mut self, scope: &Scope<'s>, res: &'a Resources, running: &'a AtomicBitSet)
+        where 'a: 's
     {
         let data = T::TaskData::fetch(res);
         scope.spawn(move |_| {
@@ -197,7 +289,7 @@ impl<'r, T> ExecTask<'r> for TaskDispatch<T>
     }
 }
 
-struct TaskInfo<'r, 't> {
+struct TaskInfo<'a> {
     dependents: Vec<usize>,
-    exec: Box<ExecTask<'r> + 't>,
+    exec: Box<ExecTask<'a> + Send + 'a>,
 }
