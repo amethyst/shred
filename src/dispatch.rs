@@ -7,7 +7,7 @@ use bitset::AtomicBitSet;
 use {ResourceId, Resources, Task, TaskData};
 
 #[derive(Default)]
-pub struct Dependencies {
+struct Dependencies {
     dependencies: Vec<Vec<usize>>,
     rev_reads: FnvHashMap<ResourceId, Vec<usize>>,
     rev_writes: FnvHashMap<ResourceId, Vec<usize>>,
