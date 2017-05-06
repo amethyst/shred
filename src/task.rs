@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use {ResourceId, Resources};
 
 /// A `Task`, executed with a
