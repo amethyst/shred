@@ -13,8 +13,9 @@
 [di]: https://docs.rs/shred/badge.svg
 [dl]: https://docs.rs/shred/
 
-Dispatches tasks in parallel which need read access to some resources, 
-and write access to others.
+This library allows to dispatch
+tasks, which can have interdependencies,
+shared and exclusive resource access, in parallel.
 
 ## Usage
 
@@ -36,27 +37,26 @@ struct ResB;
 impl Resource for ResB {}
 
 #[derive(TaskData)]
-struct Data<'a> {
+struct PrintData<'a> {
     a: Fetch<'a, ResA>,
     b: FetchMut<'a, ResB>,
 }
 
-struct EmptyTask;
+struct PrintTask;
 
-impl<'a> Task<'a> for EmptyTask {
-    type TaskData = Data<'a>;
+impl<'a> Task<'a> for PrintTask {
+    type TaskData = PrintData<'a>;
 
-    fn work(&mut self, bundle: Data<'a>) {
+    fn work(&mut self, bundle: PrintData<'a>) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
     }
 }
 
-
 fn main() {
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
-        .add(EmptyTask, "empty", &[])
+        .add(PrintTask, "print", &[])
         .finish();
     resources.add(ResA, ());
     resources.add(ResB, ());
@@ -90,4 +90,4 @@ MIT/Apache-2.
 `shred` is distributed under the terms of both the MIT 
 license and the Apache License (Version 2.0).
 
-See LICENSE-APACHE and LICENSE-MIT.
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT).
