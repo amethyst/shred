@@ -27,15 +27,11 @@ impl Dependencies {
                 .or_insert(Vec::new())
                 .push(id);
 
-            self.rev_writes
-                .entry(*read)
-                .or_insert(Vec::new());
+            self.rev_writes.entry(*read).or_insert(Vec::new());
         }
 
         for write in &writes {
-            self.rev_reads
-                .entry(*write)
-                .or_insert(Vec::new());
+            self.rev_reads.entry(*write).or_insert(Vec::new());
 
             self.rev_writes
                 .entry(*write)
@@ -62,6 +58,9 @@ pub struct Dispatcher<'t> {
 impl<'t> Dispatcher<'t> {
     /// Dispatches the tasks given the
     /// resources to operate on.
+    ///
+    /// This operation blocks the
+    /// executing thread.
     pub fn dispatch(&mut self, res: &mut Resources) {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
@@ -164,6 +163,38 @@ impl<'t> Dispatcher<'t> {
 /// Builder for the [`Dispatcher`].
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
+///
+/// # Examples
+///
+/// This is how you create a dispatcher with
+/// a shared thread pool:
+///
+/// ```rust
+/// # extern crate shred;
+/// # #[macro_use]
+/// # extern crate shred_derive;
+/// # use shred::{DispatcherBuilder, Fetch};
+/// # struct Res; impl Resource for Res {}
+/// # #[derive(TaskData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
+/// # struct Dummy;
+/// # impl<'a> Task<'a> {
+/// #   type TaskData = Data<'a>;
+/// #
+/// # fn work(&mut self, _: Data<'a>) {}
+/// # }
+/// #
+/// # let (task_a, task_b, task_c, task_d, task_e) = (Dummy, Dummy, Dummy, Dummy, Dummy);
+/// # fn main() {
+/// let dispatcher = DispatcherBuilder::new()
+///     .add(task_a, "a", &[])
+///     .add(task_b, "b", &["a"]) // b depends on a
+///     .add(task_c, "c", &["a"]) // c also depends on a
+///     .add(task_d, "d" &[])
+///     .add(task_e, "e", &["c", "d"]) // e executes after c and d are finished
+///     .finish();
+/// # }
+/// ```
+///
 #[derive(Default)]
 pub struct DispatcherBuilder<'t> {
     dependencies: Dependencies,
