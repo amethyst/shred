@@ -43,18 +43,18 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// tasks to be executed in parallel.
-pub struct Dispatcher<'a> {
+pub struct Dispatcher<'t> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
-    tasks: Vec<TaskInfo<'a>>,
+    tasks: Vec<TaskInfo<'t>>,
     thread_pool: Arc<ThreadPool>,
 }
 
-impl<'a> Dispatcher<'a> {
+impl<'t> Dispatcher<'t> {
     /// Dispatches the tasks given the
     /// resources to operate on.
-    pub fn dispatch(&'a mut self, res: &'a mut Resources) {
+    pub fn dispatch(&mut self, res: &mut Resources) {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
         let running = &self.running;
@@ -72,12 +72,10 @@ impl<'a> Dispatcher<'a> {
 
     fn dispatch_inner<'s>(dependencies: &Dependencies,
                           mut ready: Vec<usize>,
-                          res: &'a mut Resources,
-                          running: &'a AtomicBitSet,
+                          res: &'s mut Resources,
+                          running: &'s AtomicBitSet,
                           scope: &Scope<'s>,
-                          tasks: &'a mut Vec<TaskInfo<'a>>)
-        where 'a: 's
-    {
+                          tasks: &'s mut Vec<TaskInfo>) {
         let mut start_count = 0;
         let num_tasks = tasks.len();
         let mut tasks: Vec<_> = tasks.iter_mut().map(|x| Some(x)).collect();
@@ -159,15 +157,15 @@ impl<'a> Dispatcher<'a> {
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
 #[derive(Default)]
-pub struct DispatcherBuilder<'a> {
+pub struct DispatcherBuilder<'t> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
-    tasks: Vec<TaskInfo<'a>>,
+    tasks: Vec<TaskInfo<'t>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
-impl<'a> DispatcherBuilder<'a> {
+impl<'t> DispatcherBuilder<'t> {
     /// Creates a new `DispatcherBuilder` by
     /// using the `Default` implementation.
     ///
@@ -188,10 +186,8 @@ impl<'a> DispatcherBuilder<'a> {
     /// # Panics
     ///
     /// * if the specified dependency does not exist
-    pub fn add<I, T>(mut self, task: I, name: &str, dep: &[&str]) -> Self
-        where I: Into<T>,
-              T: Task + Send + 'a,
-              T::TaskData: TaskData<'a>
+    pub fn add<T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
+        where T: for<'a> Task<'a> + Send + 't
     {
         let id = self.tasks.len();
         let reads = unsafe { T::TaskData::reads() };
@@ -219,7 +215,7 @@ impl<'a> DispatcherBuilder<'a> {
 
         let info = TaskInfo {
             dependents: Vec::new(),
-            exec: Box::new(TaskDispatch::new(id, task.into())),
+            exec: Box::new(TaskDispatch::new(id, task)),
         };
         self.tasks.push(info);
 
@@ -239,7 +235,7 @@ impl<'a> DispatcherBuilder<'a> {
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn finish(self) -> Dispatcher<'a> {
+    pub fn finish(self) -> Dispatcher<'t> {
         let size = self.tasks.len();
 
         Dispatcher {
@@ -260,8 +256,8 @@ impl<'a> DispatcherBuilder<'a> {
     }
 }
 
-trait ExecTask<'a> {
-    fn exec<'s>(&'a mut self, &Scope<'s>, &'a Resources, &'a AtomicBitSet) where 'a: 's;
+trait ExecTask {
+    fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, &'s AtomicBitSet);
 }
 
 struct TaskDispatch<T> {
@@ -275,13 +271,10 @@ impl<T> TaskDispatch<T> {
     }
 }
 
-impl<'a, T> ExecTask<'a> for TaskDispatch<T>
-    where T: Task,
-          T::TaskData: TaskData<'a>
+impl<T> ExecTask for TaskDispatch<T>
+    where T: for<'b> Task<'b>
 {
-    fn exec<'s>(&'a mut self, scope: &Scope<'s>, res: &'a Resources, running: &'a AtomicBitSet)
-        where 'a: 's
-    {
+    fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
         let data = T::TaskData::fetch(res);
         scope.spawn(move |_| {
                         self.task.work(data);
@@ -290,7 +283,7 @@ impl<'a, T> ExecTask<'a> for TaskDispatch<T>
     }
 }
 
-struct TaskInfo<'a> {
+struct TaskInfo<'t> {
     dependents: Vec<usize>,
-    exec: Box<ExecTask<'a> + Send + 'a>,
+    exec: Box<ExecTask + Send + 't>,
 }

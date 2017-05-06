@@ -22,7 +22,7 @@ impl<'a, F, D> From<F> for Closure<F, D>
     }
 }
 
-impl<'a, F, D> Task for Closure<F, D>
+impl<'a, F, D> Task<'a> for Closure<F, D>
     where F: FnMut(D),
           D: TaskData<'a>
 {
@@ -37,13 +37,13 @@ impl<'a, F, D> Task for Closure<F, D>
 /// set of required [`Resource`]s.
 ///
 /// [`Resource`]: trait.Resource.html
-pub trait Task {
+pub trait Task<'a> {
     /// The resource bundle required
     /// to execute this task.
     ///
     /// To create such a resource bundle,
     /// simple derive `TaskData` for it.
-    type TaskData;
+    type TaskData: TaskData<'a>;
 
     /// Executes the task with the required task
     /// data.
