@@ -173,23 +173,28 @@ impl<'t> Dispatcher<'t> {
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{DispatcherBuilder, Fetch};
-/// # struct Res; impl Resource for Res {}
+/// # use shred::{DispatcherBuilder, Fetch, Task, Resource};
+/// # struct Res;
+/// # impl Resource for Res {}
 /// # #[derive(TaskData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
-/// # impl<'a> Task<'a> {
+/// # impl<'a> Task<'a> for Dummy {
 /// #   type TaskData = Data<'a>;
 /// #
-/// # fn work(&mut self, _: Data<'a>) {}
+/// #   fn work(&mut self, _: Data<'a>) {}
 /// # }
 /// #
-/// # let (task_a, task_b, task_c, task_d, task_e) = (Dummy, Dummy, Dummy, Dummy, Dummy);
 /// # fn main() {
+/// # let task_a = Dummy;
+/// # let task_b = Dummy;
+/// # let task_c = Dummy;
+/// # let task_d = Dummy;
+/// # let task_e = Dummy;
 /// let dispatcher = DispatcherBuilder::new()
 ///     .add(task_a, "a", &[])
 ///     .add(task_b, "b", &["a"]) // b depends on a
 ///     .add(task_c, "c", &["a"]) // c also depends on a
-///     .add(task_d, "d" &[])
+///     .add(task_d, "d", &[])
 ///     .add(task_e, "e", &["c", "d"]) // e executes after c and d are finished
 ///     .finish();
 /// # }
