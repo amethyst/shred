@@ -26,9 +26,17 @@ impl Dependencies {
                 .entry(*read)
                 .or_insert(Vec::new())
                 .push(id);
+
+            self.rev_writes
+                .entry(*read)
+                .or_insert(Vec::new());
         }
 
         for write in &writes {
+            self.rev_reads
+                .entry(*write)
+                .or_insert(Vec::new());
+
             self.rev_writes
                 .entry(*write)
                 .or_insert(Vec::new())
