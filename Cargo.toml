@@ -2,6 +2,11 @@
 name = "shred"
 version = "0.1.0"
 authors = ["torkleyy"]
+description = """
+Dispatches tasks in parallel which need read access to some resources,
+and write access to others.
+"""
+readme = "README.md"
 
 [dependencies]
 fnv = "1"
