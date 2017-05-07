@@ -22,7 +22,7 @@ shared and exclusive resource access, in parallel.
 ```rust
 extern crate shred;
 #[macro_use]
-extern crate shred_derive;
+extern crate shred_derive; // for `#[derive(TaskData)]`
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, Task};
 
@@ -36,9 +36,15 @@ struct ResB;
 
 impl Resource for ResB {}
 
+/// Every task has a predefined
+/// task data.
 #[derive(TaskData)]
 struct PrintData<'a> {
+    /// `Fetch` means it reads from
+    /// that data
     a: Fetch<'a, ResA>,
+    /// `FetchMut` also allows
+    /// write access
     b: FetchMut<'a, ResB>,
 }
 
@@ -50,13 +56,16 @@ impl<'a> Task<'a> for PrintTask {
     fn work(&mut self, bundle: PrintData<'a>) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
+        
+        *bundle.b = ResB; // We can mutate ResB here
+                          // because it's `FetchMut`.
     }
 }
 
 fn main() {
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
-        .add(PrintTask, "print", &[])
+        .add(PrintTask, "print", &[]) // Adds a task "print" without dependencies
         .finish();
     resources.add(ResA, ());
     resources.add(ResB, ());
@@ -65,6 +74,8 @@ fn main() {
 }
 ```
 
+Please see [the benchmark](benches/bench.rs) for a bigger (and useful) example.
+
 ### Required Rust version
 
 `1.15 stable`
@@ -72,7 +83,7 @@ fn main() {
 ## Features
 
 * lock-free
-* no channels or similar functionality used
+* no channels or similar functionality used (-> less overhead)
 * allows lifetimes (opposed to `'static` only)
 
 ## Contribution

@@ -21,6 +21,9 @@ fnv = "1"
 mopa = "0.2"
 shred-derive = { path = "shred-derive", version = "0.1.0" }
 
+[dev-dependencies]
+cgmath = "0.14"
+
 [dependencies.rayon]
 version = "0.7"
 features = ["unstable"]
