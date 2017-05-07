@@ -39,12 +39,16 @@ fn impl_task_data(ast: &MacroInput) -> Tokens {
             }
 
             unsafe fn reads() -> Vec<::shred::ResourceId> {
+                #![allow(unused_imports)] // In case there is no read
+
                 use std::any::TypeId;
 
                 vec![ #( (TypeId::of::<#reads>(), 14695981039346656037) ),* ]
             }
 
             unsafe fn writes() -> Vec<::shred::ResourceId> {
+                #![allow(unused_imports)] // In case there is no write
+
                 use std::any::TypeId;
 
                 vec![ #( (TypeId::of::<#writes>(), 14695981039346656037) ),* ]
