@@ -8,7 +8,7 @@ extern crate test;
 
 use std::ops::{Index, IndexMut};
 
-use cgmath::{Vector3};
+use cgmath::Vector3;
 use shred::*;
 use test::Bencher;
 
@@ -156,7 +156,11 @@ impl<'a> Task<'a> for ClearForceAccum {
 
     fn work(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {
-            data.force[elem] = Force(Vec3 { x: 0.0, y: 0.0, z: 0.0 });
+            data.force[elem] = Force(Vec3 {
+                                         x: 0.0,
+                                         y: 0.0,
+                                         z: 0.0,
+                                     });
         }
     }
 }
@@ -176,10 +180,10 @@ fn basic(b: &mut Bencher) {
     let vel = VecStorage::new(Vel(Vec3::new(0.0, 0.0, 0.0)));
     let force = VecStorage::new(Force(Vec3::new(0.0, 0.0, 0.0)));
     let spring = VecStorage::new(Spring {
-        constant: 2.0,
-        connection_to: 0,
-        rest: 1.0,
-    });
+                                     constant: 2.0,
+                                     connection_to: 0,
+                                     rest: 1.0,
+                                 });
 
     pos.data[0] = Pos(Vec3::new(-5.0, -5.0, -5.0));
 
