@@ -1,27 +1,27 @@
 use {ResourceId, Resources};
 
-/// A `Task`, executed with a
+/// A `System`, executed with a
 /// set of required [`Resource`]s.
 ///
 /// [`Resource`]: trait.Resource.html
-pub trait Task<'a> {
+pub trait System<'a> {
     /// The resource bundle required
-    /// to execute this task.
+    /// to execute this system.
     ///
     /// To create such a resource bundle,
-    /// simple derive `TaskData` for it.
-    type TaskData: TaskData<'a>;
+    /// simple derive `SystemData` for it.
+    type SystemData: SystemData<'a>;
 
-    /// Executes the task with the required task
+    /// Executes the system with the required system
     /// data.
-    fn work(&mut self, bundle: Self::TaskData);
+    fn work(&mut self, data: Self::SystemData);
 }
 
 /// A struct implementing
-/// task data indicates that it
+/// system data indicates that it
 /// bundles some resources which are
 /// required for the execution.
-pub trait TaskData<'a> {
+pub trait SystemData<'a> {
     /// Creates a new resource bundle
     /// by fetching the required resources
     /// from the [`Resources`] struct.

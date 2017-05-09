@@ -172,7 +172,7 @@ impl Resources {
     /// Fetches the resource with the specified type `T`.
     /// The id is useful if you don't define your resources
     /// in Rust or you want a more dynamic resource handling.
-    /// By default, the `#[derive(TaskData)]` passes `()`
+    /// By default, the `#[derive(SystemData)]` passes `()`
     /// as id.
     ///
     /// # Safety

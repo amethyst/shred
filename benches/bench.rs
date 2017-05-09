@@ -71,7 +71,7 @@ const NUM_COMPONENTS: usize = 200;
 
 // --------------
 
-#[derive(TaskData)]
+#[derive(SystemData)]
 struct SpringForceData<'a> {
     pos: Fetch<'a, PosStorage>,
     spring: Fetch<'a, SpringStorage>,
@@ -81,8 +81,8 @@ struct SpringForceData<'a> {
 
 struct SpringForce;
 
-impl<'a> Task<'a> for SpringForce {
-    type TaskData = SpringForceData<'a>;
+impl<'a> System<'a> for SpringForce {
+    type SystemData = SpringForceData<'a>;
 
     fn work(&mut self, mut data: SpringForceData) {
         for elem in 0..NUM_COMPONENTS {
@@ -103,7 +103,7 @@ impl<'a> Task<'a> for SpringForce {
     }
 }
 
-#[derive(TaskData)]
+#[derive(SystemData)]
 struct IntegrationData<'a> {
     force: Fetch<'a, ForceStorage>,
     mass: Fetch<'a, MassStorage>,
@@ -113,10 +113,10 @@ struct IntegrationData<'a> {
     time: Fetch<'a, DeltaTime>,
 }
 
-struct IntegrationTask;
+struct IntegrationSystem;
 
-impl<'a> Task<'a> for IntegrationTask {
-    type TaskData = IntegrationData<'a>;
+impl<'a> System<'a> for IntegrationSystem {
+    type SystemData = IntegrationData<'a>;
 
     fn work(&mut self, mut data: IntegrationData) {
         for elem in 0..NUM_COMPONENTS {
@@ -144,15 +144,15 @@ impl<'a> Task<'a> for IntegrationTask {
     }
 }
 
-#[derive(TaskData)]
+#[derive(SystemData)]
 struct ClearForceAccumData<'a> {
     force: FetchMut<'a, ForceStorage>,
 }
 
 struct ClearForceAccum;
 
-impl<'a> Task<'a> for ClearForceAccum {
-    type TaskData = ClearForceAccumData<'a>;
+impl<'a> System<'a> for ClearForceAccum {
+    type SystemData = ClearForceAccumData<'a>;
 
     fn work(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {
@@ -169,7 +169,7 @@ impl<'a> Task<'a> for ClearForceAccum {
 fn basic(b: &mut Bencher) {
     let mut dispatcher = DispatcherBuilder::new()
         .add(SpringForce, "spring", &[])
-        .add(IntegrationTask, "integration", &[])
+        .add(IntegrationSystem, "integration", &[])
         .add(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
                                                                // the integration
         .finish();

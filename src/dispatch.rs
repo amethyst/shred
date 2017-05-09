@@ -4,7 +4,7 @@ use fnv::FnvHashMap;
 use rayon::{Configuration, Scope, ThreadPool, scope};
 
 use bitset::AtomicBitSet;
-use {ResourceId, Resources, Task, TaskData};
+use {ResourceId, Resources, System, SystemData};
 
 #[derive(Default)]
 struct Dependencies {
@@ -46,17 +46,17 @@ impl Dependencies {
 }
 
 /// The dispatcher struct, allowing
-/// tasks to be executed in parallel.
+/// systems to be executed in parallel.
 pub struct Dispatcher<'t> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
-    tasks: Vec<TaskInfo<'t>>,
+    systems: Vec<SystemInfo<'t>>,
     thread_pool: Arc<ThreadPool>,
 }
 
 impl<'t> Dispatcher<'t> {
-    /// Dispatches the tasks given the
+    /// Dispatches the systems given the
     /// resources to operate on.
     ///
     /// This operation blocks the
@@ -65,12 +65,12 @@ impl<'t> Dispatcher<'t> {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
         let running = &self.running;
-        let tasks = &mut self.tasks;
+        let systems = &mut self.systems;
 
         self.thread_pool
             .install(|| {
                 scope(move |scope| {
-                          Self::dispatch_inner(dependencies, ready, res, running, scope, tasks)
+                          Self::dispatch_inner(dependencies, ready, res, running, scope, systems)
                       })
             });
 
@@ -82,33 +82,33 @@ impl<'t> Dispatcher<'t> {
                           res: &'s mut Resources,
                           running: &'s AtomicBitSet,
                           scope: &Scope<'s>,
-                          tasks: &'s mut Vec<TaskInfo>) {
+                          systems: &'s mut Vec<SystemInfo>) {
         let mut start_count = 0;
-        let num_tasks = tasks.len();
-        let mut tasks: Vec<_> = tasks.iter_mut().map(|x| Some(x)).collect();
+        let num_systems = systems.len();
+        let mut systems: Vec<_> = systems.iter_mut().map(|x| Some(x)).collect();
 
-        while start_count < num_tasks {
-            if let Some(index) = Self::find_runnable_task(&ready, dependencies, running) {
-                let task: &mut TaskInfo = tasks[index].take().expect("Already executed");
-                task.exec.exec(scope, res, running);
+        while start_count < num_systems {
+            if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
+                let system: &mut SystemInfo = systems[index].take().expect("Already executed");
+                system.exec.exec(scope, res, running);
 
                 start_count += 1;
 
-                // okay, now that we started executing our task,
+                // okay, now that we started executing our system,
                 // we remove the old one and add the ones which are
                 // potentially ready
 
                 let rem_pos = ready.iter().position(|x| *x == index).unwrap();
                 ready.remove(rem_pos);
 
-                for dependent in &task.dependents {
+                for dependent in &system.dependents {
                     ready.push(*dependent);
                 }
             }
         }
     }
 
-    fn find_runnable_task(ready: &Vec<usize>,
+    fn find_runnable_system(ready: &Vec<usize>,
                           dependencies: &Dependencies,
                           running: &AtomicBitSet)
                           -> Option<usize> {
@@ -173,29 +173,29 @@ impl<'t> Dispatcher<'t> {
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{DispatcherBuilder, Fetch, Task, Resource};
+/// # use shred::{DispatcherBuilder, Fetch, System, Resource};
 /// # struct Res;
 /// # impl Resource for Res {}
-/// # #[derive(TaskData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
+/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
-/// # impl<'a> Task<'a> for Dummy {
-/// #   type TaskData = Data<'a>;
+/// # impl<'a> System<'a> for Dummy {
+/// #   type SystemData = Data<'a>;
 /// #
 /// #   fn work(&mut self, _: Data<'a>) {}
 /// # }
 /// #
 /// # fn main() {
-/// # let task_a = Dummy;
-/// # let task_b = Dummy;
-/// # let task_c = Dummy;
-/// # let task_d = Dummy;
-/// # let task_e = Dummy;
+/// # let system_a = Dummy;
+/// # let system_b = Dummy;
+/// # let system_c = Dummy;
+/// # let system_d = Dummy;
+/// # let system_e = Dummy;
 /// let dispatcher = DispatcherBuilder::new()
-///     .add(task_a, "a", &[])
-///     .add(task_b, "b", &["a"]) // b depends on a
-///     .add(task_c, "c", &["a"]) // c also depends on a
-///     .add(task_d, "d", &[])
-///     .add(task_e, "e", &["c", "d"]) // e executes after c and d are finished
+///     .add(system_a, "a", &[])
+///     .add(system_b, "b", &["a"]) // b depends on a
+///     .add(system_c, "c", &["a"]) // c also depends on a
+///     .add(system_d, "d", &[])
+///     .add(system_e, "e", &["c", "d"]) // e executes after c and d are finished
 ///     .finish();
 /// # }
 /// ```
@@ -205,7 +205,7 @@ pub struct DispatcherBuilder<'t> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
-    tasks: Vec<TaskInfo<'t>>,
+    systems: Vec<SystemInfo<'t>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
@@ -223,30 +223,30 @@ impl<'t> DispatcherBuilder<'t> {
         DispatcherBuilder::default()
     }
 
-    /// Adds a new task with a given name and a list of dependencies.
+    /// Adds a new system with a given name and a list of dependencies.
     /// Please not that the dependency should be added before
-    /// you add the depending task.
+    /// you add the depending system.
     ///
     /// # Panics
     ///
     /// * if the specified dependency does not exist
-    pub fn add<T>(mut self, task: T, name: &str, dep: &[&str]) -> Self
-        where T: for<'a> Task<'a> + Send + 't
+    pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
+        where T: for<'a> System<'a> + Send + 't
     {
-        let id = self.tasks.len();
-        let reads = unsafe { T::TaskData::reads() };
-        let writes = unsafe { T::TaskData::writes() };
+        let id = self.systems.len();
+        let reads = unsafe { T::SystemData::reads() };
+        let writes = unsafe { T::SystemData::writes() };
 
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {
                      *self.map
                           .get(x.to_owned())
-                          .expect("No such task registered")
+                          .expect("No such system registered")
                  })
             .collect();
 
         for dependency in &dependencies {
-            let dependency: &mut TaskInfo = &mut self.tasks[*dependency];
+            let dependency: &mut SystemInfo = &mut self.systems[*dependency];
             dependency.dependents.push(id);
         }
 
@@ -257,11 +257,11 @@ impl<'t> DispatcherBuilder<'t> {
             self.ready.push(id);
         }
 
-        let info = TaskInfo {
+        let info = SystemInfo {
             dependents: Vec::new(),
-            exec: Box::new(TaskDispatch::new(id, task)),
+            exec: Box::new(SystemDispatch::new(id, system)),
         };
-        self.tasks.push(info);
+        self.systems.push(info);
 
         self
     }
@@ -280,13 +280,13 @@ impl<'t> DispatcherBuilder<'t> {
     /// precompute useful information in
     /// order to speed up dispatching.
     pub fn finish(self) -> Dispatcher<'t> {
-        let size = self.tasks.len();
+        let size = self.systems.len();
 
         Dispatcher {
             dependencies: self.dependencies,
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
-            tasks: self.tasks,
+            systems: self.systems,
             thread_pool: self.thread_pool
                 .unwrap_or_else(|| Self::create_thread_pool()),
         }
@@ -300,34 +300,34 @@ impl<'t> DispatcherBuilder<'t> {
     }
 }
 
-trait ExecTask {
+trait ExecSystem {
     fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, &'s AtomicBitSet);
 }
 
-struct TaskDispatch<T> {
+struct SystemDispatch<T> {
     id: usize,
-    task: T,
+    system: T,
 }
 
-impl<T> TaskDispatch<T> {
-    fn new(id: usize, task: T) -> Self {
-        TaskDispatch { id: id, task: task }
+impl<T> SystemDispatch<T> {
+    fn new(id: usize, system: T) -> Self {
+        SystemDispatch { id: id, system: system }
     }
 }
 
-impl<T> ExecTask for TaskDispatch<T>
-    where T: for<'b> Task<'b>
+impl<T> ExecSystem for SystemDispatch<T>
+    where T: for<'b> System<'b>
 {
     fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
-        let data = T::TaskData::fetch(res);
+        let data = T::SystemData::fetch(res);
         scope.spawn(move |_| {
-                        self.task.work(data);
+                        self.system.work(data);
                         running.set(self.id, false)
                     })
     }
 }
 
-struct TaskInfo<'t> {
+struct SystemInfo<'t> {
     dependents: Vec<usize>,
-    exec: Box<ExecTask + Send + 't>,
+    exec: Box<ExecSystem + Send + 't>,
 }

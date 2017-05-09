@@ -10,18 +10,18 @@ use syn::{Body, Field, Ident, MacroInput, VariantData};
 use quote::Tokens;
 
 /// Used to `#[derive]` the trait
-/// `TaskData`.
-#[proc_macro_derive(TaskData)]
-pub fn task_data(input: TokenStream) -> TokenStream {
+/// `SystemData`.
+#[proc_macro_derive(SystemData)]
+pub fn system_data(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_macro_input(&s).unwrap();
 
-    let gen = impl_task_data(&ast);
+    let gen = impl_system_data(&ast);
 
     gen.parse().expect("Invalid")
 }
 
-fn impl_task_data(ast: &MacroInput) -> Tokens {
+fn impl_system_data(ast: &MacroInput) -> Tokens {
     let name = &ast.ident;
     let fields = get_fields(ast);
 
@@ -31,7 +31,7 @@ fn impl_task_data(ast: &MacroInput) -> Tokens {
     let writes = collect_field_ty_params(fields, "FetchMut");
 
     quote! {
-        impl<'a> ::shred::TaskData<'a> for #name<'a> {
+        impl<'a> ::shred::SystemData<'a> for #name<'a> {
             fn fetch(res: &'a ::shred::Resources) -> #name<'a> {
                 #name {
                     #( #identifiers: unsafe { res.#methods(()) }, )*

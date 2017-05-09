@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Fetch, FetchMut, Resource, Resources, TaskData};
+use shred::{Fetch, FetchMut, Resource, Resources, SystemData};
 
 #[derive(Debug)]
 struct ResA;
@@ -14,7 +14,7 @@ struct ResB;
 
 impl Resource for ResB {}
 
-#[derive(TaskData)]
+#[derive(SystemData)]
 pub struct AutoBundle<'a> {
     a: Fetch<'a, ResA>,
     b: FetchMut<'a, ResB>,
