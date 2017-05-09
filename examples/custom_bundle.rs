@@ -2,7 +2,7 @@ extern crate shred;
 
 use std::any::TypeId;
 
-use shred::{Fetch, FetchMut, Resource, ResourceId, Resources, TaskData};
+use shred::{Fetch, FetchMut, Resource, ResourceId, Resources, SystemData};
 
 #[derive(Debug)]
 struct ResA;
@@ -19,7 +19,7 @@ struct ExampleBundle<'a> {
     b: FetchMut<'a, ResB>,
 }
 
-impl<'a> TaskData<'a> for ExampleBundle<'a> {
+impl<'a> SystemData<'a> for ExampleBundle<'a> {
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
             a: unsafe { res.fetch(0) },

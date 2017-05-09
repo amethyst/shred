@@ -5,7 +5,7 @@ authors = ["torkleyy"]
 description = "Custom derive for shred"
 documentation = "https://docs.rs/shred_derive"
 repository = "https://github.com/torkleyy/shred/shred-derive"
-keywords = ["parallel", "tasks", "resources", "ecs", "derive"]
+keywords = ["parallel", "systems", "resources", "ecs", "derive"]
 license = "MIT/Apache-2.0"
 
 [dependencies]

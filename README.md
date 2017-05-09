@@ -14,7 +14,7 @@
 [dl]: https://docs.rs/shred/
 
 This library allows to dispatch
-tasks, which can have interdependencies,
+systems, which can have interdependencies,
 shared and exclusive resource access, in parallel.
 
 ## Usage
@@ -22,9 +22,9 @@ shared and exclusive resource access, in parallel.
 ```rust
 extern crate shred;
 #[macro_use]
-extern crate shred_derive; // for `#[derive(TaskData)]`
+extern crate shred_derive; // for `#[derive(SystemData)]`
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, Task};
+use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 
 #[derive(Debug)]
 struct ResA;
@@ -36,9 +36,9 @@ struct ResB;
 
 impl Resource for ResB {}
 
-/// Every task has a predefined
-/// task data.
-#[derive(TaskData)]
+/// Every system has a predefined
+/// system data.
+#[derive(SystemData)]
 struct PrintData<'a> {
     /// `Fetch` means it reads from
     /// that data
@@ -48,10 +48,10 @@ struct PrintData<'a> {
     b: FetchMut<'a, ResB>,
 }
 
-struct PrintTask;
+struct PrintSystem;
 
-impl<'a> Task<'a> for PrintTask {
-    type TaskData = PrintData<'a>;
+impl<'a> System<'a> for PrintSystem {
+    type SystemData = PrintData<'a>;
 
     fn work(&mut self, bundle: PrintData<'a>) {
         println!("{:?}", &*bundle.a);
@@ -65,7 +65,7 @@ impl<'a> Task<'a> for PrintTask {
 fn main() {
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
-        .add(PrintTask, "print", &[]) // Adds a task "print" without dependencies
+        .add(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .finish();
     resources.add(ResA, ());
     resources.add(ResB, ());

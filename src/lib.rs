@@ -1,7 +1,7 @@
 //! **Sh**ared **re**source **d**ispatcher
 //!
 //! This library allows to dispatch
-//! tasks, which can have interdependencies,
+//! systems, which can have interdependencies,
 //! shared and exclusive resource access, in parallel.
 //!
 //! # Examples
@@ -11,7 +11,7 @@
 //! #[macro_use]
 //! extern crate shred_derive;
 //!
-//! use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, Task};
+//! use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 //!
 //! #[derive(Debug)]
 //! struct ResA;
@@ -23,16 +23,16 @@
 //!
 //! impl Resource for ResB {}
 //!
-//! #[derive(TaskData)]
+//! #[derive(SystemData)]
 //! struct Data<'a> {
 //!     a: Fetch<'a, ResA>,
 //!     b: FetchMut<'a, ResB>,
 //! }
 //!
-//! struct EmptyTask;
+//! struct EmptySystem;
 //!
-//! impl<'a> Task<'a> for EmptyTask {
-//!     type TaskData = Data<'a>;
+//! impl<'a> System<'a> for EmptySystem {
+//!     type SystemData = Data<'a>;
 //!
 //!     fn work(&mut self, bundle: Data<'a>) {
 //!         println!("{:?}", &*bundle.a);
@@ -44,7 +44,7 @@
 //! fn main() {
 //!     let mut resources = Resources::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
-//!         .add(EmptyTask, "empty", &[])
+//!         .add(EmptySystem, "empty", &[])
 //!         .finish();
 //!     resources.add(ResA, ());
 //!     resources.add(ResB, ());
@@ -66,8 +66,8 @@ mod bitset;
 mod cell;
 mod dispatch;
 mod res;
-mod task;
+mod system;
 
 pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
-pub use task::{Task, TaskData};
+pub use system::{System, SystemData};
