@@ -53,7 +53,7 @@ struct PrintSystem;
 impl<'a> System<'a> for PrintSystem {
     type SystemData = PrintData<'a>;
 
-    fn work(&mut self, bundle: PrintData<'a>) {
+    fn work(&mut self, mut bundle: PrintData<'a>) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
         

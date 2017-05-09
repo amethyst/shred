@@ -12,6 +12,7 @@ repository = "https://github.com/torkleyy/shred"
 keywords = ["parallel", "systems", "resources", "ecs"]
 categories = ["concurrency"]
 license = "MIT/Apache-2.0"
+build = "build.rs"
 
 [badges]
 travis-ci = { repository = "torkleyy/shred" }
@@ -21,8 +22,12 @@ fnv = "1"
 mopa = "0.2"
 shred-derive = { path = "shred-derive", version = "0.1.0" }
 
+[build-dependencies]
+skeptic = "0.9"
+
 [dev-dependencies]
 cgmath = "0.14"
+skeptic = "0.9"
 
 [dependencies.rayon]
 version = "0.7"
