@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use fnv::FnvHashMap;
-use rayon::{Configuration, Scope, ThreadPool, scope};
+use rayon::{Configuration, ThreadPool, scope};
 
 use bitset::AtomicBitSet;
-use {ResourceId, Resources, System, SystemData};
+use {ResourceId, Resources, SystemData};
+use system::Helper;
 
 #[derive(Default)]
 struct Dependencies {
@@ -47,65 +48,61 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
-pub struct Dispatcher<'t> {
+pub struct Dispatcher<'a> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
-    systems: Vec<SystemInfo<'t>>,
+    systems: Vec<SystemInfo>,
     thread_pool: Arc<ThreadPool>,
+    system_workers: Vec<SystemWorker<'a>>,
 }
 
-impl<'t> Dispatcher<'t> {
+impl<'a> Dispatcher<'a> {
     /// Dispatches the systems given the
     /// resources to operate on.
     ///
     /// This operation blocks the
     /// executing thread.
-    pub fn dispatch(&mut self, res: &mut Resources) {
+    pub fn dispatch<'b: 'a>(&mut self, res: &'b Resources) {
         let dependencies = &self.dependencies;
-        let ready = self.ready.clone();
+        let mut ready = self.ready.clone();
         let running = &self.running;
         let systems = &mut self.systems;
+        let workers = &mut self.system_workers;
 
         self.thread_pool
             .install(|| {
                 scope(move |scope| {
-                          Self::dispatch_inner(dependencies, ready, res, running, scope, systems)
-                      })
+                    let mut start_count = 0;
+                    let num_systems = systems.len();
+                    let mut systems: Vec<_> = systems.iter_mut().map(|x| Some(x)).collect();
+                    let mut workers: Vec<_> = workers.iter_mut().map(|x| Some(x)).collect();
+
+                    while start_count < num_systems {
+                        if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
+                            let system: &mut SystemInfo = systems[index].take().expect("Already executed");
+                            let worker = workers[index].take().expect("Already executed");
+                            let data = (worker.fetch)(res);
+                            scope.spawn(move |_| (worker.exec)(data, running) );
+
+                            start_count += 1;
+
+                            // okay, now that we started executing our system,
+                            // we remove the old one and add the ones which are
+                            // potentially ready
+
+                            let rem_pos = ready.iter().position(|x| *x == index).unwrap();
+                            ready.remove(rem_pos);
+
+                            for dependent in &system.dependents {
+                                ready.push(*dependent);
+                            }
+                        }
+                    }
+                })
             });
 
         self.running.clear();
-    }
-
-    fn dispatch_inner<'s>(dependencies: &Dependencies,
-                          mut ready: Vec<usize>,
-                          res: &'s mut Resources,
-                          running: &'s AtomicBitSet,
-                          scope: &Scope<'s>,
-                          systems: &'s mut Vec<SystemInfo>) {
-        let mut start_count = 0;
-        let num_systems = systems.len();
-        let mut systems: Vec<_> = systems.iter_mut().map(|x| Some(x)).collect();
-
-        while start_count < num_systems {
-            if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
-                let system: &mut SystemInfo = systems[index].take().expect("Already executed");
-                system.exec.exec(scope, res, running);
-
-                start_count += 1;
-
-                // okay, now that we started executing our system,
-                // we remove the old one and add the ones which are
-                // potentially ready
-
-                let rem_pos = ready.iter().position(|x| *x == index).unwrap();
-                ready.remove(rem_pos);
-
-                for dependent in &system.dependents {
-                    ready.push(*dependent);
-                }
-            }
-        }
     }
 
     fn find_runnable_system(ready: &Vec<usize>,
@@ -173,16 +170,12 @@ impl<'t> Dispatcher<'t> {
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{DispatcherBuilder, Fetch, System, Resource};
+/// # use shred::{DispatcherBuilder, Fetch, Resource};
 /// # struct Res;
 /// # impl Resource for Res {}
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
-/// # impl<'a> System<'a> for Dummy {
-/// #   type SystemData = Data<'a>;
-/// #
-/// #   fn work(&mut self, _: Data<'a>) {}
-/// # }
+/// # fn work<'a>(_: &mut Dummy, _: Data<'a>) {}
 /// #
 /// # fn main() {
 /// # let system_a = Dummy;
@@ -191,25 +184,25 @@ impl<'t> Dispatcher<'t> {
 /// # let system_d = Dummy;
 /// # let system_e = Dummy;
 /// let dispatcher = DispatcherBuilder::new()
-///     .add(system_a, "a", &[])
-///     .add(system_b, "b", &["a"]) // b depends on a
-///     .add(system_c, "c", &["a"]) // c also depends on a
-///     .add(system_d, "d", &[])
-///     .add(system_e, "e", &["c", "d"]) // e executes after c and d are finished
+///     .add("a", work, system_a, &[])
+///     .add("b", work, system_b, &["a"]) // b depends on a
+///     .add("c", work, system_c, &["a"]) // c also depends on a
+///     .add("d", work, system_d, &[])
+///     .add("e", work, system_e, &["c", "d"]) // e executes after c and d are finished
 ///     .finish();
 /// # }
 /// ```
 ///
-#[derive(Default)]
-pub struct DispatcherBuilder<'t> {
+pub struct DispatcherBuilder<'a> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
-    systems: Vec<SystemInfo<'t>>,
+    systems: Vec<SystemInfo>,
     thread_pool: Option<Arc<ThreadPool>>,
+    system_workers: Vec<SystemWorker<'a>>,
 }
 
-impl<'t> DispatcherBuilder<'t> {
+impl<'a> DispatcherBuilder<'a> {
     /// Creates a new `DispatcherBuilder` by
     /// using the `Default` implementation.
     ///
@@ -220,7 +213,14 @@ impl<'t> DispatcherBuilder<'t> {
     /// this builder to use it with `with_pool`
     /// instead.
     pub fn new() -> Self {
-        DispatcherBuilder::default()
+        DispatcherBuilder {
+            dependencies: Dependencies::default(),
+            ready: Vec::default(),
+            map: FnvHashMap::default(),
+            systems: Vec::default(),
+            thread_pool: None,
+            system_workers: Vec::default(),
+        }
     }
 
     /// Adds a new system with a given name and a list of dependencies.
@@ -230,12 +230,14 @@ impl<'t> DispatcherBuilder<'t> {
     /// # Panics
     ///
     /// * if the specified dependency does not exist
-    pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
-        where T: for<'a> System<'a> + Send + 't
+    pub fn add<T, F, S>(mut self, name: &str, func: F, mut system: S, dep: &[&str]) -> Self
+        where T: SystemData<'a> + 'a,
+              F: Fn(&mut S, T) + Send + Sync + 'static,
+              S: Send + Sync + 'static
     {
         let id = self.systems.len();
-        let reads = unsafe { T::SystemData::reads() };
-        let writes = unsafe { T::SystemData::writes() };
+        let reads = unsafe { T::reads() };
+        let writes = unsafe { T::writes() };
 
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {
@@ -257,11 +259,19 @@ impl<'t> DispatcherBuilder<'t> {
             self.ready.push(id);
         }
 
-        let info = SystemInfo {
-            dependents: Vec::new(),
-            exec: Box::new(SystemDispatch::new(id, system)),
-        };
+        let info = SystemInfo { dependents: Vec::new() };
         self.systems.push(info);
+
+        let worker = SystemWorker {
+            exec: Box::new(move |data: Box<Helper + 'a>, running: &AtomicBitSet| {
+                    let raw: *mut Helper = Box::into_raw(data);
+                    let data = unsafe { Box::from_raw(raw as *mut T) };
+                    func(&mut system, *data);
+                    running.set(id, false);
+            }),
+            fetch: Box::new(move |res: &'a Resources| Box::new(T::fetch(res))),
+        };
+        self.system_workers.push(worker);
 
         self
     }
@@ -279,7 +289,7 @@ impl<'t> DispatcherBuilder<'t> {
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn finish(self) -> Dispatcher<'t> {
+    pub fn finish(self) -> Dispatcher<'a> {
         let size = self.systems.len();
 
         Dispatcher {
@@ -289,6 +299,7 @@ impl<'t> DispatcherBuilder<'t> {
             systems: self.systems,
             thread_pool: self.thread_pool
                 .unwrap_or_else(|| Self::create_thread_pool()),
+            system_workers: self.system_workers,
         }
     }
 
@@ -300,34 +311,11 @@ impl<'t> DispatcherBuilder<'t> {
     }
 }
 
-trait ExecSystem {
-    fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, &'s AtomicBitSet);
-}
-
-struct SystemDispatch<T> {
-    id: usize,
-    system: T,
-}
-
-impl<T> SystemDispatch<T> {
-    fn new(id: usize, system: T) -> Self {
-        SystemDispatch { id: id, system: system }
-    }
-}
-
-impl<T> ExecSystem for SystemDispatch<T>
-    where T: for<'b> System<'b>
-{
-    fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
-        let data = T::SystemData::fetch(res);
-        scope.spawn(move |_| {
-                        self.system.work(data);
-                        running.set(self.id, false)
-                    })
-    }
-}
-
-struct SystemInfo<'t> {
+struct SystemInfo {
     dependents: Vec<usize>,
-    exec: Box<ExecSystem + Send + 't>,
+}
+
+struct SystemWorker<'a> {
+    exec: Box<FnMut(Box<Helper + 'a>, &AtomicBitSet) + Send + Sync>,
+    fetch: Box<Fn(&'a Resources) -> Box<Helper + 'a> + Send + Sync>,
 }

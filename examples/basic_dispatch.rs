@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
+use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources};
 
 #[derive(Debug)]
 struct ResA;
@@ -20,25 +20,23 @@ struct Data<'a> {
     b: FetchMut<'a, ResB>,
 }
 
+#[derive(Clone)]
 struct EmptySystem;
 
-impl<'a> System<'a> for EmptySystem {
-    type SystemData = Data<'a>;
-
-    fn work(&mut self, bundle: Data<'a>) {
-        println!("{:?}", &*bundle.a);
-        println!("{:?}", &*bundle.b);
-    }
+fn work<'a>(_: &mut EmptySystem, bundle: Data<'a>) {
+    println!("{:?}", &*bundle.a);
+    println!("{:?}", &*bundle.b);
 }
 
 
 fn main() {
     let mut resources = Resources::new();
-    let mut dispatcher = DispatcherBuilder::new()
-        .add(EmptySystem, "empty", &[])
-        .finish();
     resources.add(ResA, ());
     resources.add(ResB, ());
+    
+    let mut dispatcher = DispatcherBuilder::new()
+        .add("empty", work, EmptySystem, &[])
+        .finish();
 
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&resources);
 }

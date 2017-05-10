@@ -1,21 +1,5 @@
 use {ResourceId, Resources};
 
-/// A `System`, executed with a
-/// set of required [`Resource`]s.
-///
-/// [`Resource`]: trait.Resource.html
-pub trait System<'a> {
-    /// The resource bundle required
-    /// to execute this system.
-    ///
-    /// To create such a resource bundle,
-    /// simple derive `SystemData` for it.
-    type SystemData: SystemData<'a>;
-
-    /// Executes the system with the required system
-    /// data.
-    fn work(&mut self, data: Self::SystemData);
-}
 
 /// A struct implementing
 /// system data indicates that it
@@ -64,3 +48,7 @@ pub trait SystemData<'a> {
     /// (otherwise it has no effect).
     unsafe fn writes() -> Vec<ResourceId>;
 }
+
+/// Helper trait for storing SystemDatas inside the Dispatcher.
+pub trait Helper { }
+impl<'a, T> Helper for T where T: SystemData<'a> { }

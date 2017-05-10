@@ -81,25 +81,21 @@ struct SpringForceData<'a> {
 
 struct SpringForce;
 
-impl<'a> System<'a> for SpringForce {
-    type SystemData = SpringForceData<'a>;
+fn calc_force(_: &mut SpringForce, mut data: SpringForceData) {
+    for elem in 0..NUM_COMPONENTS {
+        let pos = data.pos[elem].0;
+        let spring: Spring = data.spring[elem];
+        let other_pos = data.pos[spring.connection_to].0;
 
-    fn work(&mut self, mut data: SpringForceData) {
-        for elem in 0..NUM_COMPONENTS {
-            let pos = data.pos[elem].0;
-            let spring: Spring = data.spring[elem];
-            let other_pos = data.pos[spring.connection_to].0;
+        let force = pos - other_pos;
 
-            let force = pos - other_pos;
+        let len = (force.x * force.x + force.y * force.y + force.z * force.z).sqrt();
+        let magn = (len - spring.rest).abs() * spring.constant;
 
-            let len = (force.x * force.x + force.y * force.y + force.z * force.z).sqrt();
-            let magn = (len - spring.rest).abs() * spring.constant;
+        let mul = -magn / len;
 
-            let mul = -magn / len;
-
-            let force = force * mul;
-            data.force[elem].0 += force;
-        }
+        let force = force * mul;
+        data.force[elem].0 += force;
     }
 }
 
@@ -114,33 +110,28 @@ struct IntegrationData<'a> {
 }
 
 struct IntegrationSystem;
+fn integrate(_: &mut IntegrationSystem, mut data: IntegrationData) {
+    for elem in 0..NUM_COMPONENTS {
+        let mass = data.mass[elem].0;
 
-impl<'a> System<'a> for IntegrationSystem {
-    type SystemData = IntegrationData<'a>;
-
-    fn work(&mut self, mut data: IntegrationData) {
-        for elem in 0..NUM_COMPONENTS {
-            let mass = data.mass[elem].0;
-
-            if mass == 0.0 {
-                // infinite mass
-                continue;
-            }
-
-            let delta = data.time.0;
-            let pos = &mut data.pos[elem].0;
-            let vel = data.vel[elem].0;
-
-            *pos = vel * delta;
-
-            let force = data.force[elem].0;
-
-            let vel = vel + (force / mass) * delta;
-
-            let damping = (0.9f32).powf(delta);
-            let vel = vel * damping;
-            data.vel[elem] = Vel(vel);
+        if mass == 0.0 {
+            // infinite mass
+            continue;
         }
+
+        let delta = data.time.0;
+        let pos = &mut data.pos[elem].0;
+        let vel = data.vel[elem].0;
+
+        *pos = vel * delta;
+
+        let force = data.force[elem].0;
+
+        let vel = vel + (force / mass) * delta;
+
+        let damping = (0.9f32).powf(delta);
+        let vel = vel * damping;
+        data.vel[elem] = Vel(vel);
     }
 }
 
@@ -149,31 +140,17 @@ struct ClearForceAccumData<'a> {
     force: FetchMut<'a, ForceStorage>,
 }
 
-struct ClearForceAccum;
-
-impl<'a> System<'a> for ClearForceAccum {
-    type SystemData = ClearForceAccumData<'a>;
-
-    fn work(&mut self, mut data: ClearForceAccumData) {
-        for elem in 0..NUM_COMPONENTS {
-            data.force[elem] = Force(Vec3 {
-                                         x: 0.0,
-                                         y: 0.0,
-                                         z: 0.0,
-                                     });
-        }
+struct ClearForceAccum {
+    value: Vec3,
+}
+fn reset_force(clear_sys: &mut ClearForceAccum, mut data: ClearForceAccumData) {
+    for elem in 0..NUM_COMPONENTS {
+        data.force[elem] = Force(clear_sys.value);
     }
 }
 
 #[bench]
 fn basic(b: &mut Bencher) {
-    let mut dispatcher = DispatcherBuilder::new()
-        .add(SpringForce, "spring", &[])
-        .add(IntegrationSystem, "integration", &[])
-        .add(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
-                                                               // the integration
-        .finish();
-
     let mut res = Resources::new();
     let mass = VecStorage::new(Mass(10.0));
     let mut pos = VecStorage::new(Pos(Vec3::new(0.0, 0.0, 0.0)));
@@ -194,5 +171,12 @@ fn basic(b: &mut Bencher) {
     res.add(force, ());
     res.add(spring, ());
 
-    b.iter(|| dispatcher.dispatch(&mut res));
+    let mut dispatcher = DispatcherBuilder::new()
+        .add("spring", calc_force, SpringForce, &[])
+        .add("integration", integrate, IntegrationSystem, &[])
+        .add("clear_force", reset_force, ClearForceAccum { value: Vec3 { x: 0.0, y: 0.0, z: 0.0 }}, &["integration"]) // clear_force is executed after
+                                                               // the integration
+        .finish();
+
+    b.iter(|| dispatcher.dispatch(&res));
 }
