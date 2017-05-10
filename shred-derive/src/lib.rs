@@ -6,7 +6,8 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Body, Field, Ident, MacroInput, VariantData};
+use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, PathParameters, PathSegment, Ty,
+          TyParam, VariantData};
 use quote::Tokens;
 
 /// Used to `#[derive]` the trait
@@ -23,16 +24,26 @@ pub fn system_data(input: TokenStream) -> TokenStream {
 
 fn impl_system_data(ast: &MacroInput) -> Tokens {
     let name = &ast.ident;
+    let lifetime_defs = &ast.generics.lifetimes;
+    let ty_params = &ast.generics.ty_params;
     let fields = get_fields(ast);
 
     let identifiers = gen_identifiers(fields);
+    let fetch_lt = gen_fetch_lifetime(fields);
+    let def_lt_tokens = gen_def_lt_tokens(lifetime_defs);
+    let impl_lt_tokens = gen_impl_lt_tokens(lifetime_defs);
+    let def_ty_params = gen_def_ty_params(ty_params);
+    let impl_ty_params = gen_impl_ty_params(ty_params);
     let methods = gen_methods(fields);
     let reads = collect_field_ty_params(fields, "Fetch");
     let writes = collect_field_ty_params(fields, "FetchMut");
 
     quote! {
-        impl<'a> ::shred::SystemData<'a> for #name<'a> {
-            fn fetch(res: &'a ::shred::Resources) -> #name<'a> {
+        impl< #def_lt_tokens , #def_ty_params >
+            ::shred::SystemData< #fetch_lt >
+            for #name< #impl_lt_tokens , #impl_ty_params >
+        {
+            fn fetch(res: & #fetch_lt ::shred::Resources) -> Self {
                 #name {
                     #( #identifiers: unsafe { res.#methods(()) }, )*
                 }
@@ -91,25 +102,93 @@ fn gen_identifiers(fields: &Vec<Field>) -> Vec<Ident> {
         .collect()
 }
 
+fn gen_fetch_lifetime(fields: &Vec<Field>) -> Lifetime {
+    let field: &Field = fields
+        .iter()
+        .next()
+        .expect("There has to be at least one field");
+
+    match field.ty {
+        Ty::Path(_, ref path) => {
+            let segment: &PathSegment = path.segments.last().unwrap();
+            match segment.parameters {
+                PathParameters::AngleBracketed(ref data) => {
+                    let ref lifetimes = data.lifetimes;
+
+                    assert!(lifetimes.len() == 1,
+                            "Fetch / FetchMut must have exactly one lifetime");
+
+                    lifetimes[0].clone()
+                }
+                _ => {
+                    panic!("No parenthesized brackets supported");
+                }
+            }
+        }
+        _ => {
+            panic!("Only paths supported");
+        }
+    }
+}
+
+fn gen_def_lt_tokens(lifetime_defs: &Vec<LifetimeDef>) -> Tokens {
+    let lts: Vec<Tokens> = lifetime_defs
+        .iter()
+        .map(|x| {
+                 let ref lt = x.lifetime;
+                 let ref bounds = x.bounds;
+
+                 quote! { #lt: #( #bounds )+* }
+             })
+        .collect();
+
+    quote! { #( #lts ),* }
+}
+
+fn gen_impl_lt_tokens(lifetime_defs: &Vec<LifetimeDef>) -> Tokens {
+    let lts: Vec<Lifetime> = lifetime_defs
+        .iter()
+        .map(|x| x.lifetime.clone())
+        .collect();
+
+    quote! { #( #lts ),* }
+}
+
+fn gen_def_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
+    let ty_params: Vec<Tokens> = ty_params
+        .iter()
+        .map(|x| {
+                 let ref ty = x.ident;
+                 let ref bounds = x.bounds;
+
+                 quote! { #ty: #( #bounds )+* }
+             })
+        .collect();
+
+    quote! { #( #ty_params ),* }
+}
+
+fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
+    let ty_params: Vec<Ident> = ty_params.iter().map(|x| x.ident.clone()).collect();
+
+    quote! { #( #ty_params ),* }
+}
+
 fn gen_methods(fields: &Vec<Field>) -> Vec<Ident> {
     fields
         .iter()
+        .map(|x| match x.ty {
+                 Ty::Path(_, ref path) => path.segments.last().unwrap().clone().ident,
+                 _ => panic!("Only Fetch and FetchMut types allowed"),
+             })
         .map(|x| {
-            use syn::Ty;
-
-            match x.ty {
-                Ty::Path(_, ref path) => path.segments.last().unwrap().clone().ident,
-                _ => panic!("Only Fetch and FetchMut types allowed"),
-            }
-        })
-        .map(|x| {
-            match x.as_ref() {
-                "Fetch" => "fetch",
-                "FetchMut" => "fetch_mut",
-                _ => panic!("Only Fetch and FetchMut supported"),
-            }
-                .into()
-        })
+                 match x.as_ref() {
+                         "Fetch" => "fetch",
+                         "FetchMut" => "fetch_mut",
+                         _ => panic!("Only Fetch and FetchMut supported"),
+                     }
+                     .into()
+             })
         .collect()
 }
 
