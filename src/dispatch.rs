@@ -172,15 +172,15 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{DispatcherBuilder, Fetch, System, Resource};
+/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System, Resource};
 /// # struct Res;
 /// # impl Resource for Res {}
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
-/// # impl<'a> System<'a> for Dummy {
+/// # impl<'a, C> System<'a, C> for Dummy {
 /// #   type SystemData = Data<'a>;
 /// #
-/// #   fn work(&mut self, _: Data<'a>) {}
+/// #   fn work(&mut self, _: Data<'a>, _: C) {}
 /// # }
 /// #
 /// # fn main() {
@@ -189,7 +189,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 /// # let system_c = Dummy;
 /// # let system_d = Dummy;
 /// # let system_e = Dummy;
-/// let dispatcher = DispatcherBuilder::new()
+/// let dispatcher: Dispatcher<()> = DispatcherBuilder::new()
 ///     .add(system_a, "a", &[])
 ///     .add(system_b, "b", &["a"]) // b depends on a
 ///     .add(system_c, "c", &["a"]) // c also depends on a

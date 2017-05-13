@@ -22,10 +22,10 @@ struct Data<'a> {
 
 struct EmptySystem;
 
-impl<'a> System<'a> for EmptySystem {
+impl<'a, C> System<'a, C> for EmptySystem {
     type SystemData = Data<'a>;
 
-    fn work(&mut self, bundle: Data<'a>) {
+    fn work(&mut self, bundle: Data<'a>, _: C) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
     }
@@ -40,5 +40,5 @@ fn main() {
     resources.add(ResA, ());
     resources.add(ResB, ());
 
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&mut resources, ());
 }

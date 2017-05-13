@@ -81,10 +81,10 @@ struct SpringForceData<'a> {
 
 struct SpringForce;
 
-impl<'a> System<'a> for SpringForce {
+impl<'a, C> System<'a, C> for SpringForce {
     type SystemData = SpringForceData<'a>;
 
-    fn work(&mut self, mut data: SpringForceData) {
+    fn work(&mut self, mut data: SpringForceData, _: C) {
         for elem in 0..NUM_COMPONENTS {
             let pos = data.pos[elem].0;
             let spring: Spring = data.spring[elem];
@@ -115,10 +115,10 @@ struct IntegrationData<'a> {
 
 struct IntegrationSystem;
 
-impl<'a> System<'a> for IntegrationSystem {
+impl<'a, C> System<'a, C> for IntegrationSystem {
     type SystemData = IntegrationData<'a>;
 
-    fn work(&mut self, mut data: IntegrationData) {
+    fn work(&mut self, mut data: IntegrationData, _: C) {
         for elem in 0..NUM_COMPONENTS {
             let mass = data.mass[elem].0;
 
@@ -151,10 +151,10 @@ struct ClearForceAccumData<'a> {
 
 struct ClearForceAccum;
 
-impl<'a> System<'a> for ClearForceAccum {
+impl<'a, C> System<'a, C> for ClearForceAccum {
     type SystemData = ClearForceAccumData<'a>;
 
-    fn work(&mut self, mut data: ClearForceAccumData) {
+    fn work(&mut self, mut data: ClearForceAccumData, _: C) {
         for elem in 0..NUM_COMPONENTS {
             data.force[elem] = Force(Vec3 {
                                          x: 0.0,
@@ -194,5 +194,5 @@ fn basic(b: &mut Bencher) {
     res.add(force, ());
     res.add(spring, ());
 
-    b.iter(|| dispatcher.dispatch(&mut res));
+    b.iter(|| dispatcher.dispatch(&mut res, ()));
 }

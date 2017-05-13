@@ -50,10 +50,10 @@ struct PrintData<'a> {
 
 struct PrintSystem;
 
-impl<'a> System<'a> for PrintSystem {
+impl<'a, C> System<'a, C> for PrintSystem {
     type SystemData = PrintData<'a>;
 
-    fn work(&mut self, mut bundle: PrintData<'a>) {
+    fn work(&mut self, mut bundle: PrintData<'a>, _: C) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
         
@@ -70,7 +70,7 @@ fn main() {
     resources.add(ResA, ());
     resources.add(ResB, ());
 
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&mut resources, ());
 }
 ```
 
