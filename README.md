@@ -50,6 +50,9 @@ struct PrintData<'a> {
 
 struct PrintSystem;
 
+// Systems should be generic over the
+// context if possible, so it's easy
+// to introduce one.
 impl<'a, C> System<'a, C> for PrintSystem {
     type SystemData = PrintData<'a>;
 
@@ -70,6 +73,9 @@ fn main() {
     resources.add(ResA, ());
     resources.add(ResB, ());
 
+    // We can even pass a context,
+    // but we don't need one here
+    // so we pass `()`.
     dispatcher.dispatch(&mut resources, ());
 }
 ```
