@@ -22,10 +22,7 @@ impl Dependencies {
            writes: Vec<ResourceId>,
            dependencies: Vec<usize>) {
         for read in &reads {
-            self.rev_reads
-                .entry(*read)
-                .or_insert(Vec::new())
-                .push(id);
+            self.rev_reads.entry(*read).or_insert(Vec::new()).push(id);
 
             self.rev_writes.entry(*read).or_insert(Vec::new());
         }
@@ -33,10 +30,7 @@ impl Dependencies {
         for write in &writes {
             self.rev_reads.entry(*write).or_insert(Vec::new());
 
-            self.rev_writes
-                .entry(*write)
-                .or_insert(Vec::new())
-                .push(id);
+            self.rev_writes.entry(*write).or_insert(Vec::new()).push(id);
         }
 
         self.reads.push(reads);
@@ -47,21 +41,23 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
-pub struct Dispatcher<'t> {
+pub struct Dispatcher<'c, 't, C> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
-    systems: Vec<SystemInfo<'t>>,
+    systems: Vec<SystemInfo<'c, 't, C>>,
     thread_pool: Arc<ThreadPool>,
 }
 
-impl<'t> Dispatcher<'t> {
+impl<'c, 't, C> Dispatcher<'c, 't, C>
+    where C: Clone + Send + 'c
+{
     /// Dispatches the systems given the
     /// resources to operate on.
     ///
     /// This operation blocks the
     /// executing thread.
-    pub fn dispatch(&mut self, res: &mut Resources) {
+    pub fn dispatch(&mut self, res: &mut Resources, context: C) {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
         let running = &self.running;
@@ -69,10 +65,10 @@ impl<'t> Dispatcher<'t> {
 
         self.thread_pool
             .install(|| {
-                scope(move |scope| {
-                          Self::dispatch_inner(dependencies, ready, res, running, scope, systems)
-                      })
-            });
+                         scope(move |scope| {
+                    Self::dispatch_inner(dependencies, ready, res, running, scope, systems, context)
+                })
+                     });
 
         self.running.clear();
     }
@@ -82,15 +78,18 @@ impl<'t> Dispatcher<'t> {
                           res: &'s mut Resources,
                           running: &'s AtomicBitSet,
                           scope: &Scope<'s>,
-                          systems: &'s mut Vec<SystemInfo>) {
+                          systems: &'s mut Vec<SystemInfo<C>>,
+                          context: C)
+        where 'c: 's
+    {
         let mut start_count = 0;
         let num_systems = systems.len();
         let mut systems: Vec<_> = systems.iter_mut().map(|x| Some(x)).collect();
 
         while start_count < num_systems {
             if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
-                let system: &mut SystemInfo = systems[index].take().expect("Already executed");
-                system.exec.exec(scope, res, running);
+                let system: &mut SystemInfo<C> = systems[index].take().expect("Already executed");
+                system.exec.exec(scope, res, context.clone(), running);
 
                 start_count += 1;
 
@@ -109,9 +108,9 @@ impl<'t> Dispatcher<'t> {
     }
 
     fn find_runnable_system(ready: &Vec<usize>,
-                          dependencies: &Dependencies,
-                          running: &AtomicBitSet)
-                          -> Option<usize> {
+                            dependencies: &Dependencies,
+                            running: &AtomicBitSet)
+                            -> Option<usize> {
         // Uh, this is probably
         // the worst code in
         // the history of Rust libraries
@@ -201,15 +200,17 @@ impl<'t> Dispatcher<'t> {
 /// ```
 ///
 #[derive(Default)]
-pub struct DispatcherBuilder<'t> {
+pub struct DispatcherBuilder<'c, 't, C> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
-    systems: Vec<SystemInfo<'t>>,
+    systems: Vec<SystemInfo<'c, 't, C>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
-impl<'t> DispatcherBuilder<'t> {
+impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
+    where C: 'c
+{
     /// Creates a new `DispatcherBuilder` by
     /// using the `Default` implementation.
     ///
@@ -220,7 +221,13 @@ impl<'t> DispatcherBuilder<'t> {
     /// this builder to use it with `with_pool`
     /// instead.
     pub fn new() -> Self {
-        DispatcherBuilder::default()
+        DispatcherBuilder {
+            dependencies: Default::default(),
+            ready: Default::default(),
+            map: Default::default(),
+            systems: Default::default(),
+            thread_pool: Default::default(),
+        }
     }
 
     /// Adds a new system with a given name and a list of dependencies.
@@ -231,7 +238,7 @@ impl<'t> DispatcherBuilder<'t> {
     ///
     /// * if the specified dependency does not exist
     pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
-        where T: for<'a> System<'a> + Send + 't
+        where T: for<'a> System<'a, C> + Send + 't
     {
         let id = self.systems.len();
         let reads = unsafe { T::SystemData::reads() };
@@ -246,7 +253,7 @@ impl<'t> DispatcherBuilder<'t> {
             .collect();
 
         for dependency in &dependencies {
-            let dependency: &mut SystemInfo = &mut self.systems[*dependency];
+            let dependency: &mut SystemInfo<C> = &mut self.systems[*dependency];
             dependency.dependents.push(id);
         }
 
@@ -279,7 +286,7 @@ impl<'t> DispatcherBuilder<'t> {
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn finish(self) -> Dispatcher<'t> {
+    pub fn finish(self) -> Dispatcher<'c, 't, C> {
         let size = self.systems.len();
 
         Dispatcher {
@@ -293,15 +300,15 @@ impl<'t> DispatcherBuilder<'t> {
     }
 
     fn create_thread_pool() -> Arc<ThreadPool> {
-        Arc::new(ThreadPool::new(
-            Configuration::new()
-                .panic_handler(|x| println!("Panic in worker thread: {:?}", x)))
-            .expect("Invalid thread pool configuration"))
+        Arc::new(ThreadPool::new(Configuration::new().panic_handler(|x| {
+            println!("Panic in worker thread: {:?}", x)
+        }))
+                         .expect("Invalid thread pool configuration"))
     }
 }
 
-trait ExecSystem {
-    fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, &'s AtomicBitSet);
+trait ExecSystem<'c, C> {
+    fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, C, &'s AtomicBitSet) where 'c: 's;
 }
 
 struct SystemDispatch<T> {
@@ -311,23 +318,33 @@ struct SystemDispatch<T> {
 
 impl<T> SystemDispatch<T> {
     fn new(id: usize, system: T) -> Self {
-        SystemDispatch { id: id, system: system }
+        SystemDispatch {
+            id: id,
+            system: system,
+        }
     }
 }
 
-impl<T> ExecSystem for SystemDispatch<T>
-    where T: for<'b> System<'b>
+impl<'c, C, T> ExecSystem<'c, C> for SystemDispatch<T>
+    where C: 'c,
+          T: for<'b> System<'b, C>
 {
-    fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
+    fn exec<'s>(&'s mut self,
+                scope: &Scope<'s>,
+                res: &'s Resources,
+                context: C,
+                running: &'s AtomicBitSet)
+        where 'c: 's
+    {
         let data = T::SystemData::fetch(res);
         scope.spawn(move |_| {
-                        self.system.work(data);
+                        self.system.work(data, context);
                         running.set(self.id, false)
                     })
     }
 }
 
-struct SystemInfo<'t> {
+struct SystemInfo<'c, 't, C> {
     dependents: Vec<usize>,
-    exec: Box<ExecSystem + Send + 't>,
+    exec: Box<ExecSystem<'c, C> + Send + 't>,
 }

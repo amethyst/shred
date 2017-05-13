@@ -4,7 +4,7 @@ use {ResourceId, Resources};
 /// set of required [`Resource`]s.
 ///
 /// [`Resource`]: trait.Resource.html
-pub trait System<'a> {
+pub trait System<'a, C> {
     /// The resource bundle required
     /// to execute this system.
     ///
@@ -14,7 +14,7 @@ pub trait System<'a> {
 
     /// Executes the system with the required system
     /// data.
-    fn work(&mut self, data: Self::SystemData);
+    fn work(&mut self, data: Self::SystemData, context: C);
 }
 
 /// A struct implementing
