@@ -41,7 +41,7 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
-pub struct Dispatcher<'c, 't, C> {
+pub struct Dispatcher<'c, 't, C = ()> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
@@ -200,7 +200,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 /// ```
 ///
 #[derive(Default)]
-pub struct DispatcherBuilder<'c, 't, C> {
+pub struct DispatcherBuilder<'c, 't, C = ()> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
