@@ -73,6 +73,16 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         self.running.clear();
     }
 
+    /// Dispatches all systems sequentially.
+    ///
+    /// This is useful if parallel overhead is
+    /// too big or the platform does not support it.
+    pub fn dispatch_seq(&mut self, res: &mut Resources, context: C) {
+        for system in &mut self.systems {
+            system.exec.exec_seq(res, context.clone());
+        }
+    }
+
     fn dispatch_inner<'s>(dependencies: &Dependencies,
                           mut ready: Vec<usize>,
                           res: &'s mut Resources,
@@ -313,7 +323,10 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
 }
 
 trait ExecSystem<'c, C> {
-    fn exec<'s>(&'s mut self, &Scope<'s>, &'s Resources, C, &'s AtomicBitSet) where 'c: 's;
+    fn exec<'s>(&'s mut self, s: &Scope<'s>, res: &'s Resources, C, running: &'s AtomicBitSet)
+        where 'c: 's;
+
+    fn exec_seq(&mut self, res: &Resources, context: C);
 }
 
 struct SystemDispatch<T> {
@@ -347,9 +360,20 @@ impl<'c, C, T> ExecSystem<'c, C> for SystemDispatch<T>
                         running.set(self.id, false)
                     })
     }
+
+    fn exec_seq(&mut self, res: &Resources, context: C) {
+        run_now(&mut self.system, res, context);
+    }
 }
 
 struct SystemInfo<'c, 't, C> {
     dependents: Vec<usize>,
     exec: Box<ExecSystem<'c, C> + Send + 't>,
+}
+
+pub fn run_now<'a, T, C>(sys: &mut T, res: &'a Resources, context: C)
+    where T: System<'a, C>
+{
+    let data = T::SystemData::fetch(res);
+    sys.work(data, context);
 }
