@@ -27,3 +27,8 @@ cgmath = "0.14"
 [dependencies.rayon]
 version = "0.7"
 features = ["unstable"]
+
+[features]
+default = ["parallel"]
+
+parallel = []

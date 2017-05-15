@@ -52,12 +52,25 @@ pub struct Dispatcher<'c, 't, C = ()> {
 impl<'c, 't, C> Dispatcher<'c, 't, C>
     where C: Clone + Send + 'c
 {
-    /// Dispatches the systems given the
+    /// Dispatch systems with given resources and context.
+    ///
+    /// This function automatically redirects to
+    ///
+    /// * [`dispatch_par`] in case the `parallel` feature is set
+    /// * [`dispatch_seq`] in case the `parallel` feature is not set
+    ///
+    /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
+    /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
+    pub fn dispatch(&mut self, res: &mut Resources, context: C) {
+        self.dispatch_cfg(res, context);
+    }
+
+    /// Dispatches the systems in parallel given the
     /// resources to operate on.
     ///
     /// This operation blocks the
     /// executing thread.
-    pub fn dispatch(&mut self, res: &mut Resources, context: C) {
+    pub fn dispatch_par(&mut self, res: &mut Resources, context: C) {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
         let running = &self.running;
@@ -65,10 +78,10 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 
         self.thread_pool
             .install(|| {
-                         scope(move |scope| {
+                scope(move |scope| {
                     Self::dispatch_inner(dependencies, ready, res, running, scope, systems, context)
                 })
-                     });
+            });
 
         self.running.clear();
     }
@@ -81,6 +94,18 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         for system in &mut self.systems {
             system.exec.exec_seq(res, context.clone());
         }
+    }
+
+    // The cfg-specific helper functions.
+
+    #[cfg(feature = "parallel")]
+    fn dispatch_cfg(&mut self, res: &mut Resources, context: C) {
+        self.dispatch_par(res, context);
+    }
+
+    #[cfg(not(feature = "parallel"))]
+    fn dispatch_cfg(&mut self, res: &mut Resources, context: C) {
+        self.dispatch_seq(res, context);
     }
 
     fn dispatch_inner<'s>(dependencies: &Dependencies,
