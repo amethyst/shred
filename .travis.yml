@@ -20,6 +20,8 @@ script:
 - |
   travis-cargo build &&
   travis-cargo test &&
+  travis-cargo build --no-default-features &&
+  travis-cargo test --no-default-features &&
   travis-cargo bench
 env:
   global:
