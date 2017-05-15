@@ -103,6 +103,11 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
                 for dependent in &system.dependents {
                     ready.push(*dependent);
                 }
+            } else {
+                use std::thread;
+                use std::time::Duration;
+
+                thread::sleep(Duration::new(0, 10));
             }
         }
     }
