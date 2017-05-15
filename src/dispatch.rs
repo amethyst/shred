@@ -396,6 +396,12 @@ struct SystemInfo<'c, 't, C> {
     exec: Box<ExecSystem<'c, C> + Send + 't>,
 }
 
+/// Runs a system right now.
+///
+/// You usually want to use the [`Dispatcher`]
+/// instead.
+///
+/// [`Dispatcher`]: struct.Dispatcher.html
 pub fn run_now<'a, T, C>(sys: &mut T, res: &'a Resources, context: C)
     where T: System<'a, C>
 {
