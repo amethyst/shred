@@ -62,7 +62,11 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
     pub fn dispatch(&mut self, res: &mut Resources, context: C) {
-        self.dispatch_cfg(res, context);
+        #[cfg(feature = "parallel")]
+        self.dispatch_par(res, context);
+
+        #[cfg(not(feature = "parallel"))]
+        self.dispatch_seq(res, context);
     }
 
     /// Dispatches the systems in parallel given the
@@ -94,18 +98,6 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         for system in &mut self.systems {
             system.exec.exec_seq(res, context.clone());
         }
-    }
-
-    // The cfg-specific helper functions.
-
-    #[cfg(feature = "parallel")]
-    fn dispatch_cfg(&mut self, res: &mut Resources, context: C) {
-        self.dispatch_par(res, context);
-    }
-
-    #[cfg(not(feature = "parallel"))]
-    fn dispatch_cfg(&mut self, res: &mut Resources, context: C) {
-        self.dispatch_seq(res, context);
     }
 
     fn dispatch_inner<'s>(dependencies: &Dependencies,
