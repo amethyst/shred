@@ -1,28 +1,15 @@
-sudo: false
 language: rust
-addons:
-  apt:
-    packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
-    - binutils-dev
 rust:
 - nightly
 - beta
 - stable
 - 1.15.0
-before_script:
-- |
-  pip install 'travis-cargo<0.2' --user &&
-  export PATH=$HOME/.local/bin:$PATH
 script:
 - |
-  travis-cargo build &&
-  travis-cargo test &&
-  travis-cargo build --no-default-features &&
-  travis-cargo test --no-default-features &&
-  travis-cargo bench
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+  cargo build --verbose &&
+  cargo test --verbose &&
+  cargo build --verbose --no-default-features &&
+  cargo test --verbose --no-default-features
+- if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then
+    cargo bench --verbose --no-run;
+  fi
