@@ -23,15 +23,15 @@ impl Dependencies {
            writes: Vec<ResourceId>,
            dependencies: Vec<usize>) {
         for read in &reads {
-            self.rev_reads.entry(*read).or_insert(Vec::new()).push(id);
+            self.rev_reads.entry(*read).or_insert_with(Vec::new).push(id);
 
-            self.rev_writes.entry(*read).or_insert(Vec::new());
+            self.rev_writes.entry(*read).or_insert_with(Vec::new);
         }
 
         for write in &writes {
-            self.rev_reads.entry(*write).or_insert(Vec::new());
+            self.rev_reads.entry(*write).or_insert_with(Vec::new);
 
-            self.rev_writes.entry(*write).or_insert(Vec::new()).push(id);
+            self.rev_writes.entry(*write).or_insert_with(Vec::new).push(id);
         }
 
         self.reads.push(reads);
@@ -112,7 +112,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     {
         let mut start_count = 0;
         let num_systems = systems.len();
-        let mut systems: Vec<_> = systems.iter_mut().map(|x| Some(x)).collect();
+        let mut systems: Vec<_> = systems.iter_mut().map(Some).collect();
 
         while start_count < num_systems {
             if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
@@ -140,7 +140,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         }
     }
 
-    fn find_runnable_system(ready: &Vec<usize>,
+    fn find_runnable_system(ready: &[usize],
                             dependencies: &Dependencies,
                             running: &AtomicBitSet)
                             -> Option<usize> {
@@ -337,7 +337,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             running: AtomicBitSet::with_size(size),
             systems: self.systems,
             thread_pool: self.thread_pool
-                .unwrap_or_else(|| Self::create_thread_pool()),
+                .unwrap_or_else(Self::create_thread_pool),
         }
     }
 

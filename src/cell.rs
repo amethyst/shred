@@ -88,8 +88,9 @@ impl<T> TrustCell<T> {
 
     #[cfg(debug_assertions)]
     pub unsafe fn borrow(&self) -> Ref<T> {
-        debug_assert!(self.flag.load(Ordering::Acquire) != !0,
-                      "already borrowed mutably");
+        debug_assert_ne!(!0,
+                         self.flag.load(Ordering::Acquire),
+                         "already borrowed mutably");
 
         self.flag.fetch_add(1, Ordering::Release);
 
@@ -106,7 +107,7 @@ impl<T> TrustCell<T> {
 
     #[cfg(debug_assertions)]
     pub unsafe fn borrow_mut(&self) -> RefMut<T> {
-        debug_assert!(self.flag.load(Ordering::Acquire) == 0, "already borrowed");
+        debug_assert_eq!(0, self.flag.load(Ordering::Acquire), "already borrowed");
 
         self.flag.store(!0, Ordering::Release);
 
@@ -145,7 +146,9 @@ mod tests {
             *a += 3;
         }
 
-        unsafe { assert_eq!(10, *cell.borrow()); }
+        unsafe {
+            assert_eq!(10, *cell.borrow());
+        }
     }
 
     #[cfg(debug_assertions)]

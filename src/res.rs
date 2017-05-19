@@ -166,7 +166,7 @@ impl Resources {
     {
         use std::collections::hash_map::Entry;
 
-        let id = fnv_hash(id);
+        let id = fnv_hash(&id);
         let entry = self.resources.entry((TypeId::of::<R>(), id));
 
         if let Entry::Vacant(e) = entry {
@@ -245,12 +245,12 @@ impl Resources {
         where ID: Hash + Eq
     {
         self.resources
-            .get(&(id, fnv_hash(cid)))
+            .get(&(id, fnv_hash(&cid)))
             .expect("No resource with the given id")
     }
 }
 
-fn fnv_hash<H: Hash>(h: H) -> u64 {
+fn fnv_hash<H: Hash>(h: &H) -> u64 {
     use std::hash::Hasher;
 
     let mut hasher = FnvHasher::default();
