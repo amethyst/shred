@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[cfg(debug_assertions)]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
@@ -26,6 +27,7 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
+#[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
@@ -58,6 +60,7 @@ impl<'a, T> Drop for RefMut<'a, T> {
 ///
 /// 1) only checks rules in debug mode
 /// 2) is thread-safe
+#[derive(Debug)]
 pub struct TrustCell<T> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,

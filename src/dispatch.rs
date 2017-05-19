@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Error as FormatError, Formatter};
 use std::sync::Arc;
 
 use fnv::FnvHashMap;
@@ -6,7 +7,7 @@ use rayon::{Configuration, Scope, ThreadPool, scope};
 use bitset::AtomicBitSet;
 use {ResourceId, Resources, System, SystemData};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Dependencies {
     dependencies: Vec<Vec<usize>>,
     rev_reads: FnvHashMap<ResourceId, Vec<usize>>,
@@ -82,10 +83,10 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 
         self.thread_pool
             .install(|| {
-                scope(move |scope| {
+                         scope(move |scope| {
                     Self::dispatch_inner(dependencies, ready, res, running, scope, systems, context)
                 })
-            });
+                     });
 
         self.running.clear();
     }
@@ -191,6 +192,15 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     }
 }
 
+impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+        f.debug_struct("Dispatcher")
+            .field("dependencies", &self.dependencies)
+            .field("ready", &self.ready)
+            .finish()
+    }
+}
+
 /// Builder for the [`Dispatcher`].
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
@@ -205,7 +215,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 /// # #[macro_use]
 /// # extern crate shred_derive;
 /// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System, Resource};
-/// # struct Res;
+/// # #[derive(Debug)] struct Res;
 /// # impl Resource for Res {}
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
@@ -234,8 +244,8 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 #[derive(Default)]
 pub struct DispatcherBuilder<'c, 't, C = ()> {
     dependencies: Dependencies,
-    ready: Vec<usize>,
     map: FnvHashMap<String, usize>,
+    ready: Vec<usize>,
     systems: Vec<SystemInfo<'c, 't, C>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
@@ -336,6 +346,16 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             println!("Panic in worker thread: {:?}", x)
         }))
                          .expect("Invalid thread pool configuration"))
+    }
+}
+
+impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+        f.debug_struct("DispatcherBuilder")
+            .field("dependencies", &self.dependencies)
+            .field("map", &self.map)
+            .field("ready", &self.ready)
+            .finish()
     }
 }
 
