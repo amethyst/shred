@@ -10,6 +10,9 @@ use fnv::{FnvHasher, FnvHashMap};
 use mopa::Any;
 
 use cell::{Ref, RefMut, TrustCell};
+use system::SystemData;
+
+const DEFAULT_HASH: u64 = 14695981039346656037;
 
 /// Return value of [`Resources::fetch`].
 ///
@@ -27,6 +30,22 @@ impl<'a, T> Deref for Fetch<'a, T>
 
     fn deref(&self) -> &T {
         unsafe { self.inner.downcast_ref_unchecked() }
+    }
+}
+
+impl<'a, T> SystemData<'a> for Fetch<'a, T>
+    where T: Resource
+{
+    fn fetch(res: &'a Resources) -> Self {
+        res.fetch(())
+    }
+
+    unsafe fn reads() -> Vec<ResourceId> {
+        vec![(TypeId::of::<T>(), DEFAULT_HASH)]
+    }
+
+    unsafe fn writes() -> Vec<ResourceId> {
+        vec![]
     }
 }
 
@@ -92,6 +111,22 @@ impl<'a, T> DerefMut for FetchMut<'a, T>
 {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.inner.downcast_mut_unchecked() }
+    }
+}
+
+impl<'a, T> SystemData<'a> for FetchMut<'a, T>
+    where T: Resource
+{
+    fn fetch(res: &'a Resources) -> Self {
+        res.fetch_mut(())
+    }
+
+    unsafe fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    unsafe fn writes() -> Vec<ResourceId> {
+        vec![(TypeId::of::<T>(), DEFAULT_HASH)]
     }
 }
 
@@ -178,7 +213,9 @@ impl Resources {
 
     /// Returns true if the specified type / id combination
     /// is registered.
-    pub fn has_value<ID>(&self, ty: TypeId, id: ID) -> bool where ID: Hash + Eq {
+    pub fn has_value<ID>(&self, ty: TypeId, id: ID) -> bool
+        where ID: Hash + Eq
+    {
         self.resources.contains_key(&(ty, fnv_hash(&id)))
     }
 
