@@ -199,7 +199,7 @@ impl Resources {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         Fetch {
-            inner: c.borrow_unchecked(),
+            inner: c.borrow(),
             phantom: PhantomData,
         }
     }
@@ -214,7 +214,7 @@ impl Resources {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         FetchMut {
-            inner: c.borrow_unchecked_mut(),
+            inner: c.borrow_mut(),
             phantom: PhantomData,
         }
     }
@@ -227,7 +227,7 @@ impl Resources {
     {
         let c = self.fetch_internal(id, comp_id);
 
-        FetchId { inner: c.borrow_unchecked() }
+        FetchId { inner: c.borrow() }
     }
 
     /// Fetches the resource with the specified type id mutably.
@@ -238,7 +238,7 @@ impl Resources {
     {
         let c = self.fetch_internal(id, comp_id);
 
-        FetchIdMut { inner: c.borrow_unchecked_mut() }
+        FetchIdMut { inner: c.borrow_mut() }
     }
 
     fn fetch_internal<ID>(&self, id: TypeId, cid: ID) -> &TrustCell<Box<Resource>>

@@ -1,13 +1,28 @@
 use std::cell::UnsafeCell;
+use std::error::Error;
+use std::fmt::{Display, Error as FormatError, Formatter};
 use std::ops::{Deref, DerefMut};
-#[cfg(debug_assertions)]
 use std::sync::Arc;
-#[cfg(debug_assertions)]
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[derive(Clone, Copy, Debug)]
+pub struct InvalidBorrow;
+
+impl Display for InvalidBorrow {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+        write!(f, "Tried to borrow when it was illegal")
+    }
+}
+
+impl Error for InvalidBorrow {
+    fn description(&self) -> &str {
+        "This error is returned when you try to borrow immutably when it's already \
+         borrowed mutably or you try to borrow mutably when it's already borrowed"
+    }
+}
 
 #[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
-    #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
     value: &'a T,
 }
@@ -20,7 +35,6 @@ impl<'a, T> Deref for Ref<'a, T> {
     }
 }
 
-#[cfg(debug_assertions)]
 impl<'a, T> Drop for Ref<'a, T> {
     fn drop(&mut self) {
         self.flag.fetch_sub(1, Ordering::Release);
@@ -29,7 +43,6 @@ impl<'a, T> Drop for Ref<'a, T> {
 
 #[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
-    #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
     value: &'a mut T,
 }
@@ -48,7 +61,6 @@ impl<'a, T> DerefMut for RefMut<'a, T> {
     }
 }
 
-#[cfg(debug_assertions)]
 impl<'a, T> Drop for RefMut<'a, T> {
     fn drop(&mut self) {
         self.flag.store(0, Ordering::Release)
@@ -56,24 +68,14 @@ impl<'a, T> Drop for RefMut<'a, T> {
 }
 
 /// A custom cell similar to
-/// `RefCell`, but
-///
-/// 1) only checks rules in debug mode
-/// 2) is thread-safe
+/// `RefCell`, but it is thread-safe.
 #[derive(Debug)]
 pub struct TrustCell<T> {
-    #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
     inner: UnsafeCell<T>,
 }
 
 impl<T> TrustCell<T> {
-    #[cfg(not(debug_assertions))]
-    pub fn new(val: T) -> Self {
-        TrustCell { inner: UnsafeCell::new(val) }
-    }
-
-    #[cfg(debug_assertions)]
     pub fn new(val: T) -> Self {
         TrustCell {
             flag: Arc::new(AtomicUsize::new(0)),
@@ -81,18 +83,8 @@ impl<T> TrustCell<T> {
         }
     }
 
-    #[cfg(not(debug_assertions))]
-    pub unsafe fn borrow_unchecked(&self) -> Ref<T> {
-        Ref { value: &*self.inner.get() }
-    }
-
-    #[cfg(debug_assertions)]
-    pub unsafe fn borrow_unchecked(&self) -> Ref<T> {
-        debug_assert_ne!(!0,
-                         self.flag.load(Ordering::Acquire),
-                         "already borrowed mutably");
-
-        self.flag.fetch_add(1, Ordering::Release);
+    pub unsafe fn borrow(&self) -> Ref<T> {
+        self.check_flag_read().expect("Already borrowed mutably");
 
         Ref {
             flag: self.flag.clone(),
@@ -100,20 +92,33 @@ impl<T> TrustCell<T> {
         }
     }
 
-    #[cfg(not(debug_assertions))]
-    pub unsafe fn borrow_unchecked_mut(&self) -> RefMut<T> {
-        RefMut { value: &mut *self.inner.get() }
-    }
-
-    #[cfg(debug_assertions)]
-    pub unsafe fn borrow_unchecked_mut(&self) -> RefMut<T> {
-        debug_assert_eq!(0, self.flag.load(Ordering::Acquire), "already borrowed");
-
-        self.flag.store(!0, Ordering::Release);
+    pub unsafe fn borrow_mut(&self) -> RefMut<T> {
+        self.check_flag_write().expect("Already borrowed");
 
         RefMut {
             flag: self.flag.clone(),
             value: &mut *self.inner.get(),
+        }
+    }
+
+    fn check_flag_read(&self) -> Result<(), InvalidBorrow> {
+        loop {
+            let val = self.flag.load(Ordering::Acquire);
+
+            if val == !0 {
+                return Err(InvalidBorrow);
+            }
+
+            if self.flag.compare_and_swap(val, val + 1, Ordering::AcqRel) == val {
+                return Ok(());
+            }
+        }
+    }
+
+    fn check_flag_write(&self) -> Result<(), InvalidBorrow> {
+        match self.flag.compare_and_swap(0, !0, Ordering::AcqRel) {
+            0 => Ok(()),
+            _ => Err(InvalidBorrow),
         }
     }
 }
@@ -129,8 +134,8 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let a = cell.borrow_unchecked();
-            let b = cell.borrow_unchecked();
+            let a = cell.borrow();
+            let b = cell.borrow();
 
             assert_eq!(10, *a + *b);
         }
@@ -141,27 +146,27 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let mut a = cell.borrow_unchecked_mut();
+            let mut a = cell.borrow_mut();
             *a += 2;
             *a += 3;
         }
 
         unsafe {
-            assert_eq!(10, *cell.borrow_unchecked());
+            assert_eq!(10, *cell.borrow());
         }
     }
 
     #[cfg(debug_assertions)]
     #[test]
-    #[should_panic(expected = "already borrowed mutably")]
+    #[should_panic(expected = "Already borrowed mutably")]
     fn panic_already() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let mut a = cell.borrow_unchecked_mut();
+            let mut a = cell.borrow_mut();
             *a = 7;
 
-            assert_eq!(7, *cell.borrow_unchecked());
+            assert_eq!(7, *cell.borrow());
         }
     }
 }
