@@ -83,21 +83,21 @@ impl<T> TrustCell<T> {
         }
     }
 
-    pub unsafe fn borrow(&self) -> Ref<T> {
+    pub fn borrow(&self) -> Ref<T> {
         self.check_flag_read().expect("Already borrowed mutably");
 
         Ref {
             flag: self.flag.clone(),
-            value: &*self.inner.get(),
+            value: unsafe { &*self.inner.get() },
         }
     }
 
-    pub unsafe fn borrow_mut(&self) -> RefMut<T> {
+    pub fn borrow_mut(&self) -> RefMut<T> {
         self.check_flag_write().expect("Already borrowed");
 
         RefMut {
             flag: self.flag.clone(),
-            value: &mut *self.inner.get(),
+            value: unsafe { &mut *self.inner.get() },
         }
     }
 
@@ -133,27 +133,23 @@ mod tests {
     fn multi() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
-        unsafe {
-            let a = cell.borrow();
-            let b = cell.borrow();
+        let a = cell.borrow();
+        let b = cell.borrow();
 
-            assert_eq!(10, *a + *b);
-        }
+        assert_eq!(10, *a + *b);
     }
 
     #[test]
     fn write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
-        unsafe {
+        {
             let mut a = cell.borrow_mut();
             *a += 2;
             *a += 3;
         }
 
-        unsafe {
-            assert_eq!(10, *cell.borrow());
-        }
+        assert_eq!(10, *cell.borrow());
     }
 
     #[cfg(debug_assertions)]
@@ -162,11 +158,21 @@ mod tests {
     fn panic_already() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
-        unsafe {
-            let mut a = cell.borrow_mut();
-            *a = 7;
+        let mut a = cell.borrow_mut();
+        *a = 7;
 
-            assert_eq!(7, *cell.borrow());
-        }
+        assert_eq!(7, *cell.borrow());
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "Already borrowed")]
+    fn panic_already_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let mut a = cell.borrow_mut();
+        *a = 7;
+
+        assert_eq!(7, *cell.borrow_mut());
     }
 }

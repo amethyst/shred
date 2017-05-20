@@ -45,7 +45,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
         {
             fn fetch(res: & #fetch_lt ::shred::Resources) -> Self {
                 #name {
-                    #( #identifiers: unsafe { res.#methods(()) }, )*
+                    #( #identifiers: res.#methods(()), )*
                 }
             }
 

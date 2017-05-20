@@ -182,17 +182,11 @@ impl Resources {
     /// By default, the `#[derive(SystemData)]` passes `()`
     /// as id.
     ///
-    /// # Safety
-    ///
-    /// This method is marked as `unsafe` as calling
-    /// it means you are sure about the implied borrowing
-    /// rules.
-    ///
     /// # Panics
     ///
     /// Panics if the resource is being accessed mutably.
     /// Also panics if there is no such resource.
-    pub unsafe fn fetch<T, ID>(&self, id: ID) -> Fetch<T>
+    pub fn fetch<T, ID>(&self, id: ID) -> Fetch<T>
         where T: Resource,
               ID: Hash + Eq
     {
@@ -207,7 +201,7 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_mut<T, ID>(&self, id: ID) -> FetchMut<T>
+    pub fn fetch_mut<T, ID>(&self, id: ID) -> FetchMut<T>
         where T: Resource,
               ID: Hash + Eq
     {
@@ -222,7 +216,7 @@ impl Resources {
     /// Fetches the resource with the specified type id.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_id<ID>(&self, id: TypeId, comp_id: ID) -> FetchId
+    pub fn fetch_id<ID>(&self, id: TypeId, comp_id: ID) -> FetchId
         where ID: Hash + Eq
     {
         let c = self.fetch_internal(id, comp_id);
@@ -233,7 +227,7 @@ impl Resources {
     /// Fetches the resource with the specified type id mutably.
     ///
     /// Please see `fetch` for details.
-    pub unsafe fn fetch_id_mut<ID>(&self, id: TypeId, comp_id: ID) -> FetchIdMut
+    pub fn fetch_id_mut<ID>(&self, id: TypeId, comp_id: ID) -> FetchIdMut
         where ID: Hash + Eq
     {
         let c = self.fetch_internal(id, comp_id);

@@ -22,8 +22,8 @@ struct ExampleBundle<'a> {
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
-            a: unsafe { res.fetch(0) },
-            b: unsafe { res.fetch_mut(0) },
+            a: res.fetch(0),
+            b: res.fetch_mut(0),
         }
     }
 
