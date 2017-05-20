@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[cfg(debug_assertions)]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
@@ -26,6 +27,7 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
+#[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
@@ -58,6 +60,7 @@ impl<'a, T> Drop for RefMut<'a, T> {
 ///
 /// 1) only checks rules in debug mode
 /// 2) is thread-safe
+#[derive(Debug)]
 pub struct TrustCell<T> {
     #[cfg(debug_assertions)]
     flag: Arc<AtomicUsize>,
@@ -79,14 +82,15 @@ impl<T> TrustCell<T> {
     }
 
     #[cfg(not(debug_assertions))]
-    pub unsafe fn borrow(&self) -> Ref<T> {
+    pub unsafe fn borrow_unchecked(&self) -> Ref<T> {
         Ref { value: &*self.inner.get() }
     }
 
     #[cfg(debug_assertions)]
-    pub unsafe fn borrow(&self) -> Ref<T> {
-        debug_assert!(self.flag.load(Ordering::Acquire) != !0,
-                      "already borrowed mutably");
+    pub unsafe fn borrow_unchecked(&self) -> Ref<T> {
+        debug_assert_ne!(!0,
+                         self.flag.load(Ordering::Acquire),
+                         "already borrowed mutably");
 
         self.flag.fetch_add(1, Ordering::Release);
 
@@ -97,13 +101,13 @@ impl<T> TrustCell<T> {
     }
 
     #[cfg(not(debug_assertions))]
-    pub unsafe fn borrow_mut(&self) -> RefMut<T> {
+    pub unsafe fn borrow_unchecked_mut(&self) -> RefMut<T> {
         RefMut { value: &mut *self.inner.get() }
     }
 
     #[cfg(debug_assertions)]
-    pub unsafe fn borrow_mut(&self) -> RefMut<T> {
-        debug_assert!(self.flag.load(Ordering::Acquire) == 0, "already borrowed");
+    pub unsafe fn borrow_unchecked_mut(&self) -> RefMut<T> {
+        debug_assert_eq!(0, self.flag.load(Ordering::Acquire), "already borrowed");
 
         self.flag.store(!0, Ordering::Release);
 
@@ -125,8 +129,8 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let a = cell.borrow();
-            let b = cell.borrow();
+            let a = cell.borrow_unchecked();
+            let b = cell.borrow_unchecked();
 
             assert_eq!(10, *a + *b);
         }
@@ -137,12 +141,14 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let mut a = cell.borrow_mut();
+            let mut a = cell.borrow_unchecked_mut();
             *a += 2;
             *a += 3;
         }
 
-        unsafe { assert_eq!(10, *cell.borrow()); }
+        unsafe {
+            assert_eq!(10, *cell.borrow_unchecked());
+        }
     }
 
     #[cfg(debug_assertions)]
@@ -152,10 +158,10 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         unsafe {
-            let mut a = cell.borrow_mut();
+            let mut a = cell.borrow_unchecked_mut();
             *a = 7;
 
-            assert_eq!(7, *cell.borrow());
+            assert_eq!(7, *cell.borrow_unchecked());
         }
     }
 }

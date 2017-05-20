@@ -1,6 +1,7 @@
 //! Module for resource related types
 
 use std::any::TypeId;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -13,6 +14,7 @@ use cell::{Ref, RefMut, TrustCell};
 /// Return value of [`Resources::fetch`].
 ///
 /// [`Resources::fetch`]: struct.Resources.html#method.fetch
+#[derive(Debug)]
 pub struct Fetch<'a, T: 'a> {
     inner: Ref<'a, Box<Resource>>,
     phantom: PhantomData<&'a T>,
@@ -31,6 +33,7 @@ impl<'a, T> Deref for Fetch<'a, T>
 /// Return value of [`Resources::fetch_id`].
 ///
 /// [`Resources::fetch_id`]: struct.Resources.html#method.fetch_id
+#[derive(Debug)]
 pub struct FetchId<'a> {
     inner: Ref<'a, Box<Resource>>,
 }
@@ -46,6 +49,7 @@ impl<'a> Deref for FetchId<'a> {
 /// Return value of [`Resources::fetch_id_mut`].
 ///
 /// [`Resources::fetch_id_mut`]: struct.Resources.html#method.fetch_id_mut
+#[derive(Debug)]
 pub struct FetchIdMut<'a> {
     inner: RefMut<'a, Box<Resource>>,
 }
@@ -67,6 +71,7 @@ impl<'a> DerefMut for FetchIdMut<'a> {
 /// Return value of [`Resources::fetch_mut`].
 ///
 /// [`Resources::fetch_mut`]: struct.Resources.html#method.fetch_mut
+#[derive(Debug)]
 pub struct FetchMut<'a, T: 'a> {
     inner: RefMut<'a, Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
@@ -93,13 +98,13 @@ impl<'a, T> DerefMut for FetchMut<'a, T>
 /// A resource defines a set of data
 /// which can only be accessed according
 /// to Rust's typical borrowing model (one writer xor multiple readers).
-pub trait Resource: Any + Send + Sync {}
+pub trait Resource: Any + Debug + Send + Sync {}
 
 mopafy!(Resource);
 
 /// The id of a [`Resource`],
-/// which is the same as it's type
-/// id at the moment.
+/// which is a tuple of its type
+/// id and a hashed component id.
 ///
 /// [`Resource`]: trait.Resource.html
 pub type ResourceId = (TypeId, u64);
@@ -107,6 +112,7 @@ pub type ResourceId = (TypeId, u64);
 /// A resource container, which
 /// provides methods to access to
 /// the contained resources.
+#[derive(Debug, Default)]
 pub struct Resources {
     resources: FnvHashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
@@ -114,7 +120,7 @@ pub struct Resources {
 impl Resources {
     /// Creates a new, empty resource container.
     pub fn new() -> Self {
-        Resources { resources: Default::default() }
+        Default::default()
     }
 
     /// Adds a new resource
@@ -134,6 +140,7 @@ impl Resources {
     /// #
     /// use shred::Resource;
     ///
+    /// #[derive(Debug)]
     /// struct MyRes(i32);
     ///
     /// impl Resource for MyRes {}
@@ -145,7 +152,7 @@ impl Resources {
     /// ```rust
     /// # use shred::Resource;
     /// #
-    /// # struct MyRes(i32);
+    /// # #[derive(Debug)] struct MyRes(i32);
     /// #
     /// # impl Resource for MyRes {}
     /// use shred::Resources;
@@ -159,7 +166,7 @@ impl Resources {
     {
         use std::collections::hash_map::Entry;
 
-        let id = fnv_hash(id);
+        let id = fnv_hash(&id);
         let entry = self.resources.entry((TypeId::of::<R>(), id));
 
         if let Entry::Vacant(e) = entry {
@@ -192,7 +199,7 @@ impl Resources {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         Fetch {
-            inner: c.borrow(),
+            inner: c.borrow_unchecked(),
             phantom: PhantomData,
         }
     }
@@ -207,7 +214,7 @@ impl Resources {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
         FetchMut {
-            inner: c.borrow_mut(),
+            inner: c.borrow_unchecked_mut(),
             phantom: PhantomData,
         }
     }
@@ -220,7 +227,7 @@ impl Resources {
     {
         let c = self.fetch_internal(id, comp_id);
 
-        FetchId { inner: c.borrow() }
+        FetchId { inner: c.borrow_unchecked() }
     }
 
     /// Fetches the resource with the specified type id mutably.
@@ -231,19 +238,19 @@ impl Resources {
     {
         let c = self.fetch_internal(id, comp_id);
 
-        FetchIdMut { inner: c.borrow_mut() }
+        FetchIdMut { inner: c.borrow_unchecked_mut() }
     }
 
     fn fetch_internal<ID>(&self, id: TypeId, cid: ID) -> &TrustCell<Box<Resource>>
         where ID: Hash + Eq
     {
         self.resources
-            .get(&(id, fnv_hash(cid)))
+            .get(&(id, fnv_hash(&cid)))
             .expect("No resource with the given id")
     }
 }
 
-fn fnv_hash<H: Hash>(h: H) -> u64 {
+fn fnv_hash<H: Hash>(h: &H) -> u64 {
     use std::hash::Hasher;
 
     let mut hasher = FnvHasher::default();

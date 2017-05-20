@@ -6,12 +6,14 @@ extern crate shred;
 extern crate shred_derive;
 extern crate test;
 
+use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 
 use cgmath::Vector3;
 use shred::*;
 use test::Bencher;
 
+#[derive(Debug)]
 struct VecStorage<T> {
     data: Vec<T>,
 }
@@ -36,24 +38,25 @@ impl<T> IndexMut<usize> for VecStorage<T> {
     }
 }
 
-impl<T> Resource for VecStorage<T> where T: Send + Sync + 'static {}
+impl<T> Resource for VecStorage<T> where T: Debug + Send + Sync + 'static {}
 
+#[derive(Debug)]
 struct DeltaTime(f32);
 
 impl Resource for DeltaTime {}
 
 type Vec3 = Vector3<f32>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Mass(f32);
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Pos(Vec3);
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Vel(Vec3);
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Force(Vec3);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Spring {
     /// the index of the other "entity"
     connection_to: usize,
