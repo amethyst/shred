@@ -23,7 +23,10 @@ impl Dependencies {
            writes: Vec<ResourceId>,
            dependencies: Vec<usize>) {
         for read in &reads {
-            self.rev_reads.entry(*read).or_insert_with(Vec::new).push(id);
+            self.rev_reads
+                .entry(*read)
+                .or_insert_with(Vec::new)
+                .push(id);
 
             self.rev_writes.entry(*read).or_insert_with(Vec::new);
         }
@@ -31,7 +34,10 @@ impl Dependencies {
         for write in &writes {
             self.rev_reads.entry(*write).or_insert_with(Vec::new);
 
-            self.rev_writes.entry(*write).or_insert_with(Vec::new).push(id);
+            self.rev_writes
+                .entry(*write)
+                .or_insert_with(Vec::new)
+                .push(id);
         }
 
         self.reads.push(reads);
@@ -336,8 +342,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
             systems: self.systems,
-            thread_pool: self.thread_pool
-                .unwrap_or_else(Self::create_thread_pool),
+            thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
         }
     }
 
@@ -360,7 +365,11 @@ impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
 }
 
 trait ExecSystem<'c, C> {
-    fn exec<'s>(&'s mut self, s: &Scope<'s>, res: &'s Resources, C, running: &'s AtomicBitSet)
+    fn exec<'s>(&'s mut self,
+                s: &Scope<'s>,
+                res: &'s Resources,
+                context: C,
+                running: &'s AtomicBitSet)
         where 'c: 's;
 
     fn exec_seq(&mut self, res: &Resources, context: C);
@@ -391,6 +400,7 @@ impl<'c, C, T> ExecSystem<'c, C> for SystemDispatch<T>
                 running: &'s AtomicBitSet)
         where 'c: 's
     {
+        running.set(self.id, true);
         let data = T::SystemData::fetch(res);
         scope.spawn(move |_| {
                         self.system.work(data, context);
