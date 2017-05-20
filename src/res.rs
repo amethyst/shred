@@ -176,6 +176,12 @@ impl Resources {
         }
     }
 
+    /// Returns true if the specified type / id combination
+    /// is registered.
+    pub fn has_value<ID>(&self, ty: TypeId, id: ID) -> bool where ID: Hash + Eq {
+        self.resources.contains_key(&(ty, fnv_hash(&id)))
+    }
+
     /// Fetches the resource with the specified type `T`.
     /// The id is useful if you don't define your resources
     /// in Rust or you want a more dynamic resource handling.
