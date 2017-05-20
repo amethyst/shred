@@ -2,7 +2,6 @@ use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Error as FormatError, Formatter};
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Clone, Copy, Debug)]
@@ -23,7 +22,7 @@ impl Error for InvalidBorrow {
 
 #[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
-    flag: Arc<AtomicUsize>,
+    flag: &'a AtomicUsize,
     value: &'a T,
 }
 
@@ -43,7 +42,7 @@ impl<'a, T> Drop for Ref<'a, T> {
 
 #[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
-    flag: Arc<AtomicUsize>,
+    flag: &'a AtomicUsize,
     value: &'a mut T,
 }
 
@@ -71,14 +70,14 @@ impl<'a, T> Drop for RefMut<'a, T> {
 /// `RefCell`, but it is thread-safe.
 #[derive(Debug)]
 pub struct TrustCell<T> {
-    flag: Arc<AtomicUsize>,
+    flag: AtomicUsize,
     inner: UnsafeCell<T>,
 }
 
 impl<T> TrustCell<T> {
     pub fn new(val: T) -> Self {
         TrustCell {
-            flag: Arc::new(AtomicUsize::new(0)),
+            flag: AtomicUsize::new(0),
             inner: UnsafeCell::new(val),
         }
     }
@@ -87,7 +86,7 @@ impl<T> TrustCell<T> {
         self.check_flag_read().expect("Already borrowed mutably");
 
         Ref {
-            flag: self.flag.clone(),
+            flag: &self.flag,
             value: unsafe { &*self.inner.get() },
         }
     }
@@ -96,7 +95,7 @@ impl<T> TrustCell<T> {
         self.check_flag_write().expect("Already borrowed");
 
         RefMut {
-            flag: self.flag.clone(),
+            flag: &self.flag,
             value: unsafe { &mut *self.inner.get() },
         }
     }
