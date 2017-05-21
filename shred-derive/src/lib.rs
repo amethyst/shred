@@ -25,9 +25,8 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
     let name = &ast.ident;
     let lifetime_defs = &ast.generics.lifetimes;
     let ty_params = &ast.generics.ty_params;
-    let fields = get_fields(ast);
 
-    let identifiers = gen_identifiers(fields);
+    let (fetch_return, tys) = gen_from_body(&ast.body, name);
     // Assumes that the first lifetime is the fetch lt
     let fetch_lt = lifetime_defs
         .iter()
@@ -39,8 +38,8 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
     let impl_ty_params = gen_impl_ty_params(ty_params);
     // Reads and writes are taken from the same types,
     // but need to be cloned before.
-    let reads = collect_field_types(fields);
-    let writes = reads.clone();
+    let reads = tys.clone();
+    let writes = tys.clone();
 
     quote! {
         impl< #def_lt_tokens , #def_ty_params >
@@ -48,9 +47,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
             for #name< #impl_lt_tokens , #impl_ty_params >
         {
             fn fetch(res: & #fetch_lt ::shred::Resources) -> Self {
-                #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res), )*
-                }
+                #fetch_return
             }
 
             unsafe fn reads() -> Vec<::shred::ResourceId> {
@@ -134,9 +131,36 @@ fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
     quote! { #( #ty_params ),* }
 }
 
-fn get_fields(ast: &MacroInput) -> &Vec<Field> {
-    match ast.body {
-        Body::Struct(VariantData::Struct(ref x)) => x,
-        _ => panic!("Only structs with named fields supported"),
-    }
+fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Tokens>) {
+    enum BodyType { Struct, Tuple }
+
+    let (body, fields) = match *ast {
+        Body::Struct(VariantData::Struct(ref x)) => (BodyType::Struct, x),
+        Body::Struct(VariantData::Tuple(ref x)) => (BodyType::Tuple, x),
+        _ => panic!("Enums are not supported")
+    };
+
+    let tys = collect_field_types(fields);
+
+    let fetch_return = match body {
+        BodyType::Struct => {
+            let identifiers = gen_identifiers(fields);
+
+            quote! {
+                #name {
+                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
+                }
+            }
+        }
+        BodyType::Tuple => {
+            let count = tys.len();
+            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
+
+            quote! {
+                #name ( #( #fetch ),* )
+            }
+        }
+    };
+
+    (fetch_return, tys)
 }
