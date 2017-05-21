@@ -1,7 +1,5 @@
 extern crate shred;
 
-use std::any::TypeId;
-
 use shred::{Fetch, FetchMut, Resource, ResourceId, Resources, SystemData};
 
 #[derive(Debug)]
@@ -22,24 +20,24 @@ struct ExampleBundle<'a> {
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
-            a: res.fetch(0),
-            b: res.fetch_mut(0),
+            a: res.fetch(()),
+            b: res.fetch_mut(()),
         }
     }
 
     unsafe fn reads() -> Vec<ResourceId> {
-        vec![(TypeId::of::<ResA>(), 0)]
+        vec![ResourceId::new::<ResA>()]
     }
 
     unsafe fn writes() -> Vec<ResourceId> {
-        vec![(TypeId::of::<ResB>(), 0)]
+        vec![ResourceId::new::<ResB>()]
     }
 }
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA, 0);
-    res.add(ResB, 0);
+    res.add(ResA, ());
+    res.add(ResB, ());
 
 
     let mut bundle = ExampleBundle::fetch(&res);

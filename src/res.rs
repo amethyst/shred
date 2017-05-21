@@ -41,7 +41,7 @@ impl<'a, T> SystemData<'a> for Fetch<'a, T>
     }
 
     unsafe fn reads() -> Vec<ResourceId> {
-        vec![(TypeId::of::<T>(), DEFAULT_HASH)]
+        vec![ResourceId::new::<T>()]
     }
 
     unsafe fn writes() -> Vec<ResourceId> {
@@ -126,7 +126,7 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
     }
 
     unsafe fn writes() -> Vec<ResourceId> {
-        vec![(TypeId::of::<T>(), DEFAULT_HASH)]
+        vec![ResourceId::new::<T>()]
     }
 }
 
@@ -138,11 +138,27 @@ pub trait Resource: Any + Debug + Send + Sync {}
 mopafy!(Resource);
 
 /// The id of a [`Resource`],
-/// which is a tuple of its type
+/// which is a tuple struct with a type
 /// id and a hashed component id.
 ///
 /// [`Resource`]: trait.Resource.html
-pub type ResourceId = (TypeId, u64);
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ResourceId(pub TypeId, pub u64);
+
+impl ResourceId {
+    /// Creates a new resource id from
+    /// a given type with the default
+    /// extra id.
+    pub fn new<T: Resource>() -> Self {
+        ResourceId(TypeId::of::<T>(), DEFAULT_HASH)
+    }
+
+    /// Creates a new resource id from
+    /// a given type and an additional id.
+    pub fn new_with_id<T: Resource, ID: Hash + Eq>(id: ID) -> Self {
+        ResourceId(TypeId::of::<T>(), fnv_hash(&id))
+    }
+}
 
 /// A resource container, which
 /// provides methods to access to
@@ -201,8 +217,7 @@ impl Resources {
     {
         use std::collections::hash_map::Entry;
 
-        let id = fnv_hash(&id);
-        let entry = self.resources.entry((TypeId::of::<R>(), id));
+        let entry = self.resources.entry(ResourceId::new_with_id::<R, _>(id));
 
         if let Entry::Vacant(e) = entry {
             e.insert(TrustCell::new(Box::new(r)));
@@ -213,10 +228,8 @@ impl Resources {
 
     /// Returns true if the specified type / id combination
     /// is registered.
-    pub fn has_value<ID>(&self, ty: TypeId, id: ID) -> bool
-        where ID: Hash + Eq
-    {
-        self.resources.contains_key(&(ty, fnv_hash(&id)))
+    pub fn has_value(&self, res_id: ResourceId) -> bool {
+        self.resources.contains_key(&res_id)
     }
 
     /// Fetches the resource with the specified type `T`.
@@ -282,7 +295,7 @@ impl Resources {
         where ID: Hash + Eq
     {
         self.resources
-            .get(&(id, fnv_hash(&cid)))
+            .get(&ResourceId(id, fnv_hash(&cid)))
             .expect("No resource with the given id")
     }
 }

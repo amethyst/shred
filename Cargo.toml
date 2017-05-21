@@ -19,7 +19,7 @@ travis-ci = { repository = "torkleyy/shred" }
 [dependencies]
 fnv = "1"
 mopa = "0.2"
-shred-derive = { path = "shred-derive", version = "0.1.1" }
+shred-derive = { path = "shred-derive" }
 
 [dev-dependencies]
 cgmath = "0.14"
