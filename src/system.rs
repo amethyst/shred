@@ -105,7 +105,20 @@ macro_rules! impl_data {
     };
 }
 
-impl_data!();
+impl<'a> SystemData<'a> for () {
+    fn fetch(_: &'a Resources) -> Self {
+        ()
+    }
+
+    unsafe fn reads() -> Vec<ResourceId> {
+        Vec::new()
+    }
+
+    unsafe fn writes() -> Vec<ResourceId> {
+        Vec::new()
+    }
+}
+
 impl_data!(A);
 impl_data!(A, B);
 impl_data!(A, B, C);
