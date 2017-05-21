@@ -41,7 +41,7 @@ fn dispatch_builder() {
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["a"])
         .add(DummySys, "c", &["a"])
-        .finish();
+        .build();
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn dispatch_builder_invalid() {
     DispatcherBuilder::<()>::new()
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["z"])
-        .finish();
+        .build();
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn dispatch_basic() {
     let mut d: Dispatcher<_> = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["a"])
-        .finish();
+        .build();
 
     d.dispatch(&mut res, ());
 }
@@ -74,7 +74,7 @@ fn dispatch_rw_block() {
     let mut d: Dispatcher<_> = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySysMut, "b", &[])
-        .finish();
+        .build();
 
     d.dispatch(&mut res, ());
 }
@@ -87,7 +87,7 @@ fn dispatch_rw_block_rev() {
     let mut d: Dispatcher<_> = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
         .add(DummySys, "b", &[])
-        .finish();
+        .build();
 
     d.dispatch(&mut res, ());
 }
@@ -100,7 +100,7 @@ fn dispatch_sequential() {
     let mut d: Dispatcher<_> = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
         .add(DummySys, "b", &[])
-        .finish();
+        .build();
 
     d.dispatch_seq(&mut res, ());
 }

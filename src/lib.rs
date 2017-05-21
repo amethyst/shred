@@ -45,7 +45,7 @@
 //!     let mut resources = Resources::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .add(EmptySystem, "empty", &[])
-//!         .finish();
+//!         .build();
 //!     resources.add(ResA, ());
 //!     resources.add(ResB, ());
 //!
