@@ -53,6 +53,7 @@ pub struct Dispatcher<'c, 't, C = ()> {
     ready: Vec<usize>,
     running: AtomicBitSet,
     systems: Vec<SystemInfo<'c, 't, C>>,
+    thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
     thread_pool: Arc<ThreadPool>,
 }
 
@@ -82,19 +83,23 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     /// This operation blocks the
     /// executing thread.
     pub fn dispatch_par(&mut self, res: &mut Resources, context: C) {
+        let context_tl = context.clone();
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
+        let res_tl: *mut Resources = res;
         let running = &self.running;
         let systems = &mut self.systems;
 
         self.thread_pool
-            .install(|| {
+            .install(move || {
                          scope(move |scope| {
                     Self::dispatch_inner(dependencies, ready, res, running, scope, systems, context)
                 })
                      });
 
         self.running.clear();
+
+        Self::dispatch_tl(&mut self.thread_local, unsafe { &mut *res_tl }, context_tl);
     }
 
     /// Dispatches all systems sequentially.
@@ -104,6 +109,14 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     pub fn dispatch_seq(&mut self, res: &mut Resources, context: C) {
         for system in &mut self.systems {
             system.exec.exec_seq(res, context.clone());
+        }
+
+        Self::dispatch_tl(&mut self.thread_local, res, context);
+    }
+
+    fn dispatch_tl(tl: &mut [Box<ExecSystem<'c, C> + 't>], res: &mut Resources, c: C) {
+        for tl in tl {
+            tl.exec_seq(res, c.clone());
         }
     }
 
@@ -247,12 +260,12 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 /// # }
 /// ```
 ///
-#[derive(Default)]
 pub struct DispatcherBuilder<'c, 't, C = ()> {
     dependencies: Dependencies,
     map: FnvHashMap<String, usize>,
     ready: Vec<usize>,
     systems: Vec<SystemInfo<'c, 't, C>>,
+    thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
@@ -269,13 +282,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     /// this builder to use it with `with_pool`
     /// instead.
     pub fn new() -> Self {
-        DispatcherBuilder {
-            dependencies: Default::default(),
-            ready: Default::default(),
-            map: Default::default(),
-            systems: Default::default(),
-            thread_pool: Default::default(),
-        }
+        Default::default()
     }
 
     /// Adds a new system with a given name and a list of dependencies.
@@ -321,6 +328,22 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
         self
     }
 
+    /// Adds a new thread local system.
+    ///
+    /// Please only use this if your struct is
+    /// not `Send` and `Sync`.
+    ///
+    /// Thread-local systems are dispatched
+    /// in-order.
+    pub fn add_thread_local<T>(mut self, system: T) -> Self
+        where T: for<'a> System<'a, C> + 't
+    {
+        self.thread_local
+            .push(Box::new(SystemDispatch::new(0, system)));
+
+        self
+    }
+
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
     pub fn with_pool(mut self, pool: Arc<ThreadPool>) -> Self {
@@ -342,6 +365,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
             systems: self.systems,
+            thread_local: self.thread_local,
             thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
         }
     }
@@ -361,6 +385,20 @@ impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
             .field("map", &self.map)
             .field("ready", &self.ready)
             .finish()
+    }
+}
+
+impl<'c, 't, C> Default for DispatcherBuilder<'c, 't, C> {
+    fn default() -> Self {
+        DispatcherBuilder {
+            dependencies: Default::default(),
+            ready: Default::default(),
+            map: Default::default(),
+            systems: Default::default(),
+            thread_local: Default::default(),
+            thread_pool: Default::default(),
+        }
+
     }
 }
 
