@@ -84,7 +84,7 @@ Please see [the benchmark](benches/bench.rs) for a bigger (and useful) example.
 
 ### Required Rust version
 
-`1.15 stable`
+`1.16 stable`
 
 ## Features
 
