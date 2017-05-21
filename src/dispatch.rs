@@ -243,7 +243,7 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 ///     .add(system_c, "c", &["a"]) // c also depends on a
 ///     .add(system_d, "d", &[])
 ///     .add(system_e, "e", &["c", "d"]) // e executes after c and d are finished
-///     .finish();
+///     .build();
 /// # }
 /// ```
 ///
@@ -334,7 +334,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn finish(self) -> Dispatcher<'c, 't, C> {
+    pub fn build(self) -> Dispatcher<'c, 't, C> {
         let size = self.systems.len();
 
         Dispatcher {

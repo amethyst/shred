@@ -175,7 +175,7 @@ fn basic(b: &mut Bencher) {
         .add(IntegrationSystem, "integration", &[])
         .add(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
                                                                // the integration
-        .finish();
+        .build();
 
     let mut res = Resources::new();
     let mass = VecStorage::new(Mass(10.0));
