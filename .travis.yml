@@ -4,7 +4,7 @@ rust:
 - nightly
 - beta
 - stable
-- 1.16.0
+- 1.17.0
 script:
 - |
   cargo build --verbose &&
