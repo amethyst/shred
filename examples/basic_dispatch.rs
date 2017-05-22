@@ -1,6 +1,4 @@
 extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 
@@ -14,31 +12,35 @@ struct ResB;
 
 impl Resource for ResB {}
 
-#[derive(SystemData)]
-struct Data<'a> {
-    a: Fetch<'a, ResA>,
-    b: FetchMut<'a, ResB>,
-}
+struct PrintSystem;
 
-struct EmptySystem;
+// Systems should be generic over the
+// context if possible, so it's easy
+// to introduce one.
+impl<'a, C> System<'a, C> for PrintSystem {
+    type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
 
-impl<'a, C> System<'a, C> for EmptySystem {
-    type SystemData = Data<'a>;
+    fn work(&mut self, data: Self::SystemData, _: C) {
+        let (a, mut b) = data;
 
-    fn work(&mut self, bundle: Data<'a>, _: C) {
-        println!("{:?}", &*bundle.a);
-        println!("{:?}", &*bundle.b);
+        println!("{:?}", &*a);
+        println!("{:?}", &*b);
+
+        *b = ResB; // We can mutate ResB here
+        // because it's `FetchMut`.
     }
 }
-
 
 fn main() {
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
-        .add(EmptySystem, "empty", &[])
+        .add(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
     resources.add(ResA, ());
     resources.add(ResB, ());
 
+    // We can even pass a context,
+    // but we don't need one here
+    // so we pass `()`.
     dispatcher.dispatch(&mut resources, ());
 }
