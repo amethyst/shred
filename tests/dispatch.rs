@@ -104,3 +104,18 @@ fn dispatch_sequential() {
 
     d.dispatch_seq(&mut res, ());
 }
+
+#[test]
+fn dispatch_async() {
+    let mut res = Resources::new();
+    res.add(Res, ());
+
+    let mut d = DispatcherBuilder::new()
+        .add(DummySysMut, "a", &[])
+        .add(DummySys, "b", &[])
+        .build_async(res);
+
+    d.dispatch(());
+
+    d.wait();
+}
