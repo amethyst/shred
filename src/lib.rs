@@ -60,6 +60,8 @@
 extern crate fnv;
 #[macro_use]
 extern crate mopa;
+#[cfg(feature = "parallel")]
+extern crate pulse;
 extern crate rayon;
 
 mod bitset;
