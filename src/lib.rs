@@ -60,6 +60,8 @@
 extern crate fnv;
 #[macro_use]
 extern crate mopa;
+#[cfg(feature = "parallel")]
+extern crate pulse;
 extern crate rayon;
 
 mod bitset;
@@ -68,6 +70,8 @@ mod dispatch;
 mod res;
 mod system;
 
+#[cfg(feature = "parallel")]
+pub use dispatch::AsyncDispatcher;
 pub use dispatch::{Dispatcher, DispatcherBuilder, run_now};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 pub use system::{System, SystemData};

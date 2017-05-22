@@ -21,8 +21,6 @@ shared and exclusive resource access, in parallel.
 
 ```rust
 extern crate shred;
-#[macro_use]
-extern crate shred_derive; // for `#[derive(SystemData)]`
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 
@@ -36,32 +34,22 @@ struct ResB;
 
 impl Resource for ResB {}
 
-/// Every system has a predefined
-/// system data.
-#[derive(SystemData)]
-struct PrintData<'a> {
-    /// `Fetch` means it reads from
-    /// that data
-    a: Fetch<'a, ResA>,
-    /// `FetchMut` also allows
-    /// write access
-    b: FetchMut<'a, ResB>,
-}
-
 struct PrintSystem;
 
 // Systems should be generic over the
 // context if possible, so it's easy
 // to introduce one.
 impl<'a, C> System<'a, C> for PrintSystem {
-    type SystemData = PrintData<'a>;
+    type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
 
-    fn work(&mut self, mut bundle: PrintData<'a>, _: C) {
-        println!("{:?}", &*bundle.a);
-        println!("{:?}", &*bundle.b);
-        
-        *bundle.b = ResB; // We can mutate ResB here
-                          // because it's `FetchMut`.
+    fn work(&mut self, data: Self::SystemData, _: C) {
+        let (a, mut b) = data;
+
+        println!("{:?}", &*a);
+        println!("{:?}", &*b);
+
+        *b = ResB; // We can mutate ResB here
+        // because it's `FetchMut`.
     }
 }
 
@@ -69,7 +57,7 @@ fn main() {
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
         .add(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
-        .finish();
+        .build();
     resources.add(ResA, ());
     resources.add(ResB, ());
 
