@@ -457,6 +457,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     }
 }
 
+#[cfg(feature = "parallel")]
 impl<C> DispatcherBuilder<'static, 'static, C>
     where C: 'static
 {

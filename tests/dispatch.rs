@@ -105,6 +105,7 @@ fn dispatch_sequential() {
     d.dispatch_seq(&mut res, ());
 }
 
+#[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async() {
     let mut res = Resources::new();

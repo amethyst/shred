@@ -68,6 +68,8 @@ mod dispatch;
 mod res;
 mod system;
 
-pub use dispatch::{AsyncDispatcher, Dispatcher, DispatcherBuilder, run_now};
+#[cfg(feature = "parallel")]
+pub use dispatch::AsyncDispatcher;
+pub use dispatch::{Dispatcher, DispatcherBuilder, run_now};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 pub use system::{System, SystemData};
