@@ -456,6 +456,33 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     }
 }
 
+impl<C> DispatcherBuilder<'static, 'static, C>
+    where C: 'static
+{
+    /// Builds an async dispatcher.
+    ///
+    /// It does not allow non-static types and
+    /// accepts a `Resource` struct.
+    pub fn build_async(self, res: Resources) -> AsyncDispatcher<C> {
+        let size = self.systems.len();
+
+        let inner = AsyncDispatcherInner {
+            dependencies: self.dependencies,
+            ready: self.ready,
+            resources: res,
+            running: AtomicBitSet::with_size(size),
+            systems: self.systems,
+        };
+
+        AsyncDispatcher {
+            context: None,
+            inner: Arc::new(Mutex::new(inner)),
+            thread_local: self.thread_local,
+            thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+        }
+    }
+}
+
 impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
         f.debug_struct("DispatcherBuilder")
