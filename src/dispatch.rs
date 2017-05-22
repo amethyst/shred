@@ -1,11 +1,83 @@
 use std::fmt::{Debug, Error as FormatError, Formatter};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fnv::FnvHashMap;
 use rayon::{Configuration, Scope, ThreadPool, scope};
 
 use bitset::AtomicBitSet;
 use {ResourceId, Resources, System, SystemData};
+
+/// Like, `Dispatcher` but works
+/// asynchronously.
+#[cfg(feature = "parallel")]
+pub struct AsyncDispatcher<C> {
+    /// The last context
+    context: Option<C>,
+    inner: Arc<Mutex<AsyncDispatcherInner<C>>>,
+    thread_local: Vec<Box<ExecSystem<'static, C> + 'static>>,
+    thread_pool: Arc<ThreadPool>,
+}
+
+#[cfg(feature = "parallel")]
+impl<C> AsyncDispatcher<C>
+    where C: Clone + Send + 'static
+{
+    /// Dispatches the systems asynchronously.
+    ///
+    /// If you want to wait for the systems to finish,
+    /// call `wait()`.
+    pub fn dispatch(&mut self, context: C) {
+        let inner = self.inner.clone();
+
+        self.thread_pool
+            .spawn_async(move || {
+
+                let inner = inner;
+                let mut inner = inner.lock().unwrap();
+                let inner = &mut *inner;
+
+                Self::dispatch_inner(&inner.dependencies,
+                                     inner.ready.clone(),
+                                     &mut inner.resources,
+                                     &inner.running,
+                                     &mut inner.systems,
+                                     context);
+            })
+    }
+
+    fn dispatch_inner(d: &Dependencies,
+                      r: Vec<usize>,
+                      res: &mut Resources,
+                      run: &AtomicBitSet,
+                      sys: &mut Vec<SystemInfo<C>>,
+                      c: C) {
+        scope(|s| Dispatcher::dispatch_inner(d, r, res, run, s, sys, c));
+    }
+
+    /// Waits for all the systems to finish
+    /// and executes thread local systems (if there
+    /// are any).
+    pub fn wait(&mut self) {
+        let mut inner = self.inner.lock().unwrap();
+        let inner = &mut *inner;
+
+        Dispatcher::dispatch_tl(&mut self.thread_local,
+                                &mut inner.resources,
+                                self.context
+                                    .take()
+                                    .expect("wait() called before dispatch or \
+                                             called twice"));
+    }
+}
+
+#[cfg(feature = "parallel")]
+struct AsyncDispatcherInner<C> {
+    dependencies: Dependencies,
+    ready: Vec<usize>,
+    resources: Resources,
+    running: AtomicBitSet,
+    systems: Vec<SystemInfo<'static, 'static, C>>,
+}
 
 #[derive(Debug, Default)]
 struct Dependencies {
@@ -92,10 +164,16 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
 
         self.thread_pool
             .install(move || {
-                         scope(move |scope| {
-                    Self::dispatch_inner(dependencies, ready, res, running, scope, systems, context)
-                })
-                     });
+                scope(move |scope| {
+                    Self::dispatch_inner(dependencies,
+                                         ready,
+                                         res,
+                                         running,
+                                         scope,
+                                         systems,
+                                         context);
+                });
+            });
 
         self.running.clear();
 
