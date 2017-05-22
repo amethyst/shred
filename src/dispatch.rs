@@ -27,6 +27,7 @@ impl<C> AsyncDispatcher<C>
     /// If you want to wait for the systems to finish,
     /// call `wait()`.
     pub fn dispatch(&mut self, context: C) {
+        self.context = Some(context.clone());
         let inner = self.inner.clone();
 
         self.thread_pool
