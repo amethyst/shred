@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["torkleyy"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -20,7 +20,7 @@ travis-ci = { repository = "torkleyy/shred" }
 fnv = "1"
 mopa = "0.2"
 pulse = { version = "0.5", optional = true }
-shred-derive = { path = "shred-derive" }
+shred-derive = { path = "shred-derive", version = "0.1.2" }
 
 [dev-dependencies]
 cgmath = "0.14"
