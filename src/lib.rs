@@ -60,17 +60,19 @@
 extern crate fnv;
 #[macro_use]
 extern crate mopa;
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 extern crate pulse;
+#[cfg(not(target_os = "emscripten"))]
 extern crate rayon;
 
+#[cfg(not(target_os = "emscripten"))]
 mod bitset;
 mod cell;
 mod dispatch;
 mod res;
 mod system;
 
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 pub use dispatch::AsyncDispatcher;
 pub use dispatch::{Dispatcher, DispatcherBuilder, run_now};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};

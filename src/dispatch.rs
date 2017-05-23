@@ -1,20 +1,23 @@
 use std::fmt::{Debug, Error as FormatError, Formatter};
+#[cfg(not(target_os = "emscripten"))]
 use std::sync::{Arc, Mutex};
 
 use fnv::FnvHashMap;
-#[cfg(feature = "parallel")]
-use pulse::{Signal};
+#[cfg(not(target_os = "emscripten"))]
+use pulse::Signal;
+#[cfg(not(target_os = "emscripten"))]
 use rayon::{Configuration, Scope, ThreadPool, scope};
 
+#[cfg(not(target_os = "emscripten"))]
 use bitset::AtomicBitSet;
 use {ResourceId, Resources, System, SystemData};
 
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 const ERR_NO_DISPATCH: &str = "wait() called before dispatch or called twice";
 
 /// Like, `Dispatcher` but works
 /// asynchronously.
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 pub struct AsyncDispatcher<C> {
     /// The last context
     context: Option<C>,
@@ -25,7 +28,7 @@ pub struct AsyncDispatcher<C> {
     thread_pool: Arc<ThreadPool>,
 }
 
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 impl<C> AsyncDispatcher<C>
     where C: Clone + Send + 'static
 {
@@ -99,7 +102,7 @@ impl<C> AsyncDispatcher<C>
     }
 }
 
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 struct AsyncDispatcherInner<C> {
     dependencies: Dependencies,
     ready: Vec<usize>,
@@ -151,9 +154,11 @@ impl Dependencies {
 pub struct Dispatcher<'c, 't, C = ()> {
     dependencies: Dependencies,
     ready: Vec<usize>,
+    #[cfg(not(target_os = "emscripten"))]
     running: AtomicBitSet,
     systems: Vec<SystemInfo<'c, 't, C>>,
     thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
+    #[cfg(not(target_os = "emscripten"))]
     thread_pool: Arc<ThreadPool>,
 }
 
@@ -182,6 +187,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     ///
     /// This operation blocks the
     /// executing thread.
+    #[cfg(not(target_os = "emscripten"))]
     pub fn dispatch_par(&mut self, res: &mut Resources, context: C) {
         let context_tl = context.clone();
         let dependencies = &self.dependencies;
@@ -226,6 +232,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         }
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     fn dispatch_inner<'s>(dependencies: &Dependencies,
                           mut ready: Vec<usize>,
                           res: &'s Resources,
@@ -265,6 +272,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         }
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     fn find_runnable_system(ready: &[usize],
                             dependencies: &Dependencies,
                             running: &AtomicBitSet)
@@ -374,6 +382,7 @@ pub struct DispatcherBuilder<'c, 't, C = ()> {
     ready: Vec<usize>,
     systems: Vec<SystemInfo<'c, 't, C>>,
     thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
+    #[cfg(not(target_os = "emscripten"))]
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
@@ -427,9 +436,15 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             self.ready.push(id);
         }
 
+        #[cfg(not(target_os = "emscripten"))]
+        let exec = SystemDispatch::new(id, system);
+
+        #[cfg(target_os = "emscripten")]
+        let exec = SystemDispatch::new(system);
+
         let info = SystemInfo {
             dependents: Vec::new(),
-            exec: Box::new(SystemDispatch::new(id, system)),
+            exec: Box::new(exec),
         };
         self.systems.push(info);
 
@@ -446,14 +461,21 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     pub fn add_thread_local<T>(mut self, system: T) -> Self
         where T: for<'a> System<'a, C> + 't
     {
+
+        #[cfg(not(target_os = "emscripten"))]
         self.thread_local
             .push(Box::new(SystemDispatch::new(0, system)));
+
+        #[cfg(target_os = "emscripten")]
+        self.thread_local
+            .push(Box::new(SystemDispatch::new(system)));
 
         self
     }
 
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
+    #[cfg(not(target_os = "emscripten"))]
     pub fn with_pool(mut self, pool: Arc<ThreadPool>) -> Self {
         self.thread_pool = Some(pool);
 
@@ -466,18 +488,31 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     /// precompute useful information in
     /// order to speed up dispatching.
     pub fn build(self) -> Dispatcher<'c, 't, C> {
+        #[cfg(not(target_os = "emscripten"))]
         let size = self.systems.len();
 
-        Dispatcher {
+        #[cfg(not(target_os = "emscripten"))]
+        let d = Dispatcher {
             dependencies: self.dependencies,
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
             systems: self.systems,
             thread_local: self.thread_local,
             thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
-        }
+        };
+
+        #[cfg(target_os = "emscripten")]
+        let d = Dispatcher {
+            dependencies: self.dependencies,
+            ready: self.ready,
+            systems: self.systems,
+            thread_local: self.thread_local,
+        };
+
+        d
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     fn create_thread_pool() -> Arc<ThreadPool> {
         Arc::new(ThreadPool::new(Configuration::new().panic_handler(|x| {
             println!("Panic in worker thread: {:?}", x)
@@ -486,7 +521,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     }
 }
 
-#[cfg(feature = "parallel")]
+#[cfg(not(target_os = "emscripten"))]
 impl<C> DispatcherBuilder<'static, 'static, C>
     where C: 'static
 {
@@ -527,19 +562,31 @@ impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
 
 impl<'c, 't, C> Default for DispatcherBuilder<'c, 't, C> {
     fn default() -> Self {
-        DispatcherBuilder {
+        #[cfg(not(target_os = "emscripten"))]
+        let d = DispatcherBuilder {
             dependencies: Default::default(),
             ready: Default::default(),
             map: Default::default(),
             systems: Default::default(),
             thread_local: Default::default(),
             thread_pool: Default::default(),
-        }
+        };
 
+        #[cfg(target_os = "emscripten")]
+        let d = DispatcherBuilder {
+            dependencies: Default::default(),
+            ready: Default::default(),
+            map: Default::default(),
+            systems: Default::default(),
+            thread_local: Default::default(),
+        };
+
+        d
     }
 }
 
 trait ExecSystem<'c, C> {
+    #[cfg(not(target_os = "emscripten"))]
     fn exec<'s>(&'s mut self,
                 s: &Scope<'s>,
                 res: &'s Resources,
@@ -551,14 +598,23 @@ trait ExecSystem<'c, C> {
 }
 
 struct SystemDispatch<T> {
+    #[cfg(not(target_os = "emscripten"))]
     id: usize,
     system: T,
 }
 
 impl<T> SystemDispatch<T> {
+    #[cfg(not(target_os = "emscripten"))]
     fn new(id: usize, system: T) -> Self {
         SystemDispatch {
             id: id,
+            system: system,
+        }
+    }
+
+    #[cfg(target_os = "emscripten")]
+    fn new(system: T) -> Self {
+        SystemDispatch {
             system: system,
         }
     }
@@ -568,6 +624,7 @@ impl<'c, C, T> ExecSystem<'c, C> for SystemDispatch<T>
     where C: 'c,
           T: for<'b> System<'b, C>
 {
+    #[cfg(not(target_os = "emscripten"))]
     fn exec<'s>(&'s mut self,
                 scope: &Scope<'s>,
                 res: &'s Resources,
