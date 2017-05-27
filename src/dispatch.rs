@@ -351,7 +351,6 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 /// # extern crate shred_derive;
 /// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System, Resource};
 /// # #[derive(Debug)] struct Res;
-/// # impl Resource for Res {}
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
 /// # impl<'a, C> System<'a, C> for Dummy {

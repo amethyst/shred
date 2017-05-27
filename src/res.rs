@@ -137,6 +137,8 @@ pub trait Resource: Any + Debug + Send + Sync {}
 
 mopafy!(Resource);
 
+impl<T> Resource for T where T: Any + Debug + Send + Sync {}
+
 /// The id of a [`Resource`],
 /// which is a tuple struct with a type
 /// id and a hashed component id.
@@ -183,33 +185,24 @@ impl Resources {
     ///
     /// # Examples
     ///
-    /// To make a type a resource, simply
-    /// implement the [`Resource`] trait:
+    /// Every type satisfying `Any + Debug + Send + Sync`
+    /// automatically implements `Resource`:
     ///
     /// ```rust
     /// # #![allow(dead_code)]
-    /// #
-    /// use shred::Resource;
-    ///
     /// #[derive(Debug)]
     /// struct MyRes(i32);
-    ///
-    /// impl Resource for MyRes {}
     /// ```
     ///
     /// When you have a resource, simply
     /// register it like this:
     ///
     /// ```rust
-    /// # use shred::Resource;
-    /// #
     /// # #[derive(Debug)] struct MyRes(i32);
-    /// #
-    /// # impl Resource for MyRes {}
     /// use shred::Resources;
     ///
     /// let mut res = Resources::new();
-    /// res.add(MyRes(5), 0);
+    /// res.add(MyRes(5), ());
     /// ```
     pub fn add<R, ID>(&mut self, r: R, id: ID)
         where R: Resource,

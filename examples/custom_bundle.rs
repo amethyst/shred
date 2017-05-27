@@ -1,16 +1,12 @@
 extern crate shred;
 
-use shred::{Fetch, FetchMut, Resource, ResourceId, Resources, SystemData};
+use shred::{Fetch, FetchMut, ResourceId, Resources, SystemData};
 
 #[derive(Debug)]
 struct ResA;
 
-impl Resource for ResA {}
-
 #[derive(Debug)]
 struct ResB;
-
-impl Resource for ResB {}
 
 struct ExampleBundle<'a> {
     a: Fetch<'a, ResA>,

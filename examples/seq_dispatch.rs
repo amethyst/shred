@@ -2,17 +2,13 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
+use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
 
 #[derive(Debug)]
 struct ResA;
 
-impl Resource for ResA {}
-
 #[derive(Debug)]
 struct ResB;
-
-impl Resource for ResB {}
 
 #[derive(SystemData)]
 struct Data<'a> {

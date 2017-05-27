@@ -27,12 +27,8 @@ use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 #[derive(Debug)]
 struct ResA;
 
-impl Resource for ResA {}
-
 #[derive(Debug)]
 struct ResB;
-
-impl Resource for ResB {}
 
 struct PrintSystem;
 
