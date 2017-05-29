@@ -158,16 +158,16 @@ impl<'t> Dispatcher<'t> {
     ///
     /// This function automatically redirects to
     ///
-    /// * [`dispatch_par`] in case the `parallel` feature is set
-    /// * [`dispatch_seq`] in case the `parallel` feature is not set
+    /// * [`dispatch_par`] in case it is supported
+    /// * [`dispatch_seq`] otherwise
     ///
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
     pub fn dispatch(&mut self, res: &mut Resources) {
-        #[cfg(feature = "parallel")]
+        #[cfg(not(target_os = "emscripten"))]
         self.dispatch_par(res);
 
-        #[cfg(not(feature = "parallel"))]
+        #[cfg(target_os = "emscripten")]
         self.dispatch_seq(res);
     }
 
@@ -176,6 +176,9 @@ impl<'t> Dispatcher<'t> {
     ///
     /// This operation blocks the
     /// executing thread.
+    ///
+    /// Only available on platforms with
+    /// multithreading support (so not on emscripten).
     #[cfg(not(target_os = "emscripten"))]
     pub fn dispatch_par(&mut self, res: &mut Resources) {
         let dependencies = &self.dependencies;
@@ -199,7 +202,7 @@ impl<'t> Dispatcher<'t> {
     /// Dispatches all systems sequentially.
     ///
     /// This is useful if parallel overhead is
-    /// too big or the platform does not support it.
+    /// too big or the platform does not support multithreading.
     pub fn dispatch_seq(&mut self, res: &mut Resources) {
         for system in &mut self.systems {
             system.exec.exec_seq(res);
