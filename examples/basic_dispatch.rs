@@ -10,13 +10,10 @@ struct ResB;
 
 struct PrintSystem;
 
-// Systems should be generic over the
-// context if possible, so it's easy
-// to introduce one.
-impl<'a, C> System<'a, C> for PrintSystem {
+impl<'a> System<'a> for PrintSystem {
     type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
 
-    fn work(&mut self, data: Self::SystemData, _: C) {
+    fn work(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;
 
         println!("{:?}", &*a);
@@ -38,5 +35,5 @@ fn main() {
     // We can even pass a context,
     // but we don't need one here
     // so we pass `()`.
-    dispatcher.dispatch(&mut resources, ());
+    dispatcher.dispatch(&mut resources);
 }

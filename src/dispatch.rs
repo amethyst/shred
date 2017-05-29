@@ -18,29 +18,24 @@ const ERR_NO_DISPATCH: &str = "wait() called before dispatch or called twice";
 /// Like, `Dispatcher` but works
 /// asynchronously.
 #[cfg(not(target_os = "emscripten"))]
-pub struct AsyncDispatcher<C> {
-    /// The last context
-    context: Option<C>,
-    inner: Arc<Mutex<AsyncDispatcherInner<C>>>,
+pub struct AsyncDispatcher {
+    inner: Arc<Mutex<AsyncDispatcherInner>>,
     res: Arc<Resources>,
     signal: Option<Signal>,
-    thread_local: Vec<Box<ExecSystem<'static, C> + 'static>>,
+    thread_local: Vec<Box<ExecSystem + 'static>>,
     thread_pool: Arc<ThreadPool>,
 }
 
 #[cfg(not(target_os = "emscripten"))]
-impl<C> AsyncDispatcher<C>
-    where C: Clone + Send + 'static
-{
+impl AsyncDispatcher {
     /// Dispatches the systems asynchronously.
     ///
     /// If you want to wait for the systems to finish,
     /// call `wait()`.
-    pub fn dispatch(&mut self, context: C) {
+    pub fn dispatch(&mut self) {
         let (signal, pulse) = Signal::new();
         self.signal = Some(signal);
 
-        self.context = Some(context.clone());
         let inner = self.inner.clone();
         let res = self.res.clone();
 
@@ -55,8 +50,7 @@ impl<C> AsyncDispatcher<C>
                                          inner.ready.clone(),
                                          res,
                                          &inner.running,
-                                         &mut inner.systems,
-                                         context);
+                                         &mut inner.systems);
                 }
 
                 pulse.pulse();
@@ -67,11 +61,10 @@ impl<C> AsyncDispatcher<C>
                       r: Vec<usize>,
                       resources: Arc<Resources>,
                       run: &AtomicBitSet,
-                      sys: &mut Vec<SystemInfo<C>>,
-                      c: C) {
+                      sys: &mut Vec<SystemInfo>) {
         let res = &*resources;
 
-        scope(move |s| Dispatcher::dispatch_inner(d, r, res, run, s, sys, c));
+        scope(move |s| Dispatcher::dispatch_inner(d, r, res, run, s, sys));
     }
 
     /// Waits for all the systems to finish
@@ -84,9 +77,7 @@ impl<C> AsyncDispatcher<C>
             .wait()
             .expect("The worker thread may have panicked");
 
-        Dispatcher::dispatch_tl(&mut self.thread_local,
-                                &*self.res,
-                                self.context.take().expect(ERR_NO_DISPATCH));
+        Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
     }
 
     /// Returns the resources.
@@ -103,11 +94,11 @@ impl<C> AsyncDispatcher<C>
 }
 
 #[cfg(not(target_os = "emscripten"))]
-struct AsyncDispatcherInner<C> {
+struct AsyncDispatcherInner {
     dependencies: Dependencies,
     ready: Vec<usize>,
     running: AtomicBitSet,
-    systems: Vec<SystemInfo<'static, 'static, C>>,
+    systems: Vec<SystemInfo<'static>>,
 }
 
 #[derive(Debug, Default)]
@@ -151,20 +142,18 @@ impl Dependencies {
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
-pub struct Dispatcher<'c, 't, C = ()> {
+pub struct Dispatcher<'t> {
     dependencies: Dependencies,
     ready: Vec<usize>,
     #[cfg(not(target_os = "emscripten"))]
     running: AtomicBitSet,
-    systems: Vec<SystemInfo<'c, 't, C>>,
-    thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
+    systems: Vec<SystemInfo<'t>>,
+    thread_local: Vec<Box<ExecSystem + 't>>,
     #[cfg(not(target_os = "emscripten"))]
     thread_pool: Arc<ThreadPool>,
 }
 
-impl<'c, 't, C> Dispatcher<'c, 't, C>
-    where C: Clone + Send + 'c
-{
+impl<'t> Dispatcher<'t> {
     /// Dispatch systems with given resources and context.
     ///
     /// This function automatically redirects to
@@ -174,12 +163,12 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     ///
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
-    pub fn dispatch(&mut self, res: &mut Resources, context: C) {
+    pub fn dispatch(&mut self, res: &mut Resources) {
         #[cfg(feature = "parallel")]
-        self.dispatch_par(res, context);
+        self.dispatch_par(res);
 
         #[cfg(not(feature = "parallel"))]
-        self.dispatch_seq(res, context);
+        self.dispatch_seq(res);
     }
 
     /// Dispatches the systems in parallel given the
@@ -188,8 +177,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     /// This operation blocks the
     /// executing thread.
     #[cfg(not(target_os = "emscripten"))]
-    pub fn dispatch_par(&mut self, res: &mut Resources, context: C) {
-        let context_tl = context.clone();
+    pub fn dispatch_par(&mut self, res: &mut Resources) {
         let dependencies = &self.dependencies;
         let ready = self.ready.clone();
         let res = res as &Resources;
@@ -199,36 +187,30 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
         self.thread_pool
             .install(move || {
                 scope(move |scope| {
-                    Self::dispatch_inner(dependencies,
-                                         ready,
-                                         res,
-                                         running,
-                                         scope,
-                                         systems,
-                                         context);
-                });
+                          Self::dispatch_inner(dependencies, ready, res, running, scope, systems);
+                      });
             });
 
         self.running.clear();
 
-        Self::dispatch_tl(&mut self.thread_local, res, context_tl);
+        Self::dispatch_tl(&mut self.thread_local, res);
     }
 
     /// Dispatches all systems sequentially.
     ///
     /// This is useful if parallel overhead is
     /// too big or the platform does not support it.
-    pub fn dispatch_seq(&mut self, res: &mut Resources, context: C) {
+    pub fn dispatch_seq(&mut self, res: &mut Resources) {
         for system in &mut self.systems {
-            system.exec.exec_seq(res, context.clone());
+            system.exec.exec_seq(res);
         }
 
-        Self::dispatch_tl(&mut self.thread_local, res, context);
+        Self::dispatch_tl(&mut self.thread_local, res);
     }
 
-    fn dispatch_tl(tl: &mut [Box<ExecSystem<'c, C> + 't>], res: &Resources, c: C) {
+    fn dispatch_tl(tl: &mut [Box<ExecSystem + 't>], res: &Resources) {
         for tl in tl {
-            tl.exec_seq(res, c.clone());
+            tl.exec_seq(res);
         }
     }
 
@@ -238,18 +220,15 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
                           res: &'s Resources,
                           running: &'s AtomicBitSet,
                           scope: &Scope<'s>,
-                          systems: &'s mut Vec<SystemInfo<C>>,
-                          context: C)
-        where 'c: 's
-    {
+                          systems: &'s mut Vec<SystemInfo>) {
         let mut start_count = 0;
         let num_systems = systems.len();
         let mut systems: Vec<_> = systems.iter_mut().map(Some).collect();
 
         while start_count < num_systems {
             if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
-                let system: &mut SystemInfo<C> = systems[index].take().expect("Already executed");
-                system.exec.exec(scope, res, context.clone(), running);
+                let system: &mut SystemInfo = systems[index].take().expect("Already executed");
+                system.exec.exec(scope, res, running);
 
                 start_count += 1;
 
@@ -325,7 +304,7 @@ impl<'c, 't, C> Dispatcher<'c, 't, C>
     }
 }
 
-impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
+impl<'t> Debug for Dispatcher<'t> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
         f.debug_struct("Dispatcher")
             .field("dependencies", &self.dependencies)
@@ -353,10 +332,10 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 /// # #[derive(Debug)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
-/// # impl<'a, C> System<'a, C> for Dummy {
+/// # impl<'a> System<'a> for Dummy {
 /// #   type SystemData = Data<'a>;
 /// #
-/// #   fn work(&mut self, _: Data<'a>, _: C) {}
+/// #   fn work(&mut self, _: Data<'a>) {}
 /// # }
 /// #
 /// # fn main() {
@@ -365,7 +344,7 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 /// # let system_c = Dummy;
 /// # let system_d = Dummy;
 /// # let system_e = Dummy;
-/// let dispatcher: Dispatcher<()> = DispatcherBuilder::new()
+/// let dispatcher: Dispatcher = DispatcherBuilder::new()
 ///     .add(system_a, "a", &[])
 ///     .add(system_b, "b", &["a"]) // b depends on a
 ///     .add(system_c, "c", &["a"]) // c also depends on a
@@ -375,19 +354,17 @@ impl<'c, 't, C> Debug for Dispatcher<'c, 't, C> {
 /// # }
 /// ```
 ///
-pub struct DispatcherBuilder<'c, 't, C = ()> {
+pub struct DispatcherBuilder<'t> {
     dependencies: Dependencies,
     map: FnvHashMap<String, usize>,
     ready: Vec<usize>,
-    systems: Vec<SystemInfo<'c, 't, C>>,
-    thread_local: Vec<Box<ExecSystem<'c, C> + 't>>,
+    systems: Vec<SystemInfo<'t>>,
+    thread_local: Vec<Box<ExecSystem + 't>>,
     #[cfg(not(target_os = "emscripten"))]
     thread_pool: Option<Arc<ThreadPool>>,
 }
 
-impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
-    where C: 'c
-{
+impl<'t> DispatcherBuilder<'t> {
     /// Creates a new `DispatcherBuilder` by
     /// using the `Default` implementation.
     ///
@@ -409,7 +386,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     ///
     /// * if the specified dependency does not exist
     pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
-        where T: for<'a> System<'a, C> + Send + 't
+        where T: for<'a> System<'a> + Send + 't
     {
         let id = self.systems.len();
         let reads = unsafe { T::SystemData::reads() };
@@ -424,7 +401,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
             .collect();
 
         for dependency in &dependencies {
-            let dependency: &mut SystemInfo<C> = &mut self.systems[*dependency];
+            let dependency: &mut SystemInfo = &mut self.systems[*dependency];
             dependency.dependents.push(id);
         }
 
@@ -458,7 +435,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     /// Thread-local systems are dispatched
     /// in-order.
     pub fn add_thread_local<T>(mut self, system: T) -> Self
-        where T: for<'a> System<'a, C> + 't
+        where T: for<'a> System<'a> + 't
     {
 
         #[cfg(not(target_os = "emscripten"))]
@@ -486,7 +463,7 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn build(self) -> Dispatcher<'c, 't, C> {
+    pub fn build(self) -> Dispatcher<'t> {
         #[cfg(not(target_os = "emscripten"))]
         let size = self.systems.len();
 
@@ -521,14 +498,12 @@ impl<'c, 't, C> DispatcherBuilder<'c, 't, C>
 }
 
 #[cfg(not(target_os = "emscripten"))]
-impl<C> DispatcherBuilder<'static, 'static, C>
-    where C: 'static
-{
+impl DispatcherBuilder<'static> {
     /// Builds an async dispatcher.
     ///
     /// It does not allow non-static types and
     /// accepts a `Resource` struct.
-    pub fn build_async(self, res: Resources) -> AsyncDispatcher<C> {
+    pub fn build_async(self, res: Resources) -> AsyncDispatcher {
         let size = self.systems.len();
 
         let inner = AsyncDispatcherInner {
@@ -539,7 +514,6 @@ impl<C> DispatcherBuilder<'static, 'static, C>
         };
 
         AsyncDispatcher {
-            context: None,
             inner: Arc::new(Mutex::new(inner)),
             res: Arc::new(res),
             signal: None,
@@ -549,7 +523,7 @@ impl<C> DispatcherBuilder<'static, 'static, C>
     }
 }
 
-impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
+impl<'t> Debug for DispatcherBuilder<'t> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
         f.debug_struct("DispatcherBuilder")
             .field("dependencies", &self.dependencies)
@@ -559,7 +533,7 @@ impl<'c, 't, C> Debug for DispatcherBuilder<'c, 't, C> {
     }
 }
 
-impl<'c, 't, C> Default for DispatcherBuilder<'c, 't, C> {
+impl<'t> Default for DispatcherBuilder<'t> {
     fn default() -> Self {
         #[cfg(not(target_os = "emscripten"))]
         let d = DispatcherBuilder {
@@ -584,16 +558,11 @@ impl<'c, 't, C> Default for DispatcherBuilder<'c, 't, C> {
     }
 }
 
-trait ExecSystem<'c, C> {
+trait ExecSystem {
     #[cfg(not(target_os = "emscripten"))]
-    fn exec<'s>(&'s mut self,
-                s: &Scope<'s>,
-                res: &'s Resources,
-                context: C,
-                running: &'s AtomicBitSet)
-        where 'c: 's;
+    fn exec<'s>(&'s mut self, s: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet);
 
-    fn exec_seq(&mut self, res: &Resources, context: C);
+    fn exec_seq(&mut self, res: &Resources);
 }
 
 struct SystemDispatch<T> {
@@ -613,40 +582,31 @@ impl<T> SystemDispatch<T> {
 
     #[cfg(target_os = "emscripten")]
     fn new(system: T) -> Self {
-        SystemDispatch {
-            system: system,
-        }
+        SystemDispatch { system: system }
     }
 }
 
-impl<'c, C, T> ExecSystem<'c, C> for SystemDispatch<T>
-    where C: 'c,
-          T: for<'b> System<'b, C>
+impl<T> ExecSystem for SystemDispatch<T>
+    where T: for<'b> System<'b>
 {
     #[cfg(not(target_os = "emscripten"))]
-    fn exec<'s>(&'s mut self,
-                scope: &Scope<'s>,
-                res: &'s Resources,
-                context: C,
-                running: &'s AtomicBitSet)
-        where 'c: 's
-    {
+    fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
         running.set(self.id, true);
         let data = T::SystemData::fetch(res);
         scope.spawn(move |_| {
-                        self.system.work(data, context);
+                        self.system.work(data);
                         running.set(self.id, false)
                     })
     }
 
-    fn exec_seq(&mut self, res: &Resources, context: C) {
-        run_now(&mut self.system, res, context);
+    fn exec_seq(&mut self, res: &Resources) {
+        run_now(&mut self.system, res);
     }
 }
 
-struct SystemInfo<'c, 't, C> {
+struct SystemInfo<'t> {
     dependents: Vec<usize>,
-    exec: Box<ExecSystem<'c, C> + Send + 't>,
+    exec: Box<ExecSystem + Send + 't>,
 }
 
 /// Runs a system right now.
@@ -655,9 +615,9 @@ struct SystemInfo<'c, 't, C> {
 /// instead.
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
-pub fn run_now<'a, T, C>(sys: &mut T, res: &'a Resources, context: C)
-    where T: System<'a, C>
+pub fn run_now<'a, T>(sys: &mut T, res: &'a Resources)
+    where T: System<'a>
 {
     let data = T::SystemData::fetch(res);
-    sys.work(data, context);
+    sys.work(data);
 }

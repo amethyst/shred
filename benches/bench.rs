@@ -6,7 +6,6 @@ extern crate shred;
 extern crate shred_derive;
 extern crate test;
 
-use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 
 use cgmath::Vector3;
@@ -38,12 +37,8 @@ impl<T> IndexMut<usize> for VecStorage<T> {
     }
 }
 
-impl<T> Resource for VecStorage<T> where T: Debug + Send + Sync + 'static {}
-
 #[derive(Debug)]
 struct DeltaTime(f32);
-
-impl Resource for DeltaTime {}
 
 type Vec3 = Vector3<f32>;
 
@@ -84,10 +79,10 @@ struct SpringForceData<'a> {
 
 struct SpringForce;
 
-impl<'a, C> System<'a, C> for SpringForce {
+impl<'a> System<'a> for SpringForce {
     type SystemData = SpringForceData<'a>;
 
-    fn work(&mut self, mut data: SpringForceData, _: C) {
+    fn work(&mut self, mut data: SpringForceData) {
         for elem in 0..NUM_COMPONENTS {
             let pos = data.pos[elem].0;
             let spring: Spring = data.spring[elem];
@@ -118,10 +113,10 @@ struct IntegrationData<'a> {
 
 struct IntegrationSystem;
 
-impl<'a, C> System<'a, C> for IntegrationSystem {
+impl<'a> System<'a> for IntegrationSystem {
     type SystemData = IntegrationData<'a>;
 
-    fn work(&mut self, mut data: IntegrationData, _: C) {
+    fn work(&mut self, mut data: IntegrationData) {
         for elem in 0..NUM_COMPONENTS {
             let mass = data.mass[elem].0;
 
@@ -154,10 +149,10 @@ struct ClearForceAccumData<'a> {
 
 struct ClearForceAccum;
 
-impl<'a, C> System<'a, C> for ClearForceAccum {
+impl<'a> System<'a> for ClearForceAccum {
     type SystemData = ClearForceAccumData<'a>;
 
-    fn work(&mut self, mut data: ClearForceAccumData, _: C) {
+    fn work(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {
             data.force[elem] = Force(Vec3 {
                                          x: 0.0,
@@ -197,5 +192,5 @@ fn basic(b: &mut Bencher) {
     res.add(force, ());
     res.add(spring, ());
 
-    b.iter(|| dispatcher.dispatch(&mut res, ()));
+    b.iter(|| dispatcher.dispatch(&mut res));
 }
