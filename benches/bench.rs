@@ -6,7 +6,6 @@ extern crate shred;
 extern crate shred_derive;
 extern crate test;
 
-use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 
 use cgmath::Vector3;
@@ -38,12 +37,8 @@ impl<T> IndexMut<usize> for VecStorage<T> {
     }
 }
 
-impl<T> Resource for VecStorage<T> where T: Debug + Send + Sync + 'static {}
-
 #[derive(Debug)]
 struct DeltaTime(f32);
-
-impl Resource for DeltaTime {}
 
 type Vec3 = Vector3<f32>;
 
