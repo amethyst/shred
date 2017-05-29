@@ -19,23 +19,23 @@ struct DummyDataMut<'a> {
 
 struct DummySys;
 
-impl<'a, C> System<'a, C> for DummySys {
+impl<'a> System<'a> for DummySys {
     type SystemData = DummyData<'a>;
 
-    fn work(&mut self, _data: Self::SystemData, _context: C) {}
+    fn work(&mut self, _data: Self::SystemData) {}
 }
 
 struct DummySysMut;
 
-impl<'a, C> System<'a, C> for DummySysMut {
+impl<'a> System<'a> for DummySysMut {
     type SystemData = DummyDataMut<'a>;
 
-    fn work(&mut self, _data: Self::SystemData, _context: C) {}
+    fn work(&mut self, _data: Self::SystemData) {}
 }
 
 #[test]
 fn dispatch_builder() {
-    DispatcherBuilder::<()>::new()
+    DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["a"])
         .add(DummySys, "c", &["a"])
@@ -45,7 +45,7 @@ fn dispatch_builder() {
 #[test]
 #[should_panic(expected = "No such system registered")]
 fn dispatch_builder_invalid() {
-    DispatcherBuilder::<()>::new()
+    DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["z"])
         .build();
@@ -56,12 +56,12 @@ fn dispatch_basic() {
     let mut res = Resources::new();
     res.add(Res, ());
 
-    let mut d: Dispatcher<_> = DispatcherBuilder::new()
+    let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySys, "b", &["a"])
         .build();
 
-    d.dispatch(&mut res, ());
+    d.dispatch(&mut res);
 }
 
 #[test]
@@ -69,12 +69,12 @@ fn dispatch_rw_block() {
     let mut res = Resources::new();
     res.add(Res, ());
 
-    let mut d: Dispatcher<_> = DispatcherBuilder::new()
+    let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
         .add(DummySysMut, "b", &[])
         .build();
 
-    d.dispatch(&mut res, ());
+    d.dispatch(&mut res);
 }
 
 #[test]
@@ -82,12 +82,12 @@ fn dispatch_rw_block_rev() {
     let mut res = Resources::new();
     res.add(Res, ());
 
-    let mut d: Dispatcher<_> = DispatcherBuilder::new()
+    let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
         .add(DummySys, "b", &[])
         .build();
 
-    d.dispatch(&mut res, ());
+    d.dispatch(&mut res);
 }
 
 #[test]
@@ -95,12 +95,12 @@ fn dispatch_sequential() {
     let mut res = Resources::new();
     res.add(Res, ());
 
-    let mut d: Dispatcher<_> = DispatcherBuilder::new()
+    let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
         .add(DummySys, "b", &[])
         .build();
 
-    d.dispatch_seq(&mut res, ());
+    d.dispatch_seq(&mut res);
 }
 
 #[cfg(feature = "parallel")]
@@ -114,7 +114,7 @@ fn dispatch_async() {
         .add(DummySys, "b", &[])
         .build_async(res);
 
-    d.dispatch(());
+    d.dispatch();
 
     d.wait();
 }
@@ -130,7 +130,7 @@ fn dispatch_async_res() {
         .add(DummySys, "b", &[])
         .build_async(res);
 
-    d.dispatch(());
+    d.dispatch();
 
     let res = d.mut_res();
     res.add(Res, 2);
