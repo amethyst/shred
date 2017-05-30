@@ -1,7 +1,6 @@
 //! Module for resource related types
 
 use std::any::TypeId;
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -17,7 +16,6 @@ const DEFAULT_HASH: u64 = 14695981039346656037;
 /// Return value of [`Resources::fetch`].
 ///
 /// [`Resources::fetch`]: struct.Resources.html#method.fetch
-#[derive(Debug)]
 pub struct Fetch<'a, T: 'a> {
     inner: Ref<'a, Box<Resource>>,
     phantom: PhantomData<&'a T>,
@@ -52,7 +50,6 @@ impl<'a, T> SystemData<'a> for Fetch<'a, T>
 /// Return value of [`Resources::fetch_id`].
 ///
 /// [`Resources::fetch_id`]: struct.Resources.html#method.fetch_id
-#[derive(Debug)]
 pub struct FetchId<'a> {
     inner: Ref<'a, Box<Resource>>,
 }
@@ -68,7 +65,6 @@ impl<'a> Deref for FetchId<'a> {
 /// Return value of [`Resources::fetch_id_mut`].
 ///
 /// [`Resources::fetch_id_mut`]: struct.Resources.html#method.fetch_id_mut
-#[derive(Debug)]
 pub struct FetchIdMut<'a> {
     inner: RefMut<'a, Box<Resource>>,
 }
@@ -90,7 +86,6 @@ impl<'a> DerefMut for FetchIdMut<'a> {
 /// Return value of [`Resources::fetch_mut`].
 ///
 /// [`Resources::fetch_mut`]: struct.Resources.html#method.fetch_mut
-#[derive(Debug)]
 pub struct FetchMut<'a, T: 'a> {
     inner: RefMut<'a, Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
@@ -133,11 +128,11 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
 /// A resource defines a set of data
 /// which can only be accessed according
 /// to Rust's typical borrowing model (one writer xor multiple readers).
-pub trait Resource: Any + Debug + Send + Sync {}
+pub trait Resource: Any + Send + Sync {}
 
 mopafy!(Resource);
 
-impl<T> Resource for T where T: Any + Debug + Send + Sync {}
+impl<T> Resource for T where T: Any + Send + Sync {}
 
 /// The id of a [`Resource`],
 /// which is a tuple struct with a type
@@ -165,7 +160,7 @@ impl ResourceId {
 /// A resource container, which
 /// provides methods to access to
 /// the contained resources.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Resources {
     resources: FnvHashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
