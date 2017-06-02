@@ -29,6 +29,7 @@ pub struct AsyncDispatcher {
 #[cfg(not(target_os = "emscripten"))]
 impl AsyncDispatcher {
     /// Dispatches the systems asynchronously.
+    /// Does not execute thread local systems.
     ///
     /// If you want to wait for the systems to finish,
     /// call `wait()`.
@@ -67,22 +68,38 @@ impl AsyncDispatcher {
         scope(move |s| Dispatcher::dispatch_inner(d, r, res, run, s, sys));
     }
 
-    /// Waits for all the systems to finish
-    /// and executes thread local systems (if there
-    /// are any).
+    /// Waits for all the asynchronously dispatched systems to finish
+    /// and executes thread local systems (if there are any).
     pub fn wait(&mut self) {
+        self.wait_without_tl();
+        Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
+    }
+
+    /// Waits for all the asynchronously dispatched systems to finish
+    /// without executing thread local systems.
+    pub fn wait_without_tl(&mut self) {
         self.signal
             .take()
             .expect(ERR_NO_DISPATCH)
             .wait()
             .expect("The worker thread may have panicked");
+    }
+
+    /// Dispatch only thread local systems sequentially.
+    ///
+    /// If `wait_without_tl()` or `wait()` wasn't called before,
+    /// this method will wait.
+    pub fn dispatch_thread_local(&mut self) {
+        if self.signal.is_some() {
+            self.wait_without_tl();
+        }
 
         Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
     }
 
     /// Returns the resources.
     ///
-    /// If `wait()` wasn't called before,
+    /// If `wait_without_tl()` or `wait()` wasn't called before,
     /// this method will do that.
     pub fn mut_res(&mut self) -> &mut Resources {
         if self.signal.is_some() {
@@ -154,7 +171,8 @@ pub struct Dispatcher<'t> {
 }
 
 impl<'t> Dispatcher<'t> {
-    /// Dispatch systems with given resources and context.
+    /// Dispatch all the systems with given resources and context
+    /// and then run thread local systems.
     ///
     /// This function automatically redirects to
     ///
@@ -169,10 +187,12 @@ impl<'t> Dispatcher<'t> {
 
         #[cfg(target_os = "emscripten")]
         self.dispatch_seq(res);
+
+        self.dispatch_thread_local(res);
     }
 
-    /// Dispatches the systems in parallel given the
-    /// resources to operate on.
+    /// Dispatches the systems (except thread local systems)
+    /// in parallel given the resources to operate on.
     ///
     /// This operation blocks the
     /// executing thread.
@@ -195,11 +215,9 @@ impl<'t> Dispatcher<'t> {
             });
 
         self.running.clear();
-
-        Self::dispatch_tl(&mut self.thread_local, res);
     }
 
-    /// Dispatches all systems sequentially.
+    /// Dispatches the systems (except thread local systems) sequentially.
     ///
     /// This is useful if parallel overhead is
     /// too big or the platform does not support multithreading.
@@ -207,7 +225,10 @@ impl<'t> Dispatcher<'t> {
         for system in &mut self.systems {
             system.exec.exec_seq(res);
         }
+    }
 
+    /// Dispatch only thread local systems sequentially.
+    pub fn dispatch_thread_local(&mut self, res: &Resources) {
         Self::dispatch_tl(&mut self.thread_local, res);
     }
 
