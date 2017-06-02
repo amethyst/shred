@@ -338,7 +338,7 @@ impl<'t> Debug for Dispatcher<'t> {
 /// # impl<'a> System<'a> for Dummy {
 /// #   type SystemData = Data<'a>;
 /// #
-/// #   fn work(&mut self, _: Data<'a>) {}
+/// #   fn run(&mut self, _: Data<'a>) {}
 /// # }
 /// #
 /// # fn main() {
@@ -628,7 +628,7 @@ impl<T> ExecSystem for SystemDispatch<T>
         running.set(self.id, true);
         let data = T::SystemData::fetch(res, self.data_id);
         scope.spawn(move |_| {
-                        self.system.work(data);
+                        self.system.run(data);
                         running.set(self.id, false)
                     })
     }
@@ -653,5 +653,5 @@ pub fn run_now<'a, T>(sys: &mut T, res: &'a Resources, id: usize)
     where T: System<'a>
 {
     let data = T::SystemData::fetch(res, id);
-    sys.work(data);
+    sys.run(data);
 }

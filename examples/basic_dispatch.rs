@@ -13,7 +13,7 @@ struct PrintSystem;
 impl<'a> System<'a> for PrintSystem {
     type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
 
-    fn work(&mut self, data: Self::SystemData) {
+    fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;
 
         println!("{:?}", &*a);

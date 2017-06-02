@@ -14,7 +14,7 @@ pub trait System<'a> {
 
     /// Executes the system with the required system
     /// data.
-    fn work(&mut self, data: Self::SystemData);
+    fn run(&mut self, data: Self::SystemData);
 }
 
 /// A struct implementing
