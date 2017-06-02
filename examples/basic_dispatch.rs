@@ -32,8 +32,5 @@ fn main() {
     resources.add(ResA);
     resources.add(ResB);
 
-    // We can even pass a context,
-    // but we don't need one here
-    // so we pass `()`.
     dispatcher.dispatch(&mut resources);
 }

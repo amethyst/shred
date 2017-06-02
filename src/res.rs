@@ -133,9 +133,9 @@ impl<T> Resource for T where T: Any + Send + Sync {}
 
 /// The id of a [`Resource`],
 /// which is a tuple struct with a type
-/// id and a component id (represented with a `usize`).
+/// id and an additional resource id (represented with a `usize`).
 ///
-/// The default component id is `0`.
+/// The default resource id is `0`.
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
