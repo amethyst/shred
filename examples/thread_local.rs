@@ -34,8 +34,8 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .add_thread_local(EmptySystem(&mut x))
         .build();
-    resources.add(ResA, 0);
-    resources.add(ResB, 0);
+    resources.add(ResA);
+    resources.add(ResB);
 
     dispatcher.dispatch(&mut resources);
 }

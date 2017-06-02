@@ -180,6 +180,9 @@ impl Resources {
 
     /// Adds a new resource to this container.
     ///
+    /// This method calls `add_with_id` with
+    /// 0 for the id.
+    ///
     /// # Panics
     ///
     /// Panics if the resource is already registered.
@@ -203,9 +206,15 @@ impl Resources {
     /// use shred::Resources;
     ///
     /// let mut res = Resources::new();
-    /// res.add(MyRes(5), 0);
+    /// res.add(MyRes(5));
     /// ```
-    pub fn add<R>(&mut self, r: R, id: usize)
+    pub fn add<R>(&mut self, r: R) where R: Resource {
+        self.add_with_id(r, 0)
+    }
+
+    /// Like `add()`, but allows specifying
+    /// and id while `add()` assumes `0`.
+    pub fn add_with_id<R>(&mut self, r: R, id: usize)
         where R: Resource
     {
         use std::collections::hash_map::Entry;

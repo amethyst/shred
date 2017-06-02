@@ -54,7 +54,7 @@ fn dispatch_builder_invalid() {
 #[test]
 fn dispatch_basic() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
@@ -67,7 +67,7 @@ fn dispatch_basic() {
 #[test]
 fn dispatch_rw_block() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySys, "a", &[])
@@ -80,7 +80,7 @@ fn dispatch_rw_block() {
 #[test]
 fn dispatch_rw_block_rev() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
@@ -93,7 +93,7 @@ fn dispatch_rw_block_rev() {
 #[test]
 fn dispatch_sequential() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
@@ -107,7 +107,7 @@ fn dispatch_sequential() {
 #[test]
 fn dispatch_async() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
@@ -123,7 +123,7 @@ fn dispatch_async() {
 #[test]
 fn dispatch_async_res() {
     let mut res = Resources::new();
-    res.add(Res, 0);
+    res.add(Res);
 
     let mut d = DispatcherBuilder::new()
         .add(DummySysMut, "a", &[])
@@ -133,5 +133,5 @@ fn dispatch_async_res() {
     d.dispatch();
 
     let res = d.mut_res();
-    res.add(Res, 2);
+    res.add_with_id(Res, 2);
 }
