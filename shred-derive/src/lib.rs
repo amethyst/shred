@@ -1,4 +1,4 @@
-#![recursion_limit="128"]
+#![recursion_limit="256"]
 
 extern crate proc_macro;
 extern crate syn;
@@ -46,26 +46,26 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
             ::shred::SystemData< #fetch_lt >
             for #name< #impl_lt_tokens , #impl_ty_params >
         {
-            fn fetch(res: & #fetch_lt ::shred::Resources) -> Self {
+            fn fetch(res: & #fetch_lt ::shred::Resources, id: usize) -> Self {
                 #fetch_return
             }
 
-            unsafe fn reads() -> Vec<::shred::ResourceId> {
+            unsafe fn reads(id: usize) -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut reads = <#reads as ::shred::SystemData> :: reads();
+                        let mut reads = <#reads as ::shred::SystemData> :: reads(id);
                         r.append(&mut reads);
                     } )*
 
                 r
             }
 
-            unsafe fn writes() -> Vec<::shred::ResourceId> {
+            unsafe fn writes(id: usize) -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut writes = <#writes as ::shred::SystemData> :: writes();
+                        let mut writes = <#writes as ::shred::SystemData> :: writes(id);
                         r.append(&mut writes);
                     } )*
 
@@ -132,12 +132,15 @@ fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
 }
 
 fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Tokens>) {
-    enum BodyType { Struct, Tuple }
+    enum BodyType {
+        Struct,
+        Tuple,
+    }
 
     let (body, fields) = match *ast {
         Body::Struct(VariantData::Struct(ref x)) => (BodyType::Struct, x),
         Body::Struct(VariantData::Tuple(ref x)) => (BodyType::Tuple, x),
-        _ => panic!("Enums are not supported")
+        _ => panic!("Enums are not supported"),
     };
 
     let tys = collect_field_types(fields);
@@ -148,13 +151,13 @@ fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Tokens>) {
 
             quote! {
                 #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
+                    #( #identifiers: ::shred::SystemData::fetch(res, id) ),*
                 }
             }
         }
         BodyType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
+            let fetch = vec![quote! { ::shred::SystemData::fetch(res, id) }; count];
 
             quote! {
                 #name ( #( #fetch ),* )
