@@ -14,32 +14,31 @@ struct ExampleBundle<'a> {
 }
 
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a Resources, id: usize) -> Self {
         ExampleBundle {
-            a: res.fetch(()),
-            b: res.fetch_mut(()),
+            a: res.fetch(id),
+            b: res.fetch_mut(id),
         }
     }
 
-    unsafe fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<ResA>()]
+    unsafe fn reads(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<ResA>(id)]
     }
 
-    unsafe fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<ResB>()]
+    unsafe fn writes(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<ResB>(id)]
     }
 }
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA, ());
-    res.add(ResB, ());
+    res.add(ResA, 0);
+    res.add(ResB, 0);
 
 
-    let mut bundle = ExampleBundle::fetch(&res);
+    let mut bundle = ExampleBundle::fetch(&res, 0);
     *bundle.b = ResB;
 
     println!("{:?}", *bundle.a);
     println!("{:?}", *bundle.b);
-
 }

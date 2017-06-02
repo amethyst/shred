@@ -185,12 +185,12 @@ fn basic(b: &mut Bencher) {
 
     pos.data[0] = Pos(Vec3::new(-5.0, -5.0, -5.0));
 
-    res.add(DeltaTime(0.05), ());
-    res.add(mass, ());
-    res.add(pos, ());
-    res.add(vel, ());
-    res.add(force, ());
-    res.add(spring, ());
+    res.add(DeltaTime(0.05), 0);
+    res.add(mass, 0);
+    res.add(pos, 0);
+    res.add(vel, 0);
+    res.add(force, 0);
+    res.add(spring, 0);
 
     b.iter(|| dispatcher.dispatch(&mut res));
 }

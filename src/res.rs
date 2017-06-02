@@ -1,17 +1,14 @@
 //! Module for resource related types
 
 use std::any::TypeId;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use fnv::{FnvHasher, FnvHashMap};
+use fnv::FnvHashMap;
 use mopa::Any;
 
 use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
-
-const DEFAULT_HASH: u64 = 14695981039346656037;
 
 /// Return value of [`Resources::fetch`].
 ///
@@ -34,15 +31,15 @@ impl<'a, T> Deref for Fetch<'a, T>
 impl<'a, T> SystemData<'a> for Fetch<'a, T>
     where T: Resource
 {
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch(())
+    fn fetch(res: &'a Resources, id: usize) -> Self {
+        res.fetch(id)
     }
 
-    unsafe fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
+    unsafe fn reads(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<T>(id)]
     }
 
-    unsafe fn writes() -> Vec<ResourceId> {
+    unsafe fn writes(_: usize) -> Vec<ResourceId> {
         vec![]
     }
 }
@@ -112,16 +109,16 @@ impl<'a, T> DerefMut for FetchMut<'a, T>
 impl<'a, T> SystemData<'a> for FetchMut<'a, T>
     where T: Resource
 {
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch_mut(())
+    fn fetch(res: &'a Resources, id: usize) -> Self {
+        res.fetch_mut(id)
     }
 
-    unsafe fn reads() -> Vec<ResourceId> {
+    unsafe fn reads(_: usize) -> Vec<ResourceId> {
         vec![]
     }
 
-    unsafe fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
+    unsafe fn writes(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<T>(id)]
     }
 }
 
@@ -136,30 +133,40 @@ impl<T> Resource for T where T: Any + Send + Sync {}
 
 /// The id of a [`Resource`],
 /// which is a tuple struct with a type
-/// id and a hashed component id.
+/// id and a component id (represented with a `usize`).
+///
+/// The default component id is `0`.
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ResourceId(pub TypeId, pub u64);
+pub struct ResourceId(pub TypeId, pub usize);
 
 impl ResourceId {
     /// Creates a new resource id from
     /// a given type with the default
     /// extra id.
     pub fn new<T: Resource>() -> Self {
-        ResourceId(TypeId::of::<T>(), DEFAULT_HASH)
+        Self::new_with_id::<T>(0)
     }
 
     /// Creates a new resource id from
     /// a given type and an additional id.
-    pub fn new_with_id<T: Resource, ID: Hash + Eq>(id: ID) -> Self {
-        ResourceId(TypeId::of::<T>(), fnv_hash(&id))
+    pub fn new_with_id<T: Resource>(id: usize) -> Self {
+        ResourceId(TypeId::of::<T>(), id)
     }
 }
 
 /// A resource container, which
 /// provides methods to access to
 /// the contained resources.
+///
+/// # Resource Ids
+///
+/// Resources are in general identified
+/// by `ResourceId`, which consists of a `TypeId`
+/// and a `usize`. The `usize` may be used as
+/// an additional identifier. In many cases, there
+/// are convenience methods which assume this id is `0`.
 #[derive(Default)]
 pub struct Resources {
     resources: FnvHashMap<ResourceId, TrustCell<Box<Resource>>>,
@@ -171,8 +178,7 @@ impl Resources {
         Default::default()
     }
 
-    /// Adds a new resource
-    /// to this container.
+    /// Adds a new resource to this container.
     ///
     /// # Panics
     ///
@@ -197,15 +203,14 @@ impl Resources {
     /// use shred::Resources;
     ///
     /// let mut res = Resources::new();
-    /// res.add(MyRes(5), ());
+    /// res.add(MyRes(5), 0);
     /// ```
-    pub fn add<R, ID>(&mut self, r: R, id: ID)
-        where R: Resource,
-              ID: Hash + Eq
+    pub fn add<R>(&mut self, r: R, id: usize)
+        where R: Resource
     {
         use std::collections::hash_map::Entry;
 
-        let entry = self.resources.entry(ResourceId::new_with_id::<R, _>(id));
+        let entry = self.resources.entry(ResourceId::new_with_id::<R>(id));
 
         if let Entry::Vacant(e) = entry {
             e.insert(TrustCell::new(Box::new(r)));
@@ -230,9 +235,8 @@ impl Resources {
     ///
     /// Panics if the resource is being accessed mutably.
     /// Also panics if there is no such resource.
-    pub fn fetch<T, ID>(&self, id: ID) -> Fetch<T>
-        where T: Resource,
-              ID: Hash + Eq
+    pub fn fetch<T>(&self, id: usize) -> Fetch<T>
+        where T: Resource
     {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
@@ -245,9 +249,8 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
-    pub fn fetch_mut<T, ID>(&self, id: ID) -> FetchMut<T>
-        where T: Resource,
-              ID: Hash + Eq
+    pub fn fetch_mut<T>(&self, id: usize) -> FetchMut<T>
+        where T: Resource
     {
         let c = self.fetch_internal(TypeId::of::<T>(), id);
 
@@ -260,9 +263,7 @@ impl Resources {
     /// Fetches the resource with the specified type id.
     ///
     /// Please see `fetch` for details.
-    pub fn fetch_id<ID>(&self, id: TypeId, comp_id: ID) -> FetchId
-        where ID: Hash + Eq
-    {
+    pub fn fetch_id(&self, id: TypeId, comp_id: usize) -> FetchId {
         let c = self.fetch_internal(id, comp_id);
 
         FetchId { inner: c.borrow() }
@@ -271,27 +272,15 @@ impl Resources {
     /// Fetches the resource with the specified type id mutably.
     ///
     /// Please see `fetch` for details.
-    pub fn fetch_id_mut<ID>(&self, id: TypeId, comp_id: ID) -> FetchIdMut
-        where ID: Hash + Eq
-    {
+    pub fn fetch_id_mut(&self, id: TypeId, comp_id: usize) -> FetchIdMut {
         let c = self.fetch_internal(id, comp_id);
 
         FetchIdMut { inner: c.borrow_mut() }
     }
 
-    fn fetch_internal<ID>(&self, id: TypeId, cid: ID) -> &TrustCell<Box<Resource>>
-        where ID: Hash + Eq
-    {
+    fn fetch_internal(&self, id: TypeId, cid: usize) -> &TrustCell<Box<Resource>> {
         self.resources
-            .get(&ResourceId(id, fnv_hash(&cid)))
+            .get(&ResourceId(id, cid))
             .expect("No resource with the given id")
     }
-}
-
-fn fnv_hash<H: Hash>(h: &H) -> u64 {
-    use std::hash::Hasher;
-
-    let mut hasher = FnvHasher::default();
-    Hash::hash(&h, &mut hasher);
-    hasher.finish()
 }

@@ -388,12 +388,25 @@ impl<'t> DispatcherBuilder<'t> {
     /// # Panics
     ///
     /// * if the specified dependency does not exist
-    pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
+    pub fn add<T>(self, system: T, name: &str, dep: &[&str]) -> Self
+        where T: for<'a> System<'a> + Send + 't
+    {
+        self.add_with_id(system, 0, name, dep)
+    }
+
+    /// Adds a new system with a given name, a data id and a list of dependencies.
+    /// Please not that the dependency should be added before
+    /// you add the depending system.
+    ///
+    /// # Panics
+    ///
+    /// * if the specified dependency does not exist
+    pub fn add_with_id<T>(mut self, system: T, data_id: usize, name: &str, dep: &[&str]) -> Self
         where T: for<'a> System<'a> + Send + 't
     {
         let id = self.systems.len();
-        let reads = unsafe { T::SystemData::reads() };
-        let writes = unsafe { T::SystemData::writes() };
+        let reads = unsafe { T::SystemData::reads(data_id) };
+        let writes = unsafe { T::SystemData::writes(data_id) };
 
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {
@@ -416,10 +429,10 @@ impl<'t> DispatcherBuilder<'t> {
         }
 
         #[cfg(not(target_os = "emscripten"))]
-        let exec = SystemDispatch::new(id, system);
+        let exec = SystemDispatch::new(id, data_id, system);
 
         #[cfg(target_os = "emscripten")]
-        let exec = SystemDispatch::new(system);
+        let exec = SystemDispatch::new(system, data_id);
 
         let info = SystemInfo {
             dependents: Vec::new(),
@@ -437,17 +450,30 @@ impl<'t> DispatcherBuilder<'t> {
     ///
     /// Thread-local systems are dispatched
     /// in-order.
-    pub fn add_thread_local<T>(mut self, system: T) -> Self
+    pub fn add_thread_local<T>(self, system: T) -> Self
+        where T: for<'a> System<'a> + 't
+    {
+        self.add_thread_local_with_id(system, 0)
+    }
+
+    /// Adds a new thread local system with a given data id.
+    ///
+    /// Please only use this if your struct is
+    /// not `Send` and `Sync`.
+    ///
+    /// Thread-local systems are dispatched
+    /// in-order.
+    pub fn add_thread_local_with_id<T>(mut self, system: T, data_id: usize) -> Self
         where T: for<'a> System<'a> + 't
     {
 
         #[cfg(not(target_os = "emscripten"))]
         self.thread_local
-            .push(Box::new(SystemDispatch::new(0, system)));
+            .push(Box::new(SystemDispatch::new(0, data_id, system)));
 
         #[cfg(target_os = "emscripten")]
         self.thread_local
-            .push(Box::new(SystemDispatch::new(system)));
+            .push(Box::new(SystemDispatch::new(system, data_id)));
 
         self
     }
@@ -571,21 +597,26 @@ trait ExecSystem {
 struct SystemDispatch<T> {
     #[cfg(not(target_os = "emscripten"))]
     id: usize,
+    data_id: usize,
     system: T,
 }
 
 impl<T> SystemDispatch<T> {
     #[cfg(not(target_os = "emscripten"))]
-    fn new(id: usize, system: T) -> Self {
+    fn new(id: usize, data_id: usize, system: T) -> Self {
         SystemDispatch {
             id: id,
+            data_id: data_id,
             system: system,
         }
     }
 
     #[cfg(target_os = "emscripten")]
-    fn new(system: T) -> Self {
-        SystemDispatch { system: system }
+    fn new(system: T, data_id: usize) -> Self {
+        SystemDispatch {
+            system: system,
+            data_id: data_id,
+        }
     }
 }
 
@@ -595,7 +626,7 @@ impl<T> ExecSystem for SystemDispatch<T>
     #[cfg(not(target_os = "emscripten"))]
     fn exec<'s>(&'s mut self, scope: &Scope<'s>, res: &'s Resources, running: &'s AtomicBitSet) {
         running.set(self.id, true);
-        let data = T::SystemData::fetch(res);
+        let data = T::SystemData::fetch(res, self.data_id);
         scope.spawn(move |_| {
                         self.system.work(data);
                         running.set(self.id, false)
@@ -603,7 +634,7 @@ impl<T> ExecSystem for SystemDispatch<T>
     }
 
     fn exec_seq(&mut self, res: &Resources) {
-        run_now(&mut self.system, res);
+        run_now(&mut self.system, res, self.data_id);
     }
 }
 
@@ -618,9 +649,9 @@ struct SystemInfo<'t> {
 /// instead.
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
-pub fn run_now<'a, T>(sys: &mut T, res: &'a Resources)
+pub fn run_now<'a, T>(sys: &mut T, res: &'a Resources, id: usize)
     where T: System<'a>
 {
-    let data = T::SystemData::fetch(res);
+    let data = T::SystemData::fetch(res, id);
     sys.work(data);
 }
