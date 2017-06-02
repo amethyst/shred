@@ -29,6 +29,7 @@ pub struct AsyncDispatcher {
 #[cfg(not(target_os = "emscripten"))]
 impl AsyncDispatcher {
     /// Dispatches the systems asynchronously.
+    /// Do not executes thread local systems.
     ///
     /// If you want to wait for the systems to finish,
     /// call `wait()`.
@@ -67,8 +68,16 @@ impl AsyncDispatcher {
         scope(move |s| Dispatcher::dispatch_inner(d, r, res, run, s, sys));
     }
 
-    /// Waits for all the systems to finish
+    /// Waits for all the asynchronously dispatched systems to finish
+    /// and executes thread local systems (if there are any).
     pub fn wait(&mut self) {
+        self.wait_without_tl();
+        Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
+    }
+
+    /// Waits for all the asynchronously dispatched systems to finish
+    /// without executing thread local systems.
+    pub fn wait_without_tl(&mut self) {
         self.signal
             .take()
             .expect(ERR_NO_DISPATCH)
@@ -77,13 +86,20 @@ impl AsyncDispatcher {
     }
 
     /// Dispatch only thread local systems sequentially.
+    ///
+    /// If `wait_without_tl()` or `wait()` wasn't called before,
+    /// this method will wait.
     pub fn dispatch_thread_local(&mut self) {
+        if self.signal.is_some() {
+            self.wait_without_tl();
+        }
+
         Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
     }
 
     /// Returns the resources.
     ///
-    /// If `wait()` wasn't called before,
+    /// If `wait_without_tl()` or `wait()` wasn't called before,
     /// this method will do that.
     pub fn mut_res(&mut self) -> &mut Resources {
         if self.signal.is_some() {
