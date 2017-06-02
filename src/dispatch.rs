@@ -6,7 +6,7 @@ use fnv::FnvHashMap;
 #[cfg(not(target_os = "emscripten"))]
 use pulse::Signal;
 #[cfg(not(target_os = "emscripten"))]
-use rayon::{Configuration, Scope, ThreadPool, scope};
+use rayon_core::{Configuration, Scope, ThreadPool, scope};
 
 #[cfg(not(target_os = "emscripten"))]
 use bitset::AtomicBitSet;

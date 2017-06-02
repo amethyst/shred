@@ -20,11 +20,8 @@ travis-ci = { repository = "torkleyy/shred" }
 fnv = "1"
 mopa = "0.2"
 pulse = "0.5"
+rayon-core = { version = "1.0", features = ["unstable"] }
 shred-derive = { path = "shred-derive", version = "0.1.2" }
 
 [dev-dependencies]
 cgmath = "0.14"
-
-[dependencies.rayon]
-version = "0.7"
-features = ["unstable"]
