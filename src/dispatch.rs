@@ -68,15 +68,16 @@ impl AsyncDispatcher {
     }
 
     /// Waits for all the systems to finish
-    /// and executes thread local systems (if there
-    /// are any).
     pub fn wait(&mut self) {
         self.signal
             .take()
             .expect(ERR_NO_DISPATCH)
             .wait()
             .expect("The worker thread may have panicked");
+    }
 
+    /// Dispatch only thread local systems sequentially.
+    pub fn dispatch_thread_local(&mut self) {
         Dispatcher::dispatch_tl(&mut self.thread_local, &*self.res);
     }
 
@@ -154,7 +155,8 @@ pub struct Dispatcher<'t> {
 }
 
 impl<'t> Dispatcher<'t> {
-    /// Dispatch systems with given resources and context.
+    /// Dispatch all the systems with given resources and context
+    /// and then run thread local systems.
     ///
     /// This function automatically redirects to
     ///
@@ -169,10 +171,12 @@ impl<'t> Dispatcher<'t> {
 
         #[cfg(target_os = "emscripten")]
         self.dispatch_seq(res);
+
+        self.dispatch_thread_local(res);
     }
 
-    /// Dispatches the systems in parallel given the
-    /// resources to operate on.
+    /// Dispatches the systems (except thread local systems)
+    /// in parallel given the resources to operate on.
     ///
     /// This operation blocks the
     /// executing thread.
@@ -195,11 +199,9 @@ impl<'t> Dispatcher<'t> {
             });
 
         self.running.clear();
-
-        Self::dispatch_tl(&mut self.thread_local, res);
     }
 
-    /// Dispatches all systems sequentially.
+    /// Dispatches the systems (except thread local systems) sequentially.
     ///
     /// This is useful if parallel overhead is
     /// too big or the platform does not support multithreading.
@@ -207,7 +209,10 @@ impl<'t> Dispatcher<'t> {
         for system in &mut self.systems {
             system.exec.exec_seq(res);
         }
+    }
 
+    /// Dispatch only thread local systems sequentially.
+    pub fn dispatch_thread_local(&mut self, res: &Resources) {
         Self::dispatch_tl(&mut self.thread_local, res);
     }
 
