@@ -29,8 +29,8 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .add(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    resources.add(ResA, 0);
-    resources.add(ResB, 0);
+    resources.add(ResA);
+    resources.add(ResB);
 
     // We can even pass a context,
     // but we don't need one here

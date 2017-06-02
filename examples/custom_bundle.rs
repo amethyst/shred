@@ -32,8 +32,8 @@ impl<'a> SystemData<'a> for ExampleBundle<'a> {
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA, 0);
-    res.add(ResB, 0);
+    res.add(ResA);
+    res.add(ResB);
 
 
     let mut bundle = ExampleBundle::fetch(&res, 0);
