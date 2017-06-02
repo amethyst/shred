@@ -22,7 +22,7 @@ struct DummySys;
 impl<'a> System<'a> for DummySys {
     type SystemData = DummyData<'a>;
 
-    fn work(&mut self, _data: Self::SystemData) {}
+    fn run(&mut self, _data: Self::SystemData) {}
 }
 
 struct DummySysMut;
@@ -30,7 +30,7 @@ struct DummySysMut;
 impl<'a> System<'a> for DummySysMut {
     type SystemData = DummyDataMut<'a>;
 
-    fn work(&mut self, _data: Self::SystemData) {}
+    fn run(&mut self, _data: Self::SystemData) {}
 }
 
 #[test]

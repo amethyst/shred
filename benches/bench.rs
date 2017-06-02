@@ -82,7 +82,7 @@ struct SpringForce;
 impl<'a> System<'a> for SpringForce {
     type SystemData = SpringForceData<'a>;
 
-    fn work(&mut self, mut data: SpringForceData) {
+    fn run(&mut self, mut data: SpringForceData) {
         for elem in 0..NUM_COMPONENTS {
             let pos = data.pos[elem].0;
             let spring: Spring = data.spring[elem];
@@ -116,7 +116,7 @@ struct IntegrationSystem;
 impl<'a> System<'a> for IntegrationSystem {
     type SystemData = IntegrationData<'a>;
 
-    fn work(&mut self, mut data: IntegrationData) {
+    fn run(&mut self, mut data: IntegrationData) {
         for elem in 0..NUM_COMPONENTS {
             let mass = data.mass[elem].0;
 
@@ -152,7 +152,7 @@ struct ClearForceAccum;
 impl<'a> System<'a> for ClearForceAccum {
     type SystemData = ClearForceAccumData<'a>;
 
-    fn work(&mut self, mut data: ClearForceAccumData) {
+    fn run(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {
             data.force[elem] = Force(Vec3 {
                                          x: 0.0,

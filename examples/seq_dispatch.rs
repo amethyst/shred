@@ -21,7 +21,7 @@ struct EmptySystem;
 impl<'a> System<'a> for EmptySystem {
     type SystemData = Data<'a>;
 
-    fn work(&mut self, bundle: Data<'a>) {
+    fn run(&mut self, bundle: Data<'a>) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
     }

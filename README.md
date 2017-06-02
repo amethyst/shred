@@ -35,10 +35,10 @@ struct PrintSystem;
 // Systems should be generic over the
 // context if possible, so it's easy
 // to introduce one.
-impl<'a, C> System<'a, C> for PrintSystem {
+impl<'a> System<'a> for PrintSystem {
     type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
 
-    fn work(&mut self, data: Self::SystemData, _: C) {
+    fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;
 
         println!("{:?}", &*a);
