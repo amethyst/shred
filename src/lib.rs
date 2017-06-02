@@ -59,7 +59,7 @@ extern crate mopa;
 #[cfg(not(target_os = "emscripten"))]
 extern crate pulse;
 #[cfg(not(target_os = "emscripten"))]
-extern crate rayon;
+extern crate rayon_core;
 
 #[cfg(not(target_os = "emscripten"))]
 mod bitset;
