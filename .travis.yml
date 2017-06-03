@@ -5,6 +5,11 @@ rust:
 - beta
 - stable
 - 1.17.0
+branches:
+  only:
+    - staging
+    - trying
+    - master
 script:
 - |
   cargo build --verbose &&
