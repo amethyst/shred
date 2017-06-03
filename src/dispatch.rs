@@ -563,10 +563,7 @@ impl<'t> DispatcherBuilder<'t> {
 
     #[cfg(not(target_os = "emscripten"))]
     fn create_thread_pool() -> Arc<ThreadPool> {
-        Arc::new(ThreadPool::new(Configuration::new().panic_handler(|x| {
-            println!("Panic in worker thread: {:?}", x)
-        }))
-                         .expect("Invalid thread pool configuration"))
+        Arc::new(ThreadPool::new(Configuration::new()).expect("Invalid thread pool configuration"))
     }
 
     #[cfg(not(target_os = "emscripten"))]
@@ -721,4 +718,104 @@ pub fn run_now<'a, T>(sys: &mut T, res: &'a Resources, id: usize)
 {
     let data = T::SystemData::fetch(res, id);
     sys.run(data);
+}
+
+#[cfg(test)]
+mod tests {
+    use res::*;
+    use super::*;
+
+    struct Res(i32);
+
+    struct Dummy(i32);
+
+    impl<'a> System<'a> for Dummy {
+        type SystemData = FetchMut<'a, Res>;
+
+        fn run(&mut self, mut data: Self::SystemData) {
+            if self.0 == 4 {
+                // In second stage
+
+                assert_eq!(data.0, 6);
+            } else if self.0 == 5 {
+                // In second stage
+
+                assert_eq!(data.0, 10);
+            }
+
+            data.0 += self.0;
+        }
+    }
+
+    struct Panic;
+
+    impl<'a> System<'a> for Panic {
+        type SystemData = ();
+
+        fn run(&mut self, _: Self::SystemData) {
+            panic!("Propagated panic");
+        }
+    }
+
+    fn new_builder() -> DispatcherBuilder<'static> {
+        DispatcherBuilder::new()
+            .add(Dummy(0), "0", &[])
+            .add(Dummy(1), "1", &[])
+            .add(Dummy(2), "2", &[])
+            .add(Dummy(3), "3", &["1"])
+            .new_stage()
+            .add(Dummy(4), "4", &[])
+            .add(Dummy(5), "5", &["4"])
+    }
+
+    fn new_resources() -> Resources {
+        let mut res = Resources::new();
+        res.add(Res(0));
+
+        res
+    }
+
+    #[test]
+    fn build_dispatcher() {
+        let d = new_builder().build();
+
+        assert_eq!(d.ready, vec![vec![0, 1, 2], vec![4]]);
+        assert_eq!(d.stages, vec![4, 2]);
+        assert_eq!(d.systems.len(), 6);
+    }
+
+    #[test]
+    fn build_async_dispatcher() {
+        let d = new_builder().build_async(new_resources());
+
+        let mut inner = d.inner.lock().unwrap();
+        let d: &mut AsyncDispatcherInner = &mut *inner;
+
+        assert_eq!(d.ready, vec![vec![0, 1, 2], vec![4]]);
+        assert_eq!(d.stages, vec![4, 2]);
+        assert_eq!(d.systems.len(), 6);
+    }
+
+    #[test]
+    #[should_panic(expected = "Propagated panic")]
+    fn dispatcher_panics() {
+        DispatcherBuilder::new()
+            .add(Panic, "p", &[])
+            .build()
+            .dispatch(&mut new_resources())
+    }
+
+    #[test]
+    fn stages() {
+        let mut d = new_builder().build();
+
+        d.dispatch(&mut new_resources());
+    }
+
+    #[test]
+    fn stages_async() {
+        let mut d = new_builder().build_async(new_resources());
+
+        d.dispatch();
+    }
 }
