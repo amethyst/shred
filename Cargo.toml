@@ -8,10 +8,11 @@ and write access to others.
 """
 readme = "README.md"
 documentation = "https://docs.rs/shred"
-repository = "https://github.com/torkleyy/shred"
+repository = "https://github.com/slide-rs/shred"
 keywords = ["parallel", "systems", "resources", "ecs"]
 categories = ["concurrency"]
 license = "MIT/Apache-2.0"
+exclude = ["bors.toml", ".travis.yml"]
 
 [badges]
 travis-ci = { repository = "torkleyy/shred" }
