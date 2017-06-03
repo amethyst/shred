@@ -763,7 +763,7 @@ mod tests {
             .add(Dummy(1), "1", &[])
             .add(Dummy(2), "2", &[])
             .add(Dummy(3), "3", &["1"])
-            .new_stage()
+            .add_barrier()
             .add(Dummy(4), "4", &[])
             .add(Dummy(5), "5", &["4"])
     }
