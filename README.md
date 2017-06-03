@@ -2,8 +2,8 @@
 
 [![Build Status][bi]][bl] [![Crates.io][ci]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl]
 
-[bi]: https://travis-ci.org/torkleyy/shred.svg?branch=master
-[bl]: https://travis-ci.org/torkleyy/shred
+[bi]: https://travis-ci.org/slide-rs/shred.svg?branch=master
+[bl]: https://travis-ci.org/slide-rs/shred
 
 [ci]: https://img.shields.io/crates/v/shred.svg
 [cl]: https://crates.io/crates/shred/
