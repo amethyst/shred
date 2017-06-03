@@ -208,7 +208,9 @@ impl Resources {
     /// let mut res = Resources::new();
     /// res.add(MyRes(5));
     /// ```
-    pub fn add<R>(&mut self, r: R) where R: Resource {
+    pub fn add<R>(&mut self, r: R)
+        where R: Resource
+    {
         self.add_with_id(r, 0)
     }
 
@@ -291,5 +293,97 @@ impl Resources {
         self.resources
             .get(&ResourceId(id, cid))
             .expect("No resource with the given id")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Res;
+
+    #[test]
+    fn res_id() {
+        assert_eq!(ResourceId::new::<Res>(), ResourceId::new_with_id::<Res>(0));
+        assert_eq!(ResourceId::new_with_id::<Res>(5),
+                   ResourceId(TypeId::of::<Res>(), 5));
+    }
+
+    #[test]
+    fn fetch_aspects() {
+        assert_eq!(unsafe { Fetch::<Res>::reads(4) },
+                   vec![ResourceId::new_with_id::<Res>(4)]);
+        assert_eq!(unsafe { Fetch::<Res>::writes(8) }, vec![]);
+
+        let mut res = Resources::new();
+        res.add_with_id(Res, 56);
+        Fetch::<Res>::fetch(&res, 56);
+    }
+
+    #[test]
+    fn fetch_mut_aspects() {
+        assert_eq!(unsafe { FetchMut::<Res>::reads(4) }, vec![]);
+        assert_eq!(unsafe { FetchMut::<Res>::writes(8) },
+                   vec![ResourceId::new_with_id::<Res>(8)]);
+
+        let mut res = Resources::new();
+        res.add_with_id(Res, 56);
+        FetchMut::<Res>::fetch(&res, 56);
+    }
+
+    #[test]
+    fn add() {
+        let mut res = Resources::new();
+        res.add(Res);
+
+        assert!(res.has_value(ResourceId::new::<Res>()));
+        assert!(!res.has_value(ResourceId::new_with_id::<Res>(1)));
+        assert!(!res.has_value(ResourceId::new_with_id::<Res>(1)));
+    }
+
+    #[allow(unused)]
+    #[test]
+    #[should_panic(expected = "Already borrowed")]
+    fn read_write_fails() {
+
+        let mut res = Resources::new();
+        res.add(Res);
+
+        let read = res.fetch::<Res>(0);
+        let write = res.fetch_mut::<Res>(0);
+    }
+
+    #[allow(unused)]
+    #[test]
+    #[should_panic(expected = "Already borrowed mutably")]
+    fn write_read_fails() {
+
+        let mut res = Resources::new();
+        res.add(Res);
+
+        let write = res.fetch_mut::<Res>(0);
+        let read = res.fetch::<Res>(0);
+    }
+
+    #[test]
+    fn fetch_uses_id() {
+        let mut res = Resources::new();
+        res.add_with_id(5i32, 1);
+        res.add_with_id(50i32, 2);
+
+        {
+            assert_eq!(*res.fetch::<i32>(1), 5);
+            assert_eq!(*res.fetch::<i32>(2), 50);
+        }
+
+        {
+            *res.fetch_mut::<i32>(1) *= 2;
+            *res.fetch_mut::<i32>(2) *= 2;
+        }
+
+        {
+            assert_eq!(*res.fetch::<i32>(1), 10);
+            assert_eq!(*res.fetch::<i32>(2), 100);
+        }
     }
 }
