@@ -50,6 +50,7 @@ impl AsyncDispatcher {
                                          inner.ready.clone(),
                                          res,
                                          &inner.running,
+                                         &inner.stages,
                                          &mut inner.systems);
                 }
 
@@ -58,13 +59,14 @@ impl AsyncDispatcher {
     }
 
     fn dispatch_inner(d: &Dependencies,
-                      r: Vec<usize>,
+                      r: Vec<Vec<usize>>,
                       resources: Arc<Resources>,
                       run: &AtomicBitSet,
+                      stages: &[usize],
                       sys: &mut Vec<SystemInfo>) {
         let res = &*resources;
 
-        scope(move |s| Dispatcher::dispatch_inner(d, r, res, run, s, sys));
+        Dispatcher::dispatch_inner(d, r, res, run, stages, sys);
     }
 
     /// Waits for all the systems to finish
@@ -96,8 +98,9 @@ impl AsyncDispatcher {
 #[cfg(not(target_os = "emscripten"))]
 struct AsyncDispatcherInner {
     dependencies: Dependencies,
-    ready: Vec<usize>,
+    ready: Vec<Vec<usize>>,
     running: AtomicBitSet,
+    stages: Vec<usize>,
     systems: Vec<SystemInfo<'static>>,
 }
 
@@ -144,9 +147,12 @@ impl Dependencies {
 /// systems to be executed in parallel.
 pub struct Dispatcher<'t> {
     dependencies: Dependencies,
-    ready: Vec<usize>,
+    #[cfg(not(target_os = "emscripten"))]
+    ready: Vec<Vec<usize>>,
     #[cfg(not(target_os = "emscripten"))]
     running: AtomicBitSet,
+    #[cfg(not(target_os = "emscripten"))]
+    stages: Vec<usize>,
     systems: Vec<SystemInfo<'t>>,
     thread_local: Vec<Box<ExecSystem + 't>>,
     #[cfg(not(target_os = "emscripten"))]
@@ -181,18 +187,15 @@ impl<'t> Dispatcher<'t> {
     /// multithreading support (so not on emscripten).
     #[cfg(not(target_os = "emscripten"))]
     pub fn dispatch_par(&mut self, res: &mut Resources) {
-        let dependencies = &self.dependencies;
+        let d = &self.dependencies;
         let ready = self.ready.clone();
         let res = res as &Resources;
         let running = &self.running;
+        let stages = &self.stages;
         let systems = &mut self.systems;
 
         self.thread_pool
-            .install(move || {
-                scope(move |scope| {
-                          Self::dispatch_inner(dependencies, ready, res, running, scope, systems);
-                      });
-            });
+            .install(move || Self::dispatch_inner(d, ready, res, running, stages, systems));
 
         self.running.clear();
 
@@ -219,38 +222,47 @@ impl<'t> Dispatcher<'t> {
 
     #[cfg(not(target_os = "emscripten"))]
     fn dispatch_inner<'s>(dependencies: &Dependencies,
-                          mut ready: Vec<usize>,
+                          mut ready: Vec<Vec<usize>>,
                           res: &'s Resources,
                           running: &'s AtomicBitSet,
-                          scope: &Scope<'s>,
+                          stages: &[usize],
                           systems: &'s mut Vec<SystemInfo>) {
-        let mut start_count = 0;
-        let num_systems = systems.len();
         let mut systems: Vec<_> = systems.iter_mut().map(Some).collect();
 
-        while start_count < num_systems {
-            if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
-                let system: &mut SystemInfo = systems[index].take().expect("Already executed");
-                system.exec.exec(scope, res, running);
+        for (num_systems, ready) in stages.iter().zip(ready.iter_mut()) {
+            let num_systems = *num_systems;
 
-                start_count += 1;
+            let systems = &mut systems;
 
-                // okay, now that we started executing our system,
-                // we remove the old one and add the ones which are
-                // potentially ready
+            scope(move |scope| {
+                let mut start_count = 0;
 
-                let rem_pos = ready.iter().position(|x| *x == index).unwrap();
-                ready.remove(rem_pos);
+                while start_count < num_systems {
+                    if let Some(index) = Self::find_runnable_system(&ready, dependencies, running) {
+                        let system: &mut SystemInfo =
+                            systems[index].take().expect("Already executed");
+                        system.exec.exec(scope, res, running);
 
-                for dependent in &system.dependents {
-                    ready.push(*dependent);
+                        start_count += 1;
+
+                        // okay, now that we started executing our system,
+                        // we remove the old one and add the ones which are
+                        // potentially ready
+
+                        let rem_pos = ready.iter().position(|x| *x == index).unwrap();
+                        ready.remove(rem_pos);
+
+                        for dependent in &system.dependents {
+                            ready.push(*dependent);
+                        }
+                    } else {
+                        use std::thread;
+                        use std::time::Duration;
+
+                        thread::sleep(Duration::new(0, 10));
+                    }
                 }
-            } else {
-                use std::thread;
-                use std::time::Duration;
-
-                thread::sleep(Duration::new(0, 10));
-            }
+            });
         }
     }
 
@@ -320,7 +332,12 @@ impl<'t> Debug for Dispatcher<'t> {
 ///
 /// [`Dispatcher`]: struct.Dispatcher.html
 ///
-/// # Examples
+/// ## Barriers
+///
+/// Barriers are a way of sequentializing parts of
+/// the system execution. See `add_barrier()`.
+///
+/// ## Examples
 ///
 /// This is how you create a dispatcher with
 /// a shared thread pool:
@@ -331,7 +348,7 @@ impl<'t> Debug for Dispatcher<'t> {
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System, Resource};
+/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System};
 /// # #[derive(Debug)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
 /// # struct Dummy;
@@ -360,11 +377,18 @@ impl<'t> Debug for Dispatcher<'t> {
 pub struct DispatcherBuilder<'t> {
     dependencies: Dependencies,
     map: FnvHashMap<String, usize>,
-    ready: Vec<usize>,
+    #[cfg(not(target_os = "emscripten"))]
+    ready: Vec<Vec<usize>>,
     systems: Vec<SystemInfo<'t>>,
+    #[cfg(not(target_os = "emscripten"))]
+    stages: Vec<usize>,
     thread_local: Vec<Box<ExecSystem + 't>>,
     #[cfg(not(target_os = "emscripten"))]
     thread_pool: Option<Arc<ThreadPool>>,
+    #[cfg(not(target_os = "emscripten"))]
+    unstaged: usize,
+    #[cfg(not(target_os = "emscripten"))]
+    unstaged_ready: Vec<usize>,
 }
 
 impl<'t> DispatcherBuilder<'t> {
@@ -425,7 +449,7 @@ impl<'t> DispatcherBuilder<'t> {
         self.map.insert(name.to_owned(), id);
 
         if dep.is_empty() {
-            self.ready.push(id);
+            self.unstaged_ready.push(id);
         }
 
         #[cfg(not(target_os = "emscripten"))]
@@ -439,6 +463,8 @@ impl<'t> DispatcherBuilder<'t> {
             exec: Box::new(exec),
         };
         self.systems.push(info);
+
+        self.unstaged += 1;
 
         self
     }
@@ -478,6 +504,21 @@ impl<'t> DispatcherBuilder<'t> {
         self
     }
 
+    /// Inserts a barrier which assures that all systems
+    /// added before the barrier are executed before the ones
+    /// after this barrier.
+    ///
+    /// Does nothing if there were no systems added
+    /// since the last call to `add_barrier()`.
+    ///
+    /// Thread-local systems are not affected by barriers;
+    /// they're always executed at the end.
+    pub fn add_barrier(mut self) -> Self {
+        self.stage_unstaged();
+
+        self
+    }
+
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
     #[cfg(not(target_os = "emscripten"))]
@@ -492,7 +533,9 @@ impl<'t> DispatcherBuilder<'t> {
     /// In the future, this method will
     /// precompute useful information in
     /// order to speed up dispatching.
-    pub fn build(self) -> Dispatcher<'t> {
+    pub fn build(mut self) -> Dispatcher<'t> {
+        self.stage_unstaged();
+
         #[cfg(not(target_os = "emscripten"))]
         let size = self.systems.len();
 
@@ -501,6 +544,7 @@ impl<'t> DispatcherBuilder<'t> {
             dependencies: self.dependencies,
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
+            stages: self.stages,
             systems: self.systems,
             thread_local: self.thread_local,
             thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
@@ -524,6 +568,25 @@ impl<'t> DispatcherBuilder<'t> {
         }))
                          .expect("Invalid thread pool configuration"))
     }
+
+    #[cfg(not(target_os = "emscripten"))]
+    fn stage_unstaged(&mut self) {
+        use std::mem::swap;
+
+        if self.unstaged == 0 {
+            return;
+        }
+
+        let mut unstaged_ready = Vec::new();
+        swap(&mut unstaged_ready, &mut self.unstaged_ready);
+        self.ready.push(unstaged_ready);
+        self.stages.push(self.unstaged);
+        self.unstaged = 0;
+    }
+
+    #[allow(unused)]
+    #[cfg(target_os = "emscripten")]
+    fn stage_unstaged(&mut self) {}
 }
 
 #[cfg(not(target_os = "emscripten"))]
@@ -532,13 +595,16 @@ impl DispatcherBuilder<'static> {
     ///
     /// It does not allow non-static types and
     /// accepts a `Resource` struct.
-    pub fn build_async(self, res: Resources) -> AsyncDispatcher {
+    pub fn build_async(mut self, res: Resources) -> AsyncDispatcher {
+        self.stage_unstaged();
+
         let size = self.systems.len();
 
         let inner = AsyncDispatcherInner {
             dependencies: self.dependencies,
             ready: self.ready,
             running: AtomicBitSet::with_size(size),
+            stages: self.stages,
             systems: self.systems,
         };
 
@@ -557,7 +623,6 @@ impl<'t> Debug for DispatcherBuilder<'t> {
         f.debug_struct("DispatcherBuilder")
             .field("dependencies", &self.dependencies)
             .field("map", &self.map)
-            .field("ready", &self.ready)
             .finish()
     }
 }
@@ -569,15 +634,17 @@ impl<'t> Default for DispatcherBuilder<'t> {
             dependencies: Default::default(),
             ready: Default::default(),
             map: Default::default(),
+            stages: Default::default(),
             systems: Default::default(),
             thread_local: Default::default(),
             thread_pool: Default::default(),
+            unstaged: Default::default(),
+            unstaged_ready: Default::default(),
         };
 
         #[cfg(target_os = "emscripten")]
         let d = DispatcherBuilder {
             dependencies: Default::default(),
-            ready: Default::default(),
             map: Default::default(),
             systems: Default::default(),
             thread_local: Default::default(),
