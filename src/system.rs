@@ -47,7 +47,7 @@ pub trait SystemData<'a> {
     /// This method is only executed once,
     /// thus the returned value may never change
     /// (otherwise it has no effect).
-    unsafe fn reads(id: usize) -> Vec<ResourceId>;
+    fn reads(id: usize) -> Vec<ResourceId>;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs write access to in order to
@@ -62,7 +62,7 @@ pub trait SystemData<'a> {
     /// This method is only executed once,
     /// thus the returned value may never change
     /// (otherwise it has no effect).
-    unsafe fn writes(id: usize) -> Vec<ResourceId>;
+    fn writes(id: usize) -> Vec<ResourceId>;
 }
 
 macro_rules! impl_data {
@@ -76,7 +76,7 @@ macro_rules! impl_data {
                 ( $( <$ty as SystemData<'a>>::fetch(res, id.clone()), )* )
             }
 
-            unsafe fn reads(id: usize) -> Vec<ResourceId> {
+            fn reads(id: usize) -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
@@ -89,7 +89,7 @@ macro_rules! impl_data {
                 r
             }
 
-            unsafe fn writes(id: usize) -> Vec<ResourceId> {
+            fn writes(id: usize) -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
@@ -110,11 +110,11 @@ impl<'a> SystemData<'a> for () {
         ()
     }
 
-    unsafe fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads(_: usize) -> Vec<ResourceId> {
         Vec::new()
     }
 
-    unsafe fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes(_: usize) -> Vec<ResourceId> {
         Vec::new()
     }
 }

@@ -21,11 +21,11 @@ impl<'a> SystemData<'a> for ExampleBundle<'a> {
         }
     }
 
-    unsafe fn reads(id: usize) -> Vec<ResourceId> {
+    fn reads(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<ResA>(id)]
     }
 
-    unsafe fn writes(id: usize) -> Vec<ResourceId> {
+    fn writes(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<ResB>(id)]
     }
 }
