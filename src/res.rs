@@ -35,11 +35,11 @@ impl<'a, T> SystemData<'a> for Fetch<'a, T>
         res.fetch(id)
     }
 
-    unsafe fn reads(id: usize) -> Vec<ResourceId> {
+    fn reads(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<T>(id)]
     }
 
-    unsafe fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes(_: usize) -> Vec<ResourceId> {
         vec![]
     }
 }
@@ -113,11 +113,11 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
         res.fetch_mut(id)
     }
 
-    unsafe fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads(_: usize) -> Vec<ResourceId> {
         vec![]
     }
 
-    unsafe fn writes(id: usize) -> Vec<ResourceId> {
+    fn writes(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<T>(id)]
     }
 }
@@ -311,9 +311,9 @@ mod tests {
 
     #[test]
     fn fetch_aspects() {
-        assert_eq!(unsafe { Fetch::<Res>::reads(4) },
+        assert_eq!(Fetch::<Res>::reads(4),
                    vec![ResourceId::new_with_id::<Res>(4)]);
-        assert_eq!(unsafe { Fetch::<Res>::writes(8) }, vec![]);
+        assert_eq!(Fetch::<Res>::writes(8), vec![]);
 
         let mut res = Resources::new();
         res.add_with_id(Res, 56);
@@ -322,8 +322,8 @@ mod tests {
 
     #[test]
     fn fetch_mut_aspects() {
-        assert_eq!(unsafe { FetchMut::<Res>::reads(4) }, vec![]);
-        assert_eq!(unsafe { FetchMut::<Res>::writes(8) },
+        assert_eq!(FetchMut::<Res>::reads(4), vec![]);
+        assert_eq!(FetchMut::<Res>::writes(8),
                    vec![ResourceId::new_with_id::<Res>(8)]);
 
         let mut res = Resources::new();

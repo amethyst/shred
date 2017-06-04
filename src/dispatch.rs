@@ -450,8 +450,8 @@ impl<'t> DispatcherBuilder<'t> {
         where T: for<'a> System<'a> + Send + 't
     {
         let id = self.systems.len();
-        let reads = unsafe { T::SystemData::reads(data_id) };
-        let writes = unsafe { T::SystemData::writes(data_id) };
+        let reads = T::SystemData::reads(data_id);
+        let writes = T::SystemData::writes(data_id);
 
         let dependencies: Vec<usize> = dep.iter()
             .map(|x| {

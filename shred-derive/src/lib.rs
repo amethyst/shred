@@ -50,7 +50,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 #fetch_return
             }
 
-            unsafe fn reads(id: usize) -> Vec<::shred::ResourceId> {
+            fn reads(id: usize) -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
@@ -61,7 +61,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 r
             }
 
-            unsafe fn writes(id: usize) -> Vec<::shred::ResourceId> {
+            fn writes(id: usize) -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
