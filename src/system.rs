@@ -1,5 +1,27 @@
 use {ResourceId, Resources};
 
+/// Trait for fetching data and running systems. Automatically implemented for systems.
+pub trait RunNow<'a> {
+    /// Runs the system now.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the system tries to fetch resources
+    /// which are borrowed in an incompatible way already
+    /// (tries to read from a resource which is already written to or
+    /// tries to write to a resource which is read from).
+    fn run_now(&mut self, res: &'a Resources);
+}
+
+impl<'a, T> RunNow<'a> for T
+    where T: System<'a>
+{
+    fn run_now(&mut self, res: &'a Resources) {
+        let data = T::SystemData::fetch(res, 0);
+        self.run(data);
+    }
+}
+
 /// A `System`, executed with a
 /// set of required [`Resource`]s.
 ///
