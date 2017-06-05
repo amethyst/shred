@@ -53,16 +53,16 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 
+extern crate arrayvec;
 extern crate fnv;
 #[macro_use]
 extern crate mopa;
 #[cfg(not(target_os = "emscripten"))]
 extern crate pulse;
 #[cfg(not(target_os = "emscripten"))]
-extern crate rayon_core;
+extern crate rayon;
+extern crate smallvec;
 
-#[cfg(not(target_os = "emscripten"))]
-mod bitset;
 mod cell;
 mod dispatch;
 mod res;
@@ -70,6 +70,6 @@ mod system;
 
 #[cfg(not(target_os = "emscripten"))]
 pub use dispatch::AsyncDispatcher;
-pub use dispatch::{Dispatcher, DispatcherBuilder, run_now};
+pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
-pub use system::{System, SystemData};
+pub use system::{RunNow, RunningTime, System, SystemData};
