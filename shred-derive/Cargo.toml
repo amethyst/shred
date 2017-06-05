@@ -1,6 +1,6 @@
 [package]
 name = "shred-derive"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["torkleyy"]
 description = "Custom derive for shred"
 documentation = "https://docs.rs/shred_derive"
