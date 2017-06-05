@@ -11,7 +11,7 @@ struct ResA;
 struct ResB;
 
 #[derive(SystemData)]
-pub struct AutoBundle<'a> {
+struct AutoBundle<'a> {
     a: Fetch<'a, ResA>,
     b: FetchMut<'a, ResB>,
 }

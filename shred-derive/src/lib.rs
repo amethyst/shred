@@ -6,7 +6,8 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, TyParam, VariantData};
+use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, Ty, TyParam, VariantData,
+          WhereClause};
 use quote::Tokens;
 
 /// Used to `#[derive]` the trait
@@ -25,28 +26,31 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
     let name = &ast.ident;
     let lifetime_defs = &ast.generics.lifetimes;
     let ty_params = &ast.generics.ty_params;
+    let where_clause = &ast.generics.where_clause;
 
     let (fetch_return, tys) = gen_from_body(&ast.body, name);
+    let tys = &tys;
     // Assumes that the first lifetime is the fetch lt
-    let fetch_lt = lifetime_defs
+    let def_fetch_lt = lifetime_defs
         .iter()
         .next()
         .expect("There has to be at least one lifetime");
+    let ref impl_fetch_lt = def_fetch_lt.lifetime;
     let def_lt_tokens = gen_def_lt_tokens(lifetime_defs);
     let impl_lt_tokens = gen_impl_lt_tokens(lifetime_defs);
     let def_ty_params = gen_def_ty_params(ty_params);
     let impl_ty_params = gen_impl_ty_params(ty_params);
+    let where_clause = gen_where_clause(where_clause, impl_fetch_lt, tys);
     // Reads and writes are taken from the same types,
     // but need to be cloned before.
-    let reads = tys.clone();
-    let writes = tys.clone();
 
     quote! {
         impl< #def_lt_tokens , #def_ty_params >
-            ::shred::SystemData< #fetch_lt >
+            ::shred::SystemData< #impl_fetch_lt >
             for #name< #impl_lt_tokens , #impl_ty_params >
+            where #where_clause
         {
-            fn fetch(res: & #fetch_lt ::shred::Resources, id: usize) -> Self {
+            fn fetch(res: & #impl_fetch_lt ::shred::Resources, id: usize) -> Self {
                 #fetch_return
             }
 
@@ -54,7 +58,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut reads = <#reads as ::shred::SystemData> :: reads(id);
+                        let mut reads = <#tys as ::shred::SystemData> :: reads(id);
                         r.append(&mut reads);
                     } )*
 
@@ -65,7 +69,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut writes = <#writes as ::shred::SystemData> :: writes(id);
+                        let mut writes = <#tys as ::shred::SystemData> :: writes(id);
                         r.append(&mut writes);
                     } )*
 
@@ -75,12 +79,8 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
     }
 }
 
-fn collect_field_types(fields: &Vec<Field>) -> Vec<Tokens> {
-    fields
-        .iter()
-        .map(|x| x.ty.clone())
-        .map(|x| quote! { #x })
-        .collect()
+fn collect_field_types(fields: &Vec<Field>) -> Vec<Ty> {
+    fields.iter().map(|x| x.ty.clone()).collect()
 }
 
 fn gen_identifiers(fields: &Vec<Field>) -> Vec<Ident> {
@@ -131,7 +131,20 @@ fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
     quote! { #( #ty_params ),* }
 }
 
-fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Tokens>) {
+fn gen_where_clause(clause: &WhereClause, fetch_lt: &Lifetime, tys: &Vec<Ty>) -> Tokens {
+    let user_predicates = clause.predicates.iter().map(|x| quote! { #x });
+    let system_data_predicates = tys.iter()
+        .map(|ty| {
+            quote! { #ty : ::shred::SystemData< #fetch_lt > }
+        });
+
+    let mut tokens = Tokens::new();
+    tokens.append_separated(user_predicates.chain(system_data_predicates), ",");
+
+    tokens
+}
+
+fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Ty>) {
     enum BodyType {
         Struct,
         Tuple,
