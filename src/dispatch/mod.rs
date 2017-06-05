@@ -4,7 +4,7 @@ pub use self::async::AsyncDispatcher;
 
 use smallvec::SmallVec;
 
-use res::{Resources, ResourceId};
+use res::Resources;
 use system::RunNow;
 
 use self::stage::Stage;
@@ -20,7 +20,7 @@ pub struct Dispatcher<'a, 'b> {
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
     #[cfg(not(target_os = "emscripten"))]
-    thread_pool: ::std::sync::Arc<::rayon_core::ThreadPool>,
+    thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
@@ -85,38 +85,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SystemId(pub usize);
 
-pub struct SystemInfo<'a> {
-    dependencies: SystemDependencies,
-    id: SystemId,
-    reads: SystemReads,
-    system: SystemExecSend<'a>,
-    writes: SystemWrites,
-}
-
-impl<'a> SystemInfo<'a> {
-    pub fn new(dependencies: SystemDependencies,
-               id: SystemId,
-               reads: SystemReads,
-               system: SystemExecSend<'a>,
-               writes: SystemWrites)
-               -> Self {
-        SystemInfo {
-            dependencies,
-            id,
-            reads,
-            system,
-            writes,
-        }
-    }
-}
-
-type SystemDependencies = SmallVec<[SystemId; 8]>;
-type SystemExec<'b> = Box<for<'a> RunNow<'a> + 'b>;
 type SystemExecSend<'b> = Box<for<'a> RunNow<'a> + Send + 'b>;
-type SystemReads = SmallVec<[ResourceId; 12]>;
-type SystemWrites = SmallVec<[ResourceId; 12]>;
-
-type ThreadLocal<'a> = SmallVec<[SystemExec<'a>; 4]>;
+type ThreadLocal<'a> = SmallVec<[Box<for<'b> RunNow<'b> + 'a>; 4]>;
 
 #[cfg(test)]
 mod tests {

@@ -1,23 +1,8 @@
 use fnv::FnvHashMap;
-use smallvec::SmallVec;
 
-use dispatch::{Dispatcher, SystemDependencies, SystemId, SystemInfo, ThreadLocal};
+use dispatch::{Dispatcher, SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
-use system::{System, SystemData};
-
-#[derive(Default)]
-pub struct IdGen {
-    current: usize,
-}
-
-impl IdGen {
-    pub fn next(&mut self) -> SystemId {
-        let id = self.current;
-        self.current += 1;
-
-        SystemId(id)
-    }
-}
+use system::System;
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -67,12 +52,12 @@ impl IdGen {
 ///
 #[derive(Default)]
 pub struct DispatcherBuilder<'a, 'b> {
-    id_gen: IdGen,
+    current_id: usize,
     map: FnvHashMap<String, SystemId>,
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(not(target_os = "emscripten"))]
-    thread_pool: Option<::std::sync::Arc<::rayon_core::ThreadPool>>,
+    thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,
 }
 
 impl<'a, 'b> DispatcherBuilder<'a, 'b> {
@@ -86,7 +71,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     }
 
     /// Adds a new system with a given name and a list of dependencies.
-    /// Please not that the dependency should be added before
+    /// Please note that the dependency should be added before
     /// you add the depending system.
     ///
     /// # Panics
@@ -95,31 +80,15 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
         where T: for<'c> System<'c> + Send + 'a
     {
-        let id = self.id_gen.next();
-        let mut reads: Vec<_> = T::SystemData::reads(0);
-        let writes = T::SystemData::writes(0);
+        let id = self.next_id();
 
-        reads.sort();
-        reads.dedup();
-
-        let mut reads = SmallVec::from_vec(reads);
-        reads.shrink_to_fit();
-
-        let mut writes = SmallVec::from_vec(writes);
-        writes.shrink_to_fit();
-
-        let dependencies: SystemDependencies = dep.iter()
-            .map(|x| {
-                     *self.map
-                          .get(x.to_owned())
-                          .expect("No such system registered")
-                 })
+        let dependencies = dep.iter()
+            .map(|x| *self.map.get(*x).expect("No such system registered"))
             .collect();
 
         self.map.insert(name.to_owned(), id);
 
-        self.stages_builder
-            .insert(SystemInfo::new(dependencies, id, reads, Box::new(system), writes));
+        self.stages_builder.insert(dependencies, id, system);
 
         self
     }
@@ -155,7 +124,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
     #[cfg(not(target_os = "emscripten"))]
-    pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon_core::ThreadPool>) -> Self {
+    pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) -> Self {
         self.thread_pool = Some(pool);
 
         self
@@ -183,10 +152,17 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         d
     }
 
+    fn next_id(&mut self) -> SystemId {
+        let id = self.current_id;
+        self.current_id += 1;
+
+        SystemId(id)
+    }
+
     #[cfg(not(target_os = "emscripten"))]
-    fn create_thread_pool() -> ::std::sync::Arc<::rayon_core::ThreadPool> {
+    fn create_thread_pool() -> ::std::sync::Arc<::rayon::ThreadPool> {
         use std::sync::Arc;
-        use rayon_core::{Configuration, ThreadPool};
+        use rayon::{Configuration, ThreadPool};
 
         Arc::new(ThreadPool::new(Configuration::new()).expect("Invalid thread pool configuration"))
     }

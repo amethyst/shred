@@ -18,11 +18,11 @@ exclude = ["bors.toml", ".travis.yml"]
 travis-ci = { repository = "torkleyy/shred" }
 
 [dependencies]
+arrayvec = "0.3"
 fnv = "1"
 mopa = "0.2"
 pulse = "0.5"
-rayon = "0.7"
-rayon-core = { version = "1.0", features = ["unstable"] }
+rayon = { version = "0.7", features = ["unstable"] }
 shred-derive = { path = "shred-derive", version = "0.2" }
 smallvec = "0.4"
 

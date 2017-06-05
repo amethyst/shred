@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use pulse::Signal;
-use rayon_core::ThreadPool;
+use rayon::ThreadPool;
 
 use dispatch::ThreadLocal;
 use dispatch::stage::Stage;

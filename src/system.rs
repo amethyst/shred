@@ -22,6 +22,17 @@ impl<'a, T> RunNow<'a> for T
     }
 }
 
+#[repr(u8)]
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Debug)]
+pub enum RunningTime {
+    VeryShort = 1,
+    Short = 2,
+    Average = 3,
+    Long = 4,
+    VeryLong = 5,
+}
+
 /// A `System`, executed with a
 /// set of required [`Resource`]s.
 ///
@@ -37,6 +48,15 @@ pub trait System<'a> {
     /// Executes the system with the required system
     /// data.
     fn run(&mut self, data: Self::SystemData);
+
+    /// Returns a hint how long the system needs for running.
+    /// This is used to optimize the way they're executed (might
+    /// allow more parallelization).
+    ///
+    /// Defaults to `RunningTime::Average`.
+    fn running_time(&self) -> RunningTime {
+        RunningTime::Average
+    }
 }
 
 /// A struct implementing
@@ -141,29 +161,35 @@ impl<'a> SystemData<'a> for () {
     }
 }
 
-impl_data!(A);
-impl_data!(A, B);
-impl_data!(A, B, C);
-impl_data!(A, B, C, D);
-impl_data!(A, B, C, D, E);
-impl_data!(A, B, C, D, E, F);
-impl_data!(A, B, C, D, E, F, G);
-impl_data!(A, B, C, D, E, F, G, H);
-impl_data!(A, B, C, D, E, F, G, H, I);
-impl_data!(A, B, C, D, E, F, G, H, I, J);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
-impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+mod impl_data {
+    #![cfg_attr(rustfmt, rustfmt_skip)]
+
+    use super::*;
+
+    impl_data!(A);
+    impl_data!(A, B);
+    impl_data!(A, B, C);
+    impl_data!(A, B, C, D);
+    impl_data!(A, B, C, D, E);
+    impl_data!(A, B, C, D, E, F);
+    impl_data!(A, B, C, D, E, F, G);
+    impl_data!(A, B, C, D, E, F, G, H);
+    impl_data!(A, B, C, D, E, F, G, H, I);
+    impl_data!(A, B, C, D, E, F, G, H, I, J);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+}
