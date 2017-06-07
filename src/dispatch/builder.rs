@@ -74,19 +74,32 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Please note that the dependency should be added before
     /// you add the depending system.
     ///
+    /// If you want to register systems which can not be specified as
+    /// dependencies, you can use `""` as their name, which will not panic
+    /// (using another name twice will).
+    ///
     /// # Panics
     ///
     /// * if the specified dependency does not exist
+    /// * if a system with the same name was already registered.
     pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
         where T: for<'c> System<'c> + Send + 'a
     {
+        use std::collections::hash_map::Entry;
+
         let id = self.next_id();
 
         let dependencies = dep.iter()
             .map(|x| *self.map.get(*x).expect("No such system registered"))
             .collect();
 
-        self.map.insert(name.to_owned(), id);
+        if name != "" {
+            if let Entry::Vacant(e) = self.map.entry(name.to_owned()) {
+                e.insert(id);
+            } else {
+                panic!("Cannot insert multiple systems with the same name (\"{}\")", name);
+            }
+        }
 
         self.stages_builder.insert(dependencies, id, system);
 
