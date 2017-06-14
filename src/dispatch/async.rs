@@ -47,7 +47,7 @@ impl<'a> AsyncDispatcher<'a> {
         let res = self.res.clone();
 
         self.thread_pool
-            .spawn_async(move || {
+            .spawn(move || {
                 {
                     let stages = stages;
                     let mut stages = stages.lock().expect("Mutex poisoned");
