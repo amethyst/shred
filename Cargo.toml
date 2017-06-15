@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["torkleyy"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -22,7 +22,7 @@ arrayvec = "0.3"
 fnv = "1"
 mopa = "0.2"
 pulse = "0.5"
-rayon = { version = "0.8", features = ["unstable"] }
+rayon = "0.8"
 shred-derive = { path = "shred-derive", version = "0.3" }
 smallvec = "0.4"
 
