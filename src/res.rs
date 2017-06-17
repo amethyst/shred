@@ -10,6 +10,8 @@ use mopa::Any;
 use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
 
+const RESOURCE_NOT_FOUND: &str = "No resource with the given id";
+
 /// Return value of [`Resources::fetch`].
 ///
 /// [`Resources::fetch`]: struct.Resources.html#method.fetch
@@ -249,12 +251,21 @@ impl Resources {
     pub fn fetch<T>(&self, id: usize) -> Fetch<T>
         where T: Resource
     {
-        let c = self.fetch_internal(TypeId::of::<T>(), id);
+        self.try_fetch(id).expect(RESOURCE_NOT_FOUND)
+    }
 
-        Fetch {
-            inner: c.borrow(),
-            phantom: PhantomData,
-        }
+    /// Like `fetch`, but returns an `Option` instead of panicking in the case of the resource
+    /// being accessed mutably.
+    pub fn try_fetch<T>(&self, id: usize) -> Option<Fetch<T>>
+        where T: Resource
+    {
+        self.try_fetch_internal(TypeId::of::<T>(), id)
+            .map(|r| {
+            Fetch {
+                inner: r.borrow(),
+                phantom: PhantomData,
+            }
+        })
     }
 
     /// Fetches the resource with the specified type `T` mutably.
@@ -263,36 +274,60 @@ impl Resources {
     pub fn fetch_mut<T>(&self, id: usize) -> FetchMut<T>
         where T: Resource
     {
-        let c = self.fetch_internal(TypeId::of::<T>(), id);
+        self.try_fetch_mut(id).expect(RESOURCE_NOT_FOUND)
+    }
 
-        FetchMut {
-            inner: c.borrow_mut(),
-            phantom: PhantomData,
-        }
+    /// Like `fetch_mut`, but returns an `Option` instead of panicking in the case of the resource
+    /// being accessed mutably.
+    pub fn try_fetch_mut<T>(&self, id: usize) -> Option<FetchMut<T>>
+        where T: Resource
+    {
+        self.try_fetch_internal(TypeId::of::<T>(), id)
+            .map(|r| {
+            FetchMut {
+                inner: r.borrow_mut(),
+                phantom: PhantomData,
+            }
+        })
     }
 
     /// Fetches the resource with the specified type id.
     ///
     /// Please see `fetch` for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no resource with the id exists.
     pub fn fetch_id(&self, id: TypeId, comp_id: usize) -> FetchId {
-        let c = self.fetch_internal(id, comp_id);
+        self.try_fetch_id(id, comp_id).expect(RESOURCE_NOT_FOUND)
+    }
 
-        FetchId { inner: c.borrow() }
+    /// Like `fetch_id`, but returns an `Option` rather than panicking.
+    pub fn try_fetch_id(&self, id: TypeId, comp_id: usize) -> Option<FetchId> {
+        self.try_fetch_internal(id, comp_id)
+            .map(|r| FetchId { inner: r.borrow() })
     }
 
     /// Fetches the resource with the specified type id mutably.
     ///
     /// Please see `fetch` for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no resource with the id exists.
     pub fn fetch_id_mut(&self, id: TypeId, comp_id: usize) -> FetchIdMut {
-        let c = self.fetch_internal(id, comp_id);
-
-        FetchIdMut { inner: c.borrow_mut() }
+        self.try_fetch_id_mut(id, comp_id).expect(RESOURCE_NOT_FOUND)
     }
 
-    fn fetch_internal(&self, id: TypeId, cid: usize) -> &TrustCell<Box<Resource>> {
+    /// Like `fetch_id_mut`, but returns an `Option` rather than panicking.
+    pub fn try_fetch_id_mut(&self, id: TypeId, comp_id: usize) -> Option<FetchIdMut> {
+        self.try_fetch_internal(id, comp_id)
+            .map(|r| FetchIdMut { inner: r.borrow_mut() })
+    }
+
+    fn try_fetch_internal(&self, id: TypeId, cid: usize) -> Option<&TrustCell<Box<Resource>>> {
         self.resources
             .get(&ResourceId(id, cid))
-            .expect("No resource with the given id")
     }
 }
 
