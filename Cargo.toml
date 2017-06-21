@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["torkleyy"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
