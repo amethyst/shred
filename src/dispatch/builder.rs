@@ -90,7 +90,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         let id = self.next_id();
 
         let dependencies = dep.iter()
-            .map(|x| *self.map.get(*x).expect("No such system registered"))
+            .map(|x| *self.map.get(*x).expect(&format!("No such system registered (\"{}\")", *x)))
             .collect();
 
         if name != "" {
