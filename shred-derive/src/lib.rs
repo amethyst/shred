@@ -23,6 +23,8 @@ pub fn system_data(input: TokenStream) -> TokenStream {
 }
 
 fn impl_system_data(ast: &MacroInput) -> Tokens {
+    use std::iter::repeat;
+
     let name = &ast.ident;
     let lifetime_defs = &ast.generics.lifetimes;
     let ty_params = &ast.generics.ty_params;
@@ -36,6 +38,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
         .next()
         .expect("There has to be at least one lifetime");
     let ref impl_fetch_lt = def_fetch_lt.lifetime;
+    let impl_fetch_lt_it = repeat(impl_fetch_lt);
     let def_lt_tokens = gen_def_lt_tokens(lifetime_defs);
     let impl_lt_tokens = gen_impl_lt_tokens(lifetime_defs);
     let def_ty_params = gen_def_ty_params(ty_params);
@@ -50,6 +53,8 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
             for #name< #impl_lt_tokens , #impl_ty_params >
             where #where_clause
         {
+            type Prefetch = ( #( <#tys as ::shred::SystemData< #impl_fetch_lt_it >>::Prefetch , )* );
+
             fn fetch(res: & #impl_fetch_lt ::shred::Resources, id: usize) -> Self {
                 #fetch_return
             }

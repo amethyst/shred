@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{Fetch, FetchMut, ResourceId, Resources, SystemData};
+use shred::{Fetch, FetchMut, ResourceId, Prefetch, Resources, SystemData};
 
 #[derive(Debug)]
 struct ResA;
@@ -14,6 +14,8 @@ struct ExampleBundle<'a> {
 }
 
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
+    type Prefetch = ();
+
     fn fetch(res: &'a Resources, id: usize) -> Self {
         ExampleBundle {
             a: res.fetch(id),
@@ -27,6 +29,29 @@ impl<'a> SystemData<'a> for ExampleBundle<'a> {
 
     fn writes(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<ResB>(id)]
+    }
+}
+
+struct ExamplePrefetch<'a> {
+    a: <Fetch<'a, ResA> as SystemData<'a>>::Prefetch,
+    b: <FetchMut<'a, ResB> as SystemData<'a>>::Prefetch,
+}
+
+impl<'a> Prefetch<'a> for ExamplePrefetch<'a> {
+    type Data = ExampleBundle<'a>;
+
+    fn prefetch(res: &'a Resources) -> Self {
+        ExamplePrefetch {
+            a: Prefetch::prefetch(res),
+            b: Prefetch::prefetch(res),
+        }
+    }
+
+    fn fetch(&'a mut self) -> Self::Data {
+        ExampleBundle {
+            a: self.a.fetch(),
+            b: self.b.fetch(),
+        }
     }
 }
 

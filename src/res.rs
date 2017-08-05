@@ -8,7 +8,7 @@ use fnv::FnvHashMap;
 use mopa::Any;
 
 use cell::{Ref, RefMut, TrustCell};
-use system::SystemData;
+use system::{Prefetch, SystemData};
 
 const RESOURCE_NOT_FOUND: &str = "No resource with the given id";
 
@@ -33,6 +33,8 @@ impl<'a, T> Deref for Fetch<'a, T>
 impl<'a, T> SystemData<'a> for Fetch<'a, T>
     where T: Resource
 {
+    type Prefetch = PrefetchData<'a, T>;
+
     fn fetch(res: &'a Resources, id: usize) -> Self {
         res.fetch(id)
     }
@@ -43,6 +45,35 @@ impl<'a, T> SystemData<'a> for Fetch<'a, T>
 
     fn writes(_: usize) -> Vec<ResourceId> {
         vec![]
+    }
+}
+
+pub struct PrefetchData<'a, T: 'a> {
+    inner: &'a TrustCell<Box<Resource>>,
+    phantom: PhantomData<&'a T>,
+}
+
+impl<'a, T> Prefetch<'a> for PrefetchData<'a, T>
+    where T: Resource
+{
+    type Data = Fetch<'a, T>;
+
+    fn prefetch(res: &'a Resources) -> Self {
+        let cell = res
+            .try_fetch_internal(TypeId::of::<T>(), 0)
+            .expect(RESOURCE_NOT_FOUND);
+
+        PrefetchData {
+            inner: cell,
+            phantom: PhantomData
+        }
+    }
+
+    fn fetch(&mut self) -> Self::Data {
+        Fetch {
+            inner: self.inner.borrow(),
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -111,6 +142,8 @@ impl<'a, T> DerefMut for FetchMut<'a, T>
 impl<'a, T> SystemData<'a> for FetchMut<'a, T>
     where T: Resource
 {
+    type Prefetch = PrefetchMutData<'a, T>;
+
     fn fetch(res: &'a Resources, id: usize) -> Self {
         res.fetch_mut(id)
     }
@@ -121,6 +154,35 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
 
     fn writes(id: usize) -> Vec<ResourceId> {
         vec![ResourceId::new_with_id::<T>(id)]
+    }
+}
+
+pub struct PrefetchMutData<'a, T: 'a> {
+    inner: &'a TrustCell<Box<Resource>>,
+    phantom: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> Prefetch<'a> for PrefetchMutData<'a, T>
+    where T: Resource
+{
+    type Data = FetchMut<'a, T>;
+
+    fn prefetch(res: &'a Resources) -> Self {
+        let cell = res
+            .try_fetch_internal(TypeId::of::<T>(), 0)
+            .expect(RESOURCE_NOT_FOUND);
+
+        PrefetchMutData {
+            inner: cell,
+            phantom: PhantomData
+        }
+    }
+
+    fn fetch(&mut self) -> Self::Data {
+        FetchMut {
+            inner: self.inner.borrow_mut(),
+            phantom: PhantomData,
+        }
     }
 }
 

@@ -72,4 +72,4 @@ mod system;
 pub use dispatch::AsyncDispatcher;
 pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
-pub use system::{RunNow, RunningTime, System, SystemData};
+pub use system::{Prefetch, RunNow, RunningTime, System, SystemData};
