@@ -1,7 +1,7 @@
 [package]
 name = "shred"
-version = "0.4.3"
-authors = ["torkleyy"]
+version = "0.4.4"
+authors = ["torkleyy <torkleyy@gmail.com>"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
 and write access to others.
@@ -27,4 +27,4 @@ shred-derive = { path = "shred-derive", version = "0.3" }
 smallvec = "0.4"
 
 [dev-dependencies]
-cgmath = "0.14"
+cgmath = "0.15"
