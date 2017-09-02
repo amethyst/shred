@@ -124,6 +124,38 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
     }
 }
 
+impl<'a, T> SystemData<'a> for Option<Fetch<'a, T>>
+    where T: Resource
+{
+    fn fetch(res: &'a Resources, id: usize) -> Self {
+        res.try_fetch(id)
+    }
+
+    fn reads(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<T>(id)]
+    }
+
+    fn writes(_: usize) -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+impl<'a, T> SystemData<'a> for Option<FetchMut<'a, T>>
+    where T: Resource
+{
+    fn fetch(res: &'a Resources, id: usize) -> Self {
+        res.try_fetch_mut(id)
+    }
+
+    fn reads(_: usize) -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes(id: usize) -> Vec<ResourceId> {
+        vec![ResourceId::new_with_id::<T>(id)]
+    }
+}
+
 /// A resource defines a set of data
 /// which can only be accessed according
 /// to Rust's typical borrowing model (one writer xor multiple readers).
