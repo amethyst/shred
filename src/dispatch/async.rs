@@ -85,6 +85,16 @@ impl<'a> AsyncDispatcher<'a> {
             .expect("The worker thread may have panicked");
     }
 
+
+    /// Checks if any of the asynchronously dispatched systems are running.
+    pub fn is_running(&self) -> bool {
+        if let Some(ref signal) = self.signal {
+            signal.is_pending()
+        } else {
+            false
+        }
+    }
+
     /// Dispatch only thread local systems sequentially.
     ///
     /// If `wait_without_tl()` or `wait()` wasn't called before,
