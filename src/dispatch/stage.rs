@@ -242,20 +242,41 @@ impl<'a> StagesBuilder<'a> {
         let new_writes = new_writes.into_iter();
 
         let num_groups = ids[stage].len();
+        let mut dep_conflict = false;
 
         let conflict = (0..num_groups)
             .filter(|&group| {
-                let read_and_write = writes[stage][group]
+                let reads_and_writes = writes[stage][group]
                     .iter()
                     .chain(reads[stage][group].iter());
 
-                check_intersection(new_writes.clone(), read_and_write) ||
-                check_intersection(new_reads.clone(), writes[stage][group].iter()) ||
-                check_intersection(new_dep.iter(), ids[stage][group].iter())
+                let inters = check_intersection(new_writes.clone(), reads_and_writes) ||
+                check_intersection(new_reads.clone(), writes[stage][group].iter());
+
+                if inters {
+                    true
+                } else {
+                    if check_intersection(new_dep.iter(), ids[stage][group].iter()) {
+                        dep_conflict = true;
+
+                        true
+                    } else {
+                        false
+                    }
+                }
+
             })
             .fold(Conflict::None, Conflict::add);
 
-        conflict
+        // If there is a dependency in the dependency list
+        // which was not in a previous or this stage,
+        // return `Multiple` conflict.
+
+        if (dep_conflict && new_dep.len() > 1) || (!dep_conflict && !new_dep.is_empty()) {
+            Conflict::Multiple
+        } else {
+            conflict
+        }
     }
 
     /// Removes the ids of a given stage from the passed dependency list.
@@ -434,5 +455,26 @@ mod tests {
         assert_eq!(ids[0][0], SystemId(0));
         assert_eq!(ids[1][0], SystemId(1));
         assert_eq!(ids[1][1], SystemId(2));
+    }
+
+    #[test]
+    fn test_chained_dependency() {
+        let mut builder: StagesBuilder = Default::default();
+
+        struct Sys;
+
+        impl <'a> System<'a> for Sys {
+            type SystemData = ();
+
+            fn run(&mut self, _: Self::SystemData) { }
+        }
+
+        builder.insert(SmallVec::from(&[][..]), SystemId(0), Sys);
+        builder.insert(SmallVec::from(&[SystemId(0)][..]), SystemId(1), Sys);
+        builder.insert(SmallVec::from(&[SystemId(1)][..]), SystemId(2), Sys);
+
+        assert_eq!(builder.ids[0][0][0], SystemId(0));
+        assert_eq!(builder.ids[1][0][0], SystemId(1));
+        assert_eq!(builder.ids[2][0][0], SystemId(2));
     }
 }
