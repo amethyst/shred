@@ -1,5 +1,7 @@
 //! Module for resource related types
 
+pub use self::tl::ThreadLocal;
+
 use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -9,6 +11,8 @@ use mopa::Any;
 
 use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
+
+mod tl;
 
 const RESOURCE_NOT_FOUND: &str = "No resource with the given id";
 
