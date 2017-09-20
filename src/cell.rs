@@ -122,7 +122,11 @@ impl<T> TrustCell<T> {
     }
 }
 
-unsafe impl<T> Sync for TrustCell<T> where T: Sync {}
+unsafe impl<T> Sync for TrustCell<T>
+where
+    T: Sync,
+{
+}
 
 #[cfg(test)]
 mod tests {

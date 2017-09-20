@@ -14,7 +14,8 @@ pub trait RunNow<'a> {
 }
 
 impl<'a, T> RunNow<'a> for T
-    where T: System<'a>
+where
+    T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
         let data = T::SystemData::fetch(res, 0);

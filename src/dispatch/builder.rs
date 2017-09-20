@@ -57,7 +57,8 @@ pub struct DispatcherBuilder<'a, 'b> {
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(not(target_os = "emscripten"))]
-    thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,
+    thread_pool:
+        Option<::std::sync::Arc<::rayon::ThreadPool>>,
 }
 
 impl<'a, 'b> DispatcherBuilder<'a, 'b> {
@@ -83,21 +84,29 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// * if the specified dependency does not exist
     /// * if a system with the same name was already registered.
     pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
-        where T: for<'c> System<'c> + Send + 'a
+    where
+        T: for<'c> System<'c> + Send + 'a,
     {
         use std::collections::hash_map::Entry;
 
         let id = self.next_id();
 
         let dependencies = dep.iter()
-            .map(|x| *self.map.get(*x).expect(&format!("No such system registered (\"{}\")", *x)))
+            .map(|x| {
+                *self.map
+                    .get(*x)
+                    .expect(&format!("No such system registered (\"{}\")", *x))
+            })
             .collect();
 
         if name != "" {
             if let Entry::Vacant(e) = self.map.entry(name.to_owned()) {
                 e.insert(id);
             } else {
-                panic!("Cannot insert multiple systems with the same name (\"{}\")", name);
+                panic!(
+                    "Cannot insert multiple systems with the same name (\"{}\")",
+                    name
+                );
             }
         }
 
@@ -112,7 +121,8 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ///
     /// Thread-local systems are dispatched in-order.
     pub fn add_thread_local<T>(mut self, system: T) -> Self
-        where T: for<'c> System<'c> + 'b
+    where
+        T: for<'c> System<'c> + 'b,
     {
         self.thread_local.push(Box::new(system));
 
@@ -177,7 +187,9 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         use std::sync::Arc;
         use rayon::{Configuration, ThreadPool};
 
-        Arc::new(ThreadPool::new(Configuration::new()).expect("Invalid thread pool configuration"))
+        Arc::new(
+            ThreadPool::new(Configuration::new()).expect("Invalid thread pool configuration"),
+        )
     }
 }
 
@@ -190,9 +202,11 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     pub fn build_async(self, res: ::res::Resources) -> ::dispatch::async::AsyncDispatcher<'b> {
         use dispatch::async::new_async;
 
-        new_async(res,
-                  self.stages_builder.build(),
-                  self.thread_local,
-                  self.thread_pool.unwrap_or_else(Self::create_thread_pool))
+        new_async(
+            res,
+            self.stages_builder.build(),
+            self.thread_local,
+            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+        )
     }
 }

@@ -19,11 +19,12 @@ pub struct AsyncDispatcher<'a> {
     thread_pool: Arc<ThreadPool>,
 }
 
-pub fn new_async<'a>(res: Resources,
-                     stages: Vec<Stage<'static>>,
-                     thread_local: ThreadLocal<'a>,
-                     thread_pool: Arc<ThreadPool>)
-                     -> AsyncDispatcher<'a> {
+pub fn new_async<'a>(
+    res: Resources,
+    stages: Vec<Stage<'static>>,
+    thread_local: ThreadLocal<'a>,
+    thread_pool: Arc<ThreadPool>,
+) -> AsyncDispatcher<'a> {
     AsyncDispatcher {
         res: Arc::new(res),
         signal: None,
@@ -46,21 +47,20 @@ impl<'a> AsyncDispatcher<'a> {
         let stages = self.stages.clone();
         let res = self.res.clone();
 
-        self.thread_pool
-            .spawn(move || {
-                {
-                    let stages = stages;
-                    let mut stages = stages.lock().expect("Mutex poisoned");
+        self.thread_pool.spawn(move || {
+            {
+                let stages = stages;
+                let mut stages = stages.lock().expect("Mutex poisoned");
 
-                    let res = &*res;
+                let res = &*res;
 
-                    for stage in &mut *stages {
-                        stage.execute(res);
-                    }
+                for stage in &mut *stages {
+                    stage.execute(res);
                 }
+            }
 
-                pulse.pulse();
-            })
+            pulse.pulse();
+        })
     }
 
     /// Waits for all the asynchronously dispatched systems to finish
