@@ -1,4 +1,3 @@
-
 #[cfg(not(target_os = "emscripten"))]
 pub use self::async::AsyncDispatcher;
 pub use self::builder::DispatcherBuilder;

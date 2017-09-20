@@ -1,5 +1,7 @@
 //! Module for resource related types
 
+pub use self::entry::Entry;
+
 use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -7,8 +9,11 @@ use std::ops::{Deref, DerefMut};
 use fnv::FnvHashMap;
 use mopa::Any;
 
+use self::entry::create_entry;
 use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
+
+mod entry;
 
 const RESOURCE_NOT_FOUND: &str = "No resource with the given id";
 
@@ -281,6 +286,14 @@ impl Resources {
     /// is registered.
     pub fn has_value(&self, res_id: ResourceId) -> bool {
         self.resources.contains_key(&res_id)
+    }
+
+    /// Returns an entry for the resource with type `R` and id 0.
+    pub fn entry<R>(&mut self) -> Entry<R>
+    where
+        R: Resource,
+    {
+        create_entry(self.resources.entry(ResourceId::new::<R>()))
     }
 
     /// Fetches the resource with the specified type `T`.
