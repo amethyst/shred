@@ -1,6 +1,7 @@
-pub use self::builder::DispatcherBuilder;
+
 #[cfg(not(target_os = "emscripten"))]
 pub use self::async::AsyncDispatcher;
+pub use self::builder::DispatcherBuilder;
 
 use smallvec::SmallVec;
 
@@ -19,8 +20,7 @@ mod stage;
 pub struct Dispatcher<'a, 'b> {
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
-    #[cfg(not(target_os = "emscripten"))]
-    thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
+    #[cfg(not(target_os = "emscripten"))] thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
@@ -58,10 +58,9 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn dispatch_par(&mut self, res: &mut Resources) {
         let stages = &mut self.stages;
 
-        self.thread_pool
-            .install(move || for stage in stages {
-                         stage.execute(res);
-                     });
+        self.thread_pool.install(move || for stage in stages {
+            stage.execute(res);
+        });
     }
 
     /// Dispatches the systems (except thread local systems) sequentially.
@@ -90,9 +89,9 @@ type ThreadLocal<'a> = SmallVec<[Box<for<'b> RunNow<'b> + 'a>; 4]>;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use res::*;
     use system::*;
-    use super::*;
 
     struct Res(i32);
 

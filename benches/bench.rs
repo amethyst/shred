@@ -19,7 +19,9 @@ struct VecStorage<T> {
 
 impl<T: Clone> VecStorage<T> {
     fn new(init: T) -> Self {
-        VecStorage { data: vec![init; NUM_COMPONENTS] }
+        VecStorage {
+            data: vec![init; NUM_COMPONENTS],
+        }
     }
 }
 
@@ -155,10 +157,10 @@ impl<'a> System<'a> for ClearForceAccum {
     fn run(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {
             data.force[elem] = Force(Vec3 {
-                                         x: 0.0,
-                                         y: 0.0,
-                                         z: 0.0,
-                                     });
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
         }
     }
 }
@@ -178,10 +180,10 @@ fn basic(b: &mut Bencher) {
     let vel = VecStorage::new(Vel(Vec3::new(0.0, 0.0, 0.0)));
     let force = VecStorage::new(Force(Vec3::new(0.0, 0.0, 0.0)));
     let spring = VecStorage::new(Spring {
-                                     constant: 2.0,
-                                     connection_to: 0,
-                                     rest: 1.0,
-                                 });
+        constant: 2.0,
+        connection_to: 0,
+        rest: 1.0,
+    });
 
     pos.data[0] = Pos(Vec3::new(-5.0, -5.0, -5.0));
 

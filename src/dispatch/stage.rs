@@ -34,7 +34,7 @@ use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
 use dispatch::{SystemExecSend, SystemId};
-use res::{Resources, ResourceId};
+use res::{ResourceId, Resources};
 use system::{RunningTime, System};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
@@ -82,8 +82,8 @@ impl<'a> Stage<'a> {
         self.groups
             .par_iter_mut()
             .for_each(|group| for system in group {
-                          system.run_now(res);
-                      });
+                system.run_now(res);
+            });
     }
 
     pub fn execute_seq(&mut self, res: &Resources) {
@@ -111,7 +111,8 @@ impl<'a> StagesBuilder<'a> {
     }
 
     pub fn insert<T>(&mut self, mut dep: SmallVec<[SystemId; 4]>, id: SystemId, system: T)
-        where T: for<'b> System<'b> + Send + 'a
+    where
+        T: for<'b> System<'b> + Send + 'a,
     {
         use system::SystemData;
 
@@ -170,45 +171,49 @@ impl<'a> StagesBuilder<'a> {
         self.writes[stage].push(SmallVec::new());
     }
 
-    fn insertion_target<'rw, R, W>(&self,
-                                   new_reads: R,
-                                   new_writes: W,
-                                   new_dep: &mut SmallVec<[SystemId; 4]>,
-                                   new_time: RunningTime)
-                                   -> InsertionTarget
-        where R: IntoIterator<Item = &'rw ResourceId>,
-              R::IntoIter: Clone,
-              W: IntoIterator<Item = &'rw ResourceId>,
-              W::IntoIter: Clone
+    fn insertion_target<'rw, R, W>(
+        &self,
+        new_reads: R,
+        new_writes: W,
+        new_dep: &mut SmallVec<[SystemId; 4]>,
+        new_time: RunningTime,
+    ) -> InsertionTarget
+    where
+        R: IntoIterator<Item = &'rw ResourceId>,
+        R::IntoIter: Clone,
+        W: IntoIterator<Item = &'rw ResourceId>,
+        W::IntoIter: Clone,
     {
         let new_reads = new_reads.into_iter();
         let new_writes = new_writes.into_iter();
 
         (self.barrier..self.stages.len())
             .map(|stage| {
-                let conflict = Self::find_conflict(&*self.ids,
-                                                   &*self.reads,
-                                                   &*self.writes,
-                                                   stage,
-                                                   new_reads.clone(),
-                                                   new_writes.clone(),
-                                                   new_dep);
+                let conflict = Self::find_conflict(
+                    &*self.ids,
+                    &*self.reads,
+                    &*self.writes,
+                    stage,
+                    new_reads.clone(),
+                    new_writes.clone(),
+                    new_dep,
+                );
                 self.remove_ids(stage, new_dep);
                 (stage, conflict)
             })
             .find(|&(stage, conflict)| match conflict {
-                      Conflict::None => true,
-                      Conflict::Single(group) => {
-                          self.stages[stage].groups[group].len() < MAX_SYSTEMS_PER_GROUP - 1 &&
-                          self.improves_balance(stage, group, new_time as u8)
-                      }
-                      Conflict::Multiple => false,
-                  })
+                Conflict::None => true,
+                Conflict::Single(group) => {
+                    self.stages[stage].groups[group].len() < MAX_SYSTEMS_PER_GROUP - 1 &&
+                        self.improves_balance(stage, group, new_time as u8)
+                }
+                Conflict::Multiple => false,
+            })
             .map(|(stage, conflict)| match conflict {
-                     Conflict::None => InsertionTarget::Stage(stage),
-                     Conflict::Single(group) => InsertionTarget::Group(stage, group),
-                     Conflict::Multiple => unreachable!(),
-                 })
+                Conflict::None => InsertionTarget::Stage(stage),
+                Conflict::Single(group) => InsertionTarget::Group(stage, group),
+                Conflict::Multiple => unreachable!(),
+            })
             .unwrap_or(InsertionTarget::NewStage)
     }
 
@@ -225,18 +230,20 @@ impl<'a> StagesBuilder<'a> {
 
     /// Returns an enum indicating which kind of conflict a system has
     /// with a stage.
-    fn find_conflict<'rw, R, W>(ids: &[GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>],
-                                reads: &[GroupVec<SmallVec<[ResourceId; 12]>>],
-                                writes: &[GroupVec<SmallVec<[ResourceId; 10]>>],
-                                stage: usize,
-                                new_reads: R,
-                                new_writes: W,
-                                new_dep: &SmallVec<[SystemId; 4]>)
-                                -> Conflict
-        where R: IntoIterator<Item = &'rw ResourceId>,
-              R::IntoIter: Clone,
-              W: IntoIterator<Item = &'rw ResourceId>,
-              W::IntoIter: Clone
+    fn find_conflict<'rw, R, W>(
+        ids: &[GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>],
+        reads: &[GroupVec<SmallVec<[ResourceId; 12]>>],
+        writes: &[GroupVec<SmallVec<[ResourceId; 10]>>],
+        stage: usize,
+        new_reads: R,
+        new_writes: W,
+        new_dep: &SmallVec<[SystemId; 4]>,
+    ) -> Conflict
+    where
+        R: IntoIterator<Item = &'rw ResourceId>,
+        R::IntoIter: Clone,
+        W: IntoIterator<Item = &'rw ResourceId>,
+        W::IntoIter: Clone,
     {
         let new_reads = new_reads.into_iter();
         let new_writes = new_writes.into_iter();
@@ -251,7 +258,7 @@ impl<'a> StagesBuilder<'a> {
                     .chain(reads[stage][group].iter());
 
                 let inters = check_intersection(new_writes.clone(), reads_and_writes) ||
-                check_intersection(new_reads.clone(), writes[stage][group].iter());
+                    check_intersection(new_reads.clone(), writes[stage][group].iter());
 
                 if inters {
                     true
@@ -264,7 +271,6 @@ impl<'a> StagesBuilder<'a> {
                         false
                     }
                 }
-
             })
             .fold(Conflict::None, Conflict::add);
 
@@ -292,9 +298,10 @@ impl<'a> StagesBuilder<'a> {
 }
 
 fn check_intersection<'i, 'j, T, I, J>(mut i: I, j: J) -> bool
-    where I: Iterator<Item = &'i T>,
-          J: Iterator<Item = &'j T> + Clone,
-          T: PartialEq + 'i + 'j
+where
+    I: Iterator<Item = &'i T>,
+    J: Iterator<Item = &'j T> + Clone,
+    T: PartialEq + 'i + 'j,
 {
     i.any(|elem_i| j.clone().any(|elem_j| *elem_j == *elem_i))
 }
@@ -303,15 +310,18 @@ fn check_intersection<'i, 'j, T, I, J>(mut i: I, j: J) -> bool
 mod tests {
     use super::*;
 
-    fn create_ids(ids: &[&[&[usize]]])
-                  -> Vec<GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>> {
+    fn create_ids(
+        ids: &[&[&[usize]]],
+    ) -> Vec<GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>> {
         ids.into_iter()
             .map(|groups| {
-                     groups
-                         .into_iter()
-                         .map(|systems| systems.into_iter().map(|id| SystemId(*id)).collect())
-                         .collect()
-                 })
+                groups
+                    .into_iter()
+                    .map(|systems| {
+                        systems.into_iter().map(|id| SystemId(*id)).collect()
+                    })
+                    .collect()
+            })
             .collect()
     }
 
@@ -319,11 +329,11 @@ mod tests {
         reads
             .into_iter()
             .map(|groups| {
-                     groups
-                         .into_iter()
-                         .map(|reads| reads.into_iter().map(|id| *id).collect())
-                         .collect()
-                 })
+                groups
+                    .into_iter()
+                    .map(|reads| reads.into_iter().map(|id| *id).collect())
+                    .collect()
+            })
             .collect()
     }
 
@@ -331,11 +341,11 @@ mod tests {
         writes
             .into_iter()
             .map(|groups| {
-                     groups
-                         .into_iter()
-                         .map(|writes| writes.into_iter().map(|id| *id).collect())
-                         .collect()
-                 })
+                groups
+                    .into_iter()
+                    .map(|writes| writes.into_iter().map(|id| *id).collect())
+                    .collect()
+            })
             .collect()
     }
 
@@ -357,16 +367,20 @@ mod tests {
     #[test]
     fn conflict_rw() {
         let ids = create_ids(&[&[&[0], &[1]]]);
-        let reads = create_reads(&[&[&[ResourceId::new::<ResA>()], &[ResourceId::new::<ResB>()]]]);
+        let reads = create_reads(&[
+            &[&[ResourceId::new::<ResA>()], &[ResourceId::new::<ResB>()]],
+        ]);
         let writes = create_writes(&[&[&[], &[]]]);
 
-        let conflict = StagesBuilder::find_conflict(&ids,
-                                                    &reads,
-                                                    &writes,
-                                                    0,
-                                                    &[],
-                                                    &[ResourceId::new::<ResB>()],
-                                                    &SmallVec::new());
+        let conflict = StagesBuilder::find_conflict(
+            &ids,
+            &reads,
+            &writes,
+            0,
+            &[],
+            &[ResourceId::new::<ResB>()],
+            &SmallVec::new(),
+        );
         assert_eq!(conflict, Conflict::Single(1));
     }
 
@@ -376,31 +390,35 @@ mod tests {
         let reads = create_reads(&[&[&[ResourceId::new::<ResA>()]]]);
         let writes = create_writes(&[&[&[ResourceId::new::<ResB>()]]]);
 
-        let conflict = StagesBuilder::find_conflict(&ids,
-                                                    &reads,
-                                                    &writes,
-                                                    0,
-                                                    &[],
-                                                    &[ResourceId::new::<ResB>()],
-                                                    &SmallVec::new());
+        let conflict = StagesBuilder::find_conflict(
+            &ids,
+            &reads,
+            &writes,
+            0,
+            &[],
+            &[ResourceId::new::<ResB>()],
+            &SmallVec::new(),
+        );
         assert_eq!(conflict, Conflict::Single(0));
     }
 
     #[test]
     fn conflict_ww_multi() {
         let ids = create_ids(&[&[&[0], &[1]]]);
-        let reads = create_reads(&[&[&[ResourceId::new::<ResA>(), ResourceId::new::<ResC>()],
-                                     &[]]]);
+        let reads = create_reads(&[
+            &[&[ResourceId::new::<ResA>(), ResourceId::new::<ResC>()], &[]],
+        ]);
         let writes = create_writes(&[&[&[], &[ResourceId::new::<ResB>()]]]);
 
-        let conflict = StagesBuilder::find_conflict(&ids,
-                                                    &reads,
-                                                    &writes,
-                                                    0,
-                                                    &[],
-                                                    &[ResourceId::new::<ResB>(),
-                                                      ResourceId::new::<ResC>()],
-                                                    &SmallVec::new());
+        let conflict = StagesBuilder::find_conflict(
+            &ids,
+            &reads,
+            &writes,
+            0,
+            &[],
+            &[ResourceId::new::<ResB>(), ResourceId::new::<ResC>()],
+            &SmallVec::new(),
+        );
         assert_eq!(conflict, Conflict::Multiple);
     }
 
@@ -463,10 +481,10 @@ mod tests {
 
         struct Sys;
 
-        impl <'a> System<'a> for Sys {
+        impl<'a> System<'a> for Sys {
             type SystemData = ();
 
-            fn run(&mut self, _: Self::SystemData) { }
+            fn run(&mut self, _: Self::SystemData) {}
         }
 
         builder.insert(SmallVec::from(&[][..]), SystemId(0), Sys);

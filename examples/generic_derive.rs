@@ -20,7 +20,8 @@ struct SomeTuple<'a, T: Debug + Resource>(Fetch<'a, T>);
 
 #[derive(SystemData)]
 struct WithWhereClause<'a, T>
-    where T: Resource
+where
+    T: Resource,
 {
     k: Fetch<'a, T>,
 }

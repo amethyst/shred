@@ -68,8 +68,8 @@ mod dispatch;
 mod res;
 mod system;
 
+pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(not(target_os = "emscripten"))]
 pub use dispatch::AsyncDispatcher;
-pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 pub use system::{RunNow, RunningTime, System, SystemData};
