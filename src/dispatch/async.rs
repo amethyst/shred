@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use pulse::Signal;
 use rayon::ThreadPool;
 
-use dispatch::ThreadLocal;
+use dispatch::dispatcher::ThreadLocal;
 use dispatch::stage::Stage;
 use res::Resources;
 
