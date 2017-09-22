@@ -1,6 +1,7 @@
 use fnv::FnvHashMap;
 
-use dispatch::{Dispatcher, SystemId, ThreadLocal};
+use dispatch::Dispatcher;
+use dispatch::dispatcher::{SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
 use system::System;
 
@@ -159,18 +160,20 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// precompute useful information in
     /// order to speed up dispatching.
     pub fn build(self) -> Dispatcher<'a, 'b> {
+        use dispatch::dispatcher::new_dispatcher;
+
         #[cfg(not(target_os = "emscripten"))]
-        let d = Dispatcher {
-            stages: self.stages_builder.build(),
-            thread_local: self.thread_local,
-            thread_pool: self.thread_pool.unwrap_or_else(Self::create_thread_pool),
-        };
+        let d = new_dispatcher(
+            self.stages_builder.build(),
+            self.thread_local,
+            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+        );
 
         #[cfg(target_os = "emscripten")]
-        let d = Dispatcher {
-            stages: self.stages_builder.build(),
-            thread_local: self.thread_local,
-        };
+        let d = new_dispatcher(
+            self.stages_builder.build(),
+            self.thread_local,
+        );
 
         d
     }

@@ -33,7 +33,7 @@
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
-use dispatch::{SystemExecSend, SystemId};
+use dispatch::dispatcher::{SystemExecSend, SystemId};
 use res::{ResourceId, Resources};
 use system::{RunningTime, System};
 
