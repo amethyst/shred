@@ -4,7 +4,7 @@ use res::Resources;
 use system::RunNow;
 use system::System;
 
-use rayon::ThreadPool;
+use rayon::{ThreadPool, join};
 
 pub struct Nil;
 
@@ -214,10 +214,14 @@ where
         let head = &mut self.head;
         let tail = &mut self.tail;
 
-        pool.scope(move |s| {
-            s.spawn(move |_| head.run(res, pool));
-            s.spawn(move |_| tail.run(res, pool));
-        });
+        let head = move || head.run(res, pool);
+        let tail = move || tail.run(res, pool);
+
+        if pool.current_thread_index().is_none() {
+            pool.join(head, tail);
+        } else {
+            join(head, tail);
+        }
     }
 }
 
@@ -264,6 +268,13 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use std::sync::atomic::*;
+
+    #[test]
+    fn nested_joins() {
+        let pool = ThreadPool::new(Default::default()).unwrap();
+
+        pool.join(|| join(|| join(|| join(|| (), || ()), || ()), || ()), || ());
+    }
 
     #[test]
     fn build_par() {

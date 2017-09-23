@@ -5,6 +5,9 @@ rust:
 - beta
 - stable
 - 1.17.0
+env:
+  global:
+    - RUST_MIN_STACK=16777216
 branches:
   only:
     - staging
