@@ -1,10 +1,11 @@
 use std::borrow::Borrow;
 
-use res::Resources;
+use dispatch::util::check_intersection;
+use res::{ResourceId, Resources};
 use system::RunNow;
 use system::System;
 
-use rayon::{ThreadPool, join};
+use rayon::{join, ThreadPool};
 
 pub struct Nil;
 
@@ -17,9 +18,10 @@ pub struct Nil;
 /// #[macro_use(par)]
 /// extern crate shred;
 ///
-/// # struct SysA;
-/// # struct SysB;
-/// # struct SysC;
+/// # use shred::System;
+/// # struct SysA; impl<'a> System<'a> for SysA { type SystemData = (); fn run(&mut self, _: ()){}}
+/// # struct SysB; impl<'a> System<'a> for SysB { type SystemData = (); fn run(&mut self, _: ()){}}
+/// # struct SysC; impl<'a> System<'a> for SysC { type SystemData = (); fn run(&mut self, _: ()){}}
 /// # fn main() {
 /// par![
 ///     SysA,
@@ -90,7 +92,23 @@ impl<H> Par<H, Nil> {
 
     /// Adds `sys` as the second job and returns a new `Par` struct
     /// with the previous struct as head and a no-op tail.
-    pub fn with<T>(self, sys: T) -> Par<Par<H, T>, Nil> {
+    pub fn with<T>(self, sys: T) -> Par<Par<H, T>, Nil>
+    where
+        H: for<'a> RunWithPool<'a>,
+        T: for<'a> RunWithPool<'a>,
+    {
+        debug_assert!(
+            {
+                let reads = self.head.reads();
+                let writes = self.head.writes();
+
+                !(check_intersection(writes.iter(), sys.reads().iter()) ||
+                    check_intersection(writes.iter(), sys.writes().iter()) ||
+                    check_intersection(reads.iter(), sys.writes().iter()))
+            },
+            "Tried to add system with conflicting reads / writes"
+        );
+
         Par {
             head: Par {
                 head: self.head,
@@ -209,6 +227,9 @@ where
 
 pub trait RunWithPool<'a> {
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
+
+    fn reads(&self) -> Vec<ResourceId>;
+    fn writes(&self) -> Vec<ResourceId>;
 }
 
 impl<'a, T> RunWithPool<'a> for T
@@ -217,6 +238,18 @@ where
 {
     fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
         RunNow::run_now(self, res);
+    }
+
+    fn reads(&self) -> Vec<ResourceId> {
+        use system::SystemData;
+
+        T::SystemData::reads(0)
+    }
+
+    fn writes(&self) -> Vec<ResourceId> {
+        use system::SystemData;
+
+        T::SystemData::writes(0)
     }
 }
 
@@ -237,6 +270,20 @@ where
         } else {
             join(head, tail);
         }
+    }
+
+    fn reads(&self) -> Vec<ResourceId> {
+        let mut reads = self.head.reads();
+        reads.extend(self.tail.reads());
+
+        reads
+    }
+
+    fn writes(&self) -> Vec<ResourceId> {
+        let mut writes = self.head.writes();
+        writes.extend(self.tail.writes());
+
+        writes
     }
 }
 
@@ -275,6 +322,20 @@ where
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
         self.head.run(res, pool);
         self.tail.run(res, pool);
+    }
+
+    fn reads(&self) -> Vec<ResourceId> {
+        let mut reads = self.head.reads();
+        reads.extend(self.tail.reads());
+
+        reads
+    }
+
+    fn writes(&self) -> Vec<ResourceId> {
+        let mut writes = self.head.writes();
+        writes.extend(self.tail.writes());
+
+        writes
     }
 }
 
