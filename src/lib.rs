@@ -49,6 +49,12 @@
 //! }
 //! ```
 //!
+//! Now, the above dispatcher is pretty easy to setup.
+//! There's also a more flexible and performant one;
+//! once you know about system data and parallelization,
+//! take a look at `ParSeq`, which allows dispatching with
+//! zero virtual calls.
+//!
 
 #![deny(unused_must_use)]
 #![warn(missing_docs)]

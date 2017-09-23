@@ -104,6 +104,21 @@ impl<H> Par<H, Nil> {
 /// A dispatcher intended to be used with
 /// `Par` and `Seq`  structures.
 ///
+/// This is more flexible and performant than `Dispatcher`,
+/// however, you have to check conflicts yourself.
+/// That means you cannot run two systems in parallel
+/// which write to the same resource; if you'd do that,
+/// one of the systems will panic while trying to fetch
+/// the `SystemData`.
+///
+/// ## Thread-local systems
+///
+/// This dispatcher also allows more freedom
+/// for thread-local systems; you cannot execute wherever you want,
+/// just not in parallel with other systems (putting one inside
+/// `par!` will give you a compile-time error saying the `Send` requirement
+/// is unmet).
+///
 /// ## Examples
 ///
 /// ```
