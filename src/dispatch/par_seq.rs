@@ -132,7 +132,7 @@ impl<H> Par<H, Nil> {
 /// ## Thread-local systems
 ///
 /// This dispatcher also allows more freedom
-/// for thread-local systems; you cannot execute wherever you want,
+/// for thread-local systems; you can execute wherever you want,
 /// just not in parallel with other systems (putting one inside
 /// `par!` will give you a compile-time error saying the `Send` requirement
 /// is unmet).
@@ -219,7 +219,7 @@ where
     }
 
     /// Dispatches the systems using `res`.
-    /// This involves zero virtual cost.
+    /// This doesn't call any virtual functions.
     pub fn dispatch(&mut self, res: &mut Resources) {
         self.run.run(res, self.pool.borrow());
     }
