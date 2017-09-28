@@ -23,9 +23,12 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// and runs `dispatch_thread_local` afterwards.
     ///
+    /// Please note that this method assumes that no resource
+    /// is currently borrowed. If that's the case, it panics.
+    ///
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
-    pub fn dispatch(&mut self, res: &mut Resources) {
+    pub fn dispatch(&mut self, res: &Resources) {
         #[cfg(not(target_os = "emscripten"))]
         self.dispatch_par(res);
 
@@ -43,8 +46,11 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Only available on platforms with
     /// multithreading support (so not on emscripten).
+    ///
+    /// Please note that this method assumes that no resource
+    /// is currently borrowed. If that's the case, it panics.
     #[cfg(not(target_os = "emscripten"))]
-    pub fn dispatch_par(&mut self, res: &mut Resources) {
+    pub fn dispatch_par(&mut self, res: &Resources) {
         let stages = &mut self.stages;
 
         self.thread_pool.install(move || for stage in stages {
@@ -56,14 +62,20 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// This is useful if parallel overhead is
     /// too big or the platform does not support multithreading.
-    pub fn dispatch_seq(&mut self, res: &mut Resources) {
+    ///
+    /// Please note that this method assumes that no resource
+    /// is currently borrowed. If that's the case, it panics.
+    pub fn dispatch_seq(&mut self, res: &Resources) {
         for stage in &mut self.stages {
             stage.execute_seq(res);
         }
     }
 
     /// Dispatch only thread local systems sequentially.
-    pub fn dispatch_thread_local(&mut self, res: &mut Resources) {
+    ///
+    /// Please note that this method assumes that no resource
+    /// is currently borrowed. If that's the case, it panics.
+    pub fn dispatch_thread_local(&mut self, res: &Resources) {
         for sys in &mut self.thread_local {
             sys.run_now(res);
         }

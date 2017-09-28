@@ -199,7 +199,7 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ///
     /// It does not allow non-static types and
     /// accepts a `Resource` struct.
-    pub fn build_async(self, res: ::res::Resources) -> ::dispatch::async::AsyncDispatcher<'b> {
+    pub fn build_async<R>(self, res: R) -> ::dispatch::async::AsyncDispatcher<'b, R> {
         use dispatch::async::new_async;
 
         new_async(

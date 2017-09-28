@@ -228,7 +228,10 @@ where
 
     /// Dispatches the systems using `res`.
     /// This doesn't call any virtual functions.
-    pub fn dispatch(&mut self, res: &mut Resources) {
+    ///
+    /// Please note that this method assumes that no resource
+    /// is currently borrowed. If that's the case, it panics.
+    pub fn dispatch(&mut self, res: &Resources) {
         self.run.run(res, self.pool.borrow());
     }
 }

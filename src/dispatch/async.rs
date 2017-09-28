@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::sync::{Arc, Mutex};
 
 use pulse::Signal;
@@ -11,20 +12,20 @@ const ERR_NO_DISPATCH: &str = "wait() called before dispatch or called twice";
 
 /// Like, `Dispatcher` but works
 /// asynchronously.
-pub struct AsyncDispatcher<'a> {
-    res: Arc<Resources>,
+pub struct AsyncDispatcher<'a, R> {
+    res: Arc<R>,
     signal: Option<Signal>,
     stages: Arc<Mutex<Vec<Stage<'static>>>>,
     thread_local: ThreadLocal<'a>,
     thread_pool: Arc<ThreadPool>,
 }
 
-pub fn new_async<'a>(
-    res: Resources,
+pub fn new_async<'a, R>(
+    res: R,
     stages: Vec<Stage<'static>>,
     thread_local: ThreadLocal<'a>,
     thread_pool: Arc<ThreadPool>,
-) -> AsyncDispatcher<'a> {
+) -> AsyncDispatcher<'a, R> {
     AsyncDispatcher {
         res: Arc::new(res),
         signal: None,
@@ -34,7 +35,10 @@ pub fn new_async<'a>(
     }
 }
 
-impl<'a> AsyncDispatcher<'a> {
+impl<'a, R> AsyncDispatcher<'a, R>
+where
+    R: Borrow<Resources> + Send + Sync + 'static,
+{
     /// Dispatches the systems asynchronously.
     /// Does not execute thread local systems.
     ///
@@ -52,7 +56,7 @@ impl<'a> AsyncDispatcher<'a> {
                 let stages = stages;
                 let mut stages = stages.lock().expect("Mutex poisoned");
 
-                let res = &*res;
+                let res = res.as_ref().borrow();
 
                 for stage in &mut *stages {
                     stage.execute(res);
@@ -68,7 +72,7 @@ impl<'a> AsyncDispatcher<'a> {
     pub fn wait(&mut self) {
         self.wait_without_tl();
 
-        let res = &*self.res;
+        let res = self.res.as_ref().borrow();
 
         for sys in &mut self.thread_local {
             sys.run_now(res);
@@ -104,7 +108,7 @@ impl<'a> AsyncDispatcher<'a> {
             self.wait_without_tl();
         }
 
-        let res = &*self.res;
+        let res = self.res.as_ref().borrow();
 
         for sys in &mut self.thread_local {
             sys.run_now(res);
@@ -115,7 +119,7 @@ impl<'a> AsyncDispatcher<'a> {
     ///
     /// If `wait_without_tl()` or `wait()` wasn't called before,
     /// this method will do that.
-    pub fn mut_res(&mut self) -> &mut Resources {
+    pub fn mut_res(&mut self) -> &mut R {
         if self.signal.is_some() {
             self.wait();
         }
