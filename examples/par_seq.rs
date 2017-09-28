@@ -41,7 +41,7 @@ fn main() {
 
     let pool = ThreadPool::new(Default::default()).unwrap();
 
-    let mut res = Resources::new();
+    let res = Resources::new();
     let x = 5u8;
 
     let mut dispatcher = ParSeq::new(
@@ -60,5 +60,5 @@ fn main() {
         &pool,
     );
 
-    dispatcher.dispatch(&mut res);
+    dispatcher.dispatch(&res);
 }

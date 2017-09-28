@@ -36,10 +36,10 @@ fn main() {
     resources.add(ResA);
 
     // `ResB` is not in resources, but `PrintSystem` still works.
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&resources);
 
     resources.add(ResB);
 
     // Now `ResB` can be printed, too.
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&resources);
 }

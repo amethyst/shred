@@ -37,5 +37,5 @@ fn main() {
     resources.add(ResA);
     resources.add(ResB);
 
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&resources);
 }
