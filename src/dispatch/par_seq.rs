@@ -7,6 +7,7 @@ use system::System;
 
 use rayon::{join, ThreadPool};
 
+/// The "leave node" for the `Par` / `Seq` list.
 pub struct Nil;
 
 /// The `par!` macro may be used to easily create a structure
@@ -99,12 +100,19 @@ impl<H> Par<H, Nil> {
     {
         debug_assert!(
             {
-                let reads = self.head.reads();
-                let writes = self.head.writes();
+                let mut reads = Vec::new();
+                let mut writes = Vec::new();
+                self.head.reads(&mut reads);
+                self.head.writes(&mut writes);
 
-                !(check_intersection(writes.iter(), sys.reads().iter()) ||
-                    check_intersection(writes.iter(), sys.writes().iter()) ||
-                    check_intersection(reads.iter(), sys.writes().iter()))
+                let mut sys_reads = Vec::new();
+                let mut sys_writes = Vec::new();
+                sys.reads(&mut sys_reads);
+                sys.writes(&mut sys_writes);
+
+                !(check_intersection(writes.iter(), sys_reads.iter()) ||
+                    check_intersection(writes.iter(), sys_writes.iter()) ||
+                    check_intersection(reads.iter(), sys_writes.iter()))
             },
             "Tried to add system with conflicting reads / writes"
         );
@@ -228,8 +236,8 @@ where
 pub trait RunWithPool<'a> {
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
 
-    fn reads(&self) -> Vec<ResourceId>;
-    fn writes(&self) -> Vec<ResourceId>;
+    fn reads(&self, reads: &mut Vec<ResourceId>);
+    fn writes(&self, writes: &mut Vec<ResourceId>);
 }
 
 impl<'a, T> RunWithPool<'a> for T
@@ -240,16 +248,16 @@ where
         RunNow::run_now(self, res);
     }
 
-    fn reads(&self) -> Vec<ResourceId> {
+    fn reads(&self, reads: &mut Vec<ResourceId>) {
         use system::SystemData;
 
-        T::SystemData::reads(0)
+        reads.extend(T::SystemData::reads(0))
     }
 
-    fn writes(&self) -> Vec<ResourceId> {
+    fn writes(&self, writes: &mut Vec<ResourceId>) {
         use system::SystemData;
 
-        T::SystemData::writes(0)
+        writes.extend(T::SystemData::writes(0))
     }
 }
 
@@ -272,18 +280,14 @@ where
         }
     }
 
-    fn reads(&self) -> Vec<ResourceId> {
-        let mut reads = self.head.reads();
-        reads.extend(self.tail.reads());
-
-        reads
+    fn reads(&self, reads: &mut Vec<ResourceId>) {
+        self.head.reads(reads);
+        self.tail.reads(reads);
     }
 
-    fn writes(&self) -> Vec<ResourceId> {
-        let mut writes = self.head.writes();
-        writes.extend(self.tail.writes());
-
-        writes
+    fn writes(&self, writes: &mut Vec<ResourceId>) {
+        self.head.writes(writes);
+        self.tail.writes(writes);
     }
 }
 
@@ -324,18 +328,14 @@ where
         self.tail.run(res, pool);
     }
 
-    fn reads(&self) -> Vec<ResourceId> {
-        let mut reads = self.head.reads();
-        reads.extend(self.tail.reads());
-
-        reads
+    fn reads(&self, reads: &mut Vec<ResourceId>) {
+        self.head.reads(reads);
+        self.tail.reads(reads);
     }
 
-    fn writes(&self) -> Vec<ResourceId> {
-        let mut writes = self.head.writes();
-        writes.extend(self.tail.writes());
-
-        writes
+    fn writes(&self, writes: &mut Vec<ResourceId>) {
+        self.head.writes(writes);
+        self.tail.writes(writes);
     }
 }
 
