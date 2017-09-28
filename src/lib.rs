@@ -49,6 +49,10 @@
 //! }
 //! ```
 //!
+//! Once you are more familiar with how system data and parallelization works,
+//! you can take look at a more flexible and performant way to dispatch: `ParSeq`.
+//! Using it is bit trickier, but it allows dispatching without any virtual function calls.
+//!
 
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
@@ -68,7 +72,7 @@ mod dispatch;
 mod res;
 mod system;
 
-pub use dispatch::{Dispatcher, DispatcherBuilder};
+pub use dispatch::{Dispatcher, DispatcherBuilder, Par, ParSeq, Seq};
 #[cfg(not(target_os = "emscripten"))]
 pub use dispatch::AsyncDispatcher;
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};

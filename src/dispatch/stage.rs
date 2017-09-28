@@ -34,6 +34,7 @@ use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
 use dispatch::dispatcher::{SystemExecSend, SystemId};
+use dispatch::util::check_intersection;
 use res::{ResourceId, Resources};
 use system::{RunningTime, System};
 
@@ -295,15 +296,6 @@ impl<'a> StagesBuilder<'a> {
             }
         }
     }
-}
-
-fn check_intersection<'i, 'j, T, I, J>(mut i: I, j: J) -> bool
-where
-    I: Iterator<Item = &'i T>,
-    J: Iterator<Item = &'j T> + Clone,
-    T: PartialEq + 'i + 'j,
-{
-    i.any(|elem_i| j.clone().any(|elem_j| *elem_j == *elem_i))
 }
 
 #[cfg(test)]

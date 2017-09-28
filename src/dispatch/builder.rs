@@ -170,10 +170,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         );
 
         #[cfg(target_os = "emscripten")]
-        let d = new_dispatcher(
-            self.stages_builder.build(),
-            self.thread_local,
-        );
+        let d = new_dispatcher(self.stages_builder.build(), self.thread_local);
 
         d
     }
