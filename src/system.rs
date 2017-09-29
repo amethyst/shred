@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use {ResourceId, Resources};
 
 /// Trait for fetching data and running systems. Automatically implemented for systems.
@@ -106,6 +108,20 @@ pub trait SystemData<'a> {
     /// thus the returned value may never change
     /// (otherwise it has no effect).
     fn writes(id: usize) -> Vec<ResourceId>;
+}
+
+impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
+    fn fetch(_: &'a Resources, _: usize) -> Self {
+        PhantomData
+    }
+
+    fn reads(_: usize) -> Vec<ResourceId> {
+        Vec::new()
+    }
+
+    fn writes(_: usize) -> Vec<ResourceId> {
+        Vec::new()
+    }
 }
 
 macro_rules! impl_data {
