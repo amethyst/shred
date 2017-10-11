@@ -57,9 +57,9 @@ impl<'a, 'b> System<'a> for Whatever<'b> {
 #[test]
 fn dispatch_builder() {
     DispatcherBuilder::new()
-        .add(DummySys, "a", &[])
-        .add(DummySys, "b", &["a"])
-        .add(DummySys, "c", &["a"])
+        .with(DummySys, "a", &[])
+        .with(DummySys, "b", &["a"])
+        .with(DummySys, "c", &["a"])
         .build();
 }
 
@@ -67,8 +67,8 @@ fn dispatch_builder() {
 #[should_panic(expected = "No such system registered")]
 fn dispatch_builder_invalid() {
     DispatcherBuilder::new()
-        .add(DummySys, "a", &[])
-        .add(DummySys, "b", &["z"])
+        .with(DummySys, "a", &[])
+        .with(DummySys, "b", &["z"])
         .build();
 }
 
@@ -80,9 +80,9 @@ fn dispatch_basic() {
     let number = 5;
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySys, "a", &[])
-        .add(DummySys, "b", &["a"])
-        .add(Whatever(&number), "w", &[])
+        .with(DummySys, "a", &[])
+        .with(DummySys, "b", &["a"])
+        .with(Whatever(&number), "w", &[])
         .build();
 
     d.dispatch(&mut res);
@@ -94,8 +94,8 @@ fn dispatch_ww_block() {
     res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySysMut, "a", &[])
-        .add(DummySysMut, "b", &[])
+        .with(DummySysMut, "a", &[])
+        .with(DummySysMut, "b", &[])
         .build();
 
     d.dispatch(&mut res);
@@ -107,8 +107,8 @@ fn dispatch_rw_block() {
     res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySys, "a", &[])
-        .add(DummySysMut, "b", &[])
+        .with(DummySys, "a", &[])
+        .with(DummySysMut, "b", &[])
         .build();
 
     d.dispatch(&mut res);
@@ -120,8 +120,8 @@ fn dispatch_rw_block_rev() {
     res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySysMut, "a", &[])
-        .add(DummySys, "b", &[])
+        .with(DummySysMut, "a", &[])
+        .with(DummySys, "b", &[])
         .build();
 
     d.dispatch(&mut res);
@@ -133,8 +133,8 @@ fn dispatch_sequential() {
     res.add(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySysMut, "a", &[])
-        .add(DummySys, "b", &[])
+        .with(DummySysMut, "a", &[])
+        .with(DummySys, "b", &[])
         .build();
 
     d.dispatch_seq(&mut res);
@@ -147,8 +147,8 @@ fn dispatch_async() {
     res.add(Res);
 
     let mut d = DispatcherBuilder::new()
-        .add(DummySysMut, "a", &[])
-        .add(DummySys, "b", &[])
+        .with(DummySysMut, "a", &[])
+        .with(DummySys, "b", &[])
         .build_async(res);
 
     d.dispatch();
@@ -163,8 +163,8 @@ fn dispatch_async_res() {
     res.add(Res);
 
     let mut d = DispatcherBuilder::new()
-        .add(DummySysMut, "a", &[])
-        .add(DummySys, "b", &[])
+        .with(DummySysMut, "a", &[])
+        .with(DummySys, "b", &[])
         .build_async(res);
 
     d.dispatch();
@@ -208,9 +208,9 @@ fn dispatch_stage_group() {
     }
 
     let mut d: Dispatcher = DispatcherBuilder::new()
-        .add(DummySys, "read_a", &[])
-        .add(ReadingFromResB, "read_b", &[])
-        .add(WritingToResB, "write_b", &[])
+        .with(DummySys, "read_a", &[])
+        .with(ReadingFromResB, "read_b", &[])
+        .with(WritingToResB, "write_b", &[])
         .build();
 
     d.dispatch(&mut res);

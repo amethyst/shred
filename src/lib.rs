@@ -40,7 +40,7 @@
 //! fn main() {
 //!     let mut resources = Resources::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
-//!         .add(EmptySystem, "empty", &[])
+//!         .with(EmptySystem, "empty", &[])
 //!         .build();
 //!     resources.add(ResA);
 //!     resources.add(ResB);
