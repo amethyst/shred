@@ -168,9 +168,9 @@ impl<'a> System<'a> for ClearForceAccum {
 #[bench]
 fn basic(b: &mut Bencher) {
     let mut dispatcher = DispatcherBuilder::new()
-        .add(SpringForce, "spring", &[])
-        .add(IntegrationSystem, "integration", &[])
-        .add(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
+        .with(SpringForce, "spring", &[])
+        .with(IntegrationSystem, "integration", &[])
+        .with(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
                                                                // the integration
         .build();
 

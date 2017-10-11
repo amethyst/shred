@@ -12,7 +12,7 @@ use system::System;
 /// ## Barriers
 ///
 /// Barriers are a way of sequentializing parts of
-/// the system execution. See `add_barrier()`.
+/// the system execution. See `add_barrier()`/`with_barrier()`.
 ///
 /// ## Examples
 ///
@@ -42,12 +42,45 @@ use system::System;
 /// # let system_d = Dummy;
 /// # let system_e = Dummy;
 /// let dispatcher: Dispatcher = DispatcherBuilder::new()
-///     .add(system_a, "a", &[])
-///     .add(system_b, "b", &["a"]) // b depends on a
-///     .add(system_c, "c", &["a"]) // c also depends on a
-///     .add(system_d, "d", &[])
-///     .add(system_e, "e", &["c", "d"]) // e executes after c and d are finished
+///     .with(system_a, "a", &[])
+///     .with(system_b, "b", &["a"]) // b depends on a
+///     .with(system_c, "c", &["a"]) // c also depends on a
+///     .with(system_d, "d", &[])
+///     .with(system_e, "e", &["c", "d"]) // e executes after c and d are finished
 ///     .build();
+/// # }
+/// ```
+///
+/// Systems can be conditionally added by using the `add_` functions:
+///
+/// ```rust
+/// # #![allow(unused)]
+/// #
+/// # extern crate shred;
+/// # #[macro_use]
+/// # extern crate shred_derive;
+/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System};
+/// # #[derive(Debug)] struct Res;
+/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
+/// # struct Dummy;
+/// # impl<'a> System<'a> for Dummy {
+/// #   type SystemData = Data<'a>;
+/// #
+/// #   fn run(&mut self, _: Data<'a>) {}
+/// # }
+/// #
+/// # fn main() {
+/// # let b_enabled = true;
+/// # let system_a = Dummy;
+/// # let system_b = Dummy;
+/// let mut builder = DispatcherBuilder::new()
+///     .with(system_a, "a", &[]);
+/// 
+/// if b_enabled {
+///    builder.add(system_b, "b", &[]);
+/// }
+/// 
+/// let dispatcher = builder.build();
 /// # }
 /// ```
 ///
@@ -80,11 +113,35 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// dependencies, you can use `""` as their name, which will not panic
     /// (using another name twice will).
     ///
+    /// Same as [`add()`](struct.DispatcherBuilder.html#method.add), but
+    /// returns `self` to enable method chaining.
+    ///
     /// # Panics
     ///
     /// * if the specified dependency does not exist
     /// * if a system with the same name was already registered.
-    pub fn add<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
+    pub fn with<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
+    where
+        T: for<'c> System<'c> + Send + 'a,
+    {
+        self.add(system, name, dep);
+        
+        self
+    }
+
+    /// Adds a new system with a given name and a list of dependencies.
+    /// Please note that the dependency should be added before
+    /// you add the depending system.
+    ///
+    /// If you want to register systems which can not be specified as
+    /// dependencies, you can use `""` as their name, which will not panic
+    /// (using another name twice will).
+    ///
+    /// # Panics
+    ///
+    /// * if the specified dependency does not exist
+    /// * if a system with the same name was already registered.
+    pub fn add<T>(&mut self, system: T, name: &str, dep: &[&str])
     where
         T: for<'c> System<'c> + Send + 'a,
     {
@@ -112,7 +169,23 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         }
 
         self.stages_builder.insert(dependencies, id, system);
+    }
 
+    /// Adds a new thread local system.
+    ///
+    /// Please only use this if your struct is not `Send` and `Sync`.
+    ///
+    /// Thread-local systems are dispatched in-order.
+    /// 
+    /// Same as
+    /// [`add_thread_local()`](struct.DispatcherBuilder.html#method.add_thread_local),
+    /// but returns `self` to enable method chaining.
+    pub fn with_thread_local<T>(mut self, system: T) -> Self
+    where
+        T: for<'c> System<'c> + 'b,
+    {
+        self.add_thread_local(system);
+        
         self
     }
 
@@ -121,12 +194,29 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Please only use this if your struct is not `Send` and `Sync`.
     ///
     /// Thread-local systems are dispatched in-order.
-    pub fn add_thread_local<T>(mut self, system: T) -> Self
+    pub fn add_thread_local<T>(&mut self, system: T)
     where
         T: for<'c> System<'c> + 'b,
     {
         self.thread_local.push(Box::new(system));
+    }
 
+    /// Inserts a barrier which assures that all systems
+    /// added before the barrier are executed before the ones
+    /// after this barrier.
+    ///
+    /// Does nothing if there were no systems added
+    /// since the last call to `add_barrier()`/`with_barrier()`.
+    ///
+    /// Thread-local systems are not affected by barriers;
+    /// they're always executed at the end.
+    ///
+    /// Same as
+    /// [`add_barrier()`](struct.DispatcherBuilder.html#method.add_barrier),
+    /// but returns `self` to enable method chaining.
+    pub fn with_barrier(mut self) -> Self {
+        self.add_barrier();
+        
         self
     }
 
@@ -135,23 +225,32 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// after this barrier.
     ///
     /// Does nothing if there were no systems added
-    /// since the last call to `add_barrier()`.
+    /// since the last call to `add_barrier()`/`with_barrier()`.
     ///
     /// Thread-local systems are not affected by barriers;
     /// they're always executed at the end.
-    pub fn add_barrier(mut self) -> Self {
+    pub fn add_barrier(&mut self) {
         self.stages_builder.add_barrier();
+    }
 
+    /// Attach a rayon thread pool to the builder
+    /// and use that instead of creating one.
+    ///
+    /// Same as
+    /// [`add_pool()`](struct.DispatcherBuilder.html#method.add_pool),
+    /// but returns `self` to enable method chaining.
+    #[cfg(not(target_os = "emscripten"))]
+    pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) -> Self {
+        self.add_pool(pool);
+        
         self
     }
 
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
     #[cfg(not(target_os = "emscripten"))]
-    pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) -> Self {
+    pub fn add_pool(&mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) {
         self.thread_pool = Some(pool);
-
-        self
     }
 
     /// Builds the `Dispatcher`.

@@ -32,7 +32,7 @@ fn main() {
 
     let mut resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
-        .add_thread_local(EmptySystem(&mut x))
+        .with_thread_local(EmptySystem(&mut x))
         .build();
     resources.add(ResA);
     resources.add(ResB);

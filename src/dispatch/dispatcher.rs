@@ -152,13 +152,13 @@ mod tests {
 
     fn new_builder() -> DispatcherBuilder<'static, 'static> {
         DispatcherBuilder::new()
-            .add(Dummy(0), "0", &[])
-            .add(Dummy(1), "1", &[])
-            .add(Dummy(2), "2", &[])
-            .add(Dummy(3), "3", &["1"])
-            .add_barrier()
-            .add(Dummy(4), "4", &[])
-            .add(Dummy(5), "5", &["4"])
+            .with(Dummy(0), "0", &[])
+            .with(Dummy(1), "1", &[])
+            .with(Dummy(2), "2", &[])
+            .with(Dummy(3), "3", &["1"])
+            .with_barrier()
+            .with(Dummy(4), "4", &[])
+            .with(Dummy(5), "5", &["4"])
     }
 
     fn new_resources() -> Resources {
@@ -172,7 +172,7 @@ mod tests {
     #[should_panic(expected = "Propagated panic")]
     fn dispatcher_panics() {
         DispatcherBuilder::new()
-            .add(Panic, "p", &[])
+            .with(Panic, "p", &[])
             .build()
             .dispatch(&mut new_resources())
     }
