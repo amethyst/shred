@@ -1,3 +1,5 @@
+extern crate rayon;
+
 use std::borrow::Borrow;
 
 use dispatch::util::check_intersection;
@@ -5,7 +7,7 @@ use res::{ResourceId, Resources};
 use system::RunNow;
 use system::System;
 
-use rayon::{join, ThreadPool};
+use self::rayon::{join, ThreadPool};
 
 /// The "leave node" for the `Par` / `Seq` list.
 pub struct Nil;
