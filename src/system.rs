@@ -92,6 +92,8 @@ pub trait SystemData<'a> {
     /// This method is only executed once,
     /// thus the returned value may never change
     /// (otherwise it has no effect).
+    ///
+    /// [`ResourceId`]: struct.ResourceId.html
     fn reads(id: usize) -> Vec<ResourceId>;
 
     /// A list of [`ResourceId`]s the bundle
@@ -107,6 +109,8 @@ pub trait SystemData<'a> {
     /// This method is only executed once,
     /// thus the returned value may never change
     /// (otherwise it has no effect).
+    ///
+    /// [`ResourceId`]: struct.ResourceId.html
     fn writes(id: usize) -> Vec<ResourceId>;
 }
 
