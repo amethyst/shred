@@ -1,4 +1,4 @@
-use fnv::FnvHashMap;
+use fxhash::FxHashMap;
 
 use dispatch::Dispatcher;
 use dispatch::dispatcher::{SystemId, ThreadLocal};
@@ -87,7 +87,7 @@ use system::System;
 #[derive(Default)]
 pub struct DispatcherBuilder<'a, 'b> {
     current_id: usize,
-    map: FnvHashMap<String, SystemId>,
+    map: FxHashMap<String, SystemId>,
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(not(target_os = "emscripten"))]
