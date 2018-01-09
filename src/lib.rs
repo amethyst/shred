@@ -62,7 +62,7 @@ extern crate fxhash;
 #[macro_use]
 extern crate mopa;
 #[cfg(not(target_os = "emscripten"))]
-extern crate pulse;
+extern crate parking_lot;
 #[cfg(not(target_os = "emscripten"))]
 extern crate rayon;
 extern crate smallvec;

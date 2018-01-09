@@ -21,7 +21,7 @@ travis-ci = { repository = "torkleyy/shred" }
 arrayvec = "0.4"
 fxhash = "0.2"
 mopa = "0.2"
-pulse = "0.5"
+parking_lot = "0.5"
 rayon = "0.9"
 shred-derive = { path = "shred-derive", version = "0.3" }
 smallvec = "0.6"
