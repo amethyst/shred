@@ -3,7 +3,7 @@ use fnv::FnvHashMap;
 use dispatch::Dispatcher;
 use dispatch::dispatcher::{SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
-use system::System;
+use system::{RunNow, System};
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -112,7 +112,6 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         }
 
         self.stages_builder.insert(dependencies, id, system);
-
         self
     }
 
@@ -123,10 +122,9 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Thread-local systems are dispatched in-order.
     pub fn add_thread_local<T>(mut self, system: T) -> Self
     where
-        T: for<'c> System<'c> + 'b,
+        T: for<'c> RunNow<'c> + 'b,
     {
         self.thread_local.push(Box::new(system));
-
         self
     }
 
