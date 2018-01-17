@@ -58,7 +58,7 @@
 #![warn(missing_docs)]
 
 extern crate arrayvec;
-extern crate fnv;
+extern crate fxhash;
 #[macro_use]
 extern crate mopa;
 #[cfg(not(target_os = "emscripten"))]
