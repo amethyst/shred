@@ -6,7 +6,7 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use fnv::FnvHashMap;
+use fxhash::FxHashMap;
 use mopa::Any;
 
 use self::entry::create_entry;
@@ -219,7 +219,7 @@ impl ResourceId {
 /// are convenience methods which assume this id is `0`.
 #[derive(Default)]
 pub struct Resources {
-    resources: FnvHashMap<ResourceId, TrustCell<Box<Resource>>>,
+    resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
 
 impl Resources {

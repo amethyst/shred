@@ -1,34 +1,32 @@
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 extern crate proc_macro;
-extern crate syn;
 #[macro_use]
 extern crate quote;
+extern crate syn;
 
 use proc_macro::TokenStream;
-use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, Ty, TyParam, VariantData,
-          WhereClause};
 use quote::Tokens;
+use syn::{Data, DataStruct, DeriveInput, Fields, GenericParam, Generics, Ident, Lifetime,
+          LifetimeDef, Type, TypeParam, WhereClause};
 
 /// Used to `#[derive]` the trait
 /// `SystemData`.
 #[proc_macro_derive(SystemData)]
 pub fn system_data(input: TokenStream) -> TokenStream {
-    let s = input.to_string();
-    let ast = syn::parse_macro_input(&s).unwrap();
+    let ast: DeriveInput = syn::parse(input).unwrap();
 
     let gen = impl_system_data(&ast);
 
-    gen.parse().expect("Invalid")
+    gen.into()
 }
 
-fn impl_system_data(ast: &MacroInput) -> Tokens {
+fn impl_system_data(ast: &DeriveInput) -> Tokens {
     let name = &ast.ident;
-    let lifetime_defs = &ast.generics.lifetimes;
-    let ty_params = &ast.generics.ty_params;
-    let where_clause = &ast.generics.where_clause;
 
-    let (fetch_return, tys) = gen_from_body(&ast.body, name);
+    let (ty_params, lifetime_defs, where_clause) = parse_generic(&ast.generics);
+
+    let (fetch_return, tys) = gen_from_body(&ast.data, name);
     let tys = &tys;
     // Assumes that the first lifetime is the fetch lt
     let def_fetch_lt = lifetime_defs
@@ -36,10 +34,10 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
         .next()
         .expect("There has to be at least one lifetime");
     let ref impl_fetch_lt = def_fetch_lt.lifetime;
-    let def_lt_tokens = gen_def_lt_tokens(lifetime_defs);
-    let impl_lt_tokens = gen_impl_lt_tokens(lifetime_defs);
-    let def_ty_params = gen_def_ty_params(ty_params);
-    let impl_ty_params = gen_impl_ty_params(ty_params);
+    let def_lt_tokens = gen_def_lt_tokens(&lifetime_defs);
+    let impl_lt_tokens = gen_impl_lt_tokens(&lifetime_defs);
+    let def_ty_params = gen_def_ty_params(&ty_params);
+    let impl_ty_params = gen_impl_ty_params(&ty_params);
     let where_clause = gen_where_clause(where_clause, impl_fetch_lt, tys);
     // Reads and writes are taken from the same types,
     // but need to be cloned before.
@@ -79,15 +77,53 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
     }
 }
 
-fn collect_field_types(fields: &Vec<Field>) -> Vec<Ty> {
-    fields.iter().map(|x| x.ty.clone()).collect()
+fn parse_generic(gen: &Generics) -> (Vec<&TypeParam>, Vec<&LifetimeDef>, Option<&WhereClause>) {
+    let mut type_params = Vec::new();
+    let mut lifetime_defs = Vec::new();
+    let where_clause = gen.where_clause.as_ref();
+
+    for param in &gen.params {
+        match *param {
+            GenericParam::Type(ref ty) => type_params.push(ty),
+            GenericParam::Lifetime(ref lt) => lifetime_defs.push(lt),
+            GenericParam::Const(_) => {}
+        }
+    }
+
+    (type_params, lifetime_defs, where_clause)
 }
 
-fn gen_identifiers(fields: &Vec<Field>) -> Vec<Ident> {
-    fields.iter().map(|x| x.ident.clone().unwrap()).collect()
+fn collect_field_types(fields: &Fields) -> (Vec<Type>, BodyType) {
+    match *fields {
+        Fields::Named(ref named) => (
+            named.named.iter().map(|field| field.ty.clone()).collect(),
+            BodyType::Struct,
+        ),
+        Fields::Unnamed(ref unnamed) => (
+            unnamed
+                .unnamed
+                .iter()
+                .map(|field| field.ty.clone())
+                .collect(),
+            BodyType::Tuple,
+        ),
+        Fields::Unit => panic!("Enums are not supported"),
+    }
 }
 
-fn gen_def_lt_tokens(lifetime_defs: &Vec<LifetimeDef>) -> Tokens {
+fn gen_identifiers(fields: &Fields) -> Vec<Ident> {
+    if let &Fields::Named(ref fields) = fields {
+        fields
+            .named
+            .iter()
+            .map(|field| field.ident.unwrap())
+            .collect()
+    } else {
+        panic!("tried to gen_identifiers on tuple-like struct")
+    }
+}
+
+fn gen_def_lt_tokens(lifetime_defs: &[&LifetimeDef]) -> Tokens {
     let lts: Vec<Tokens> = lifetime_defs
         .iter()
         .map(|x| {
@@ -105,13 +141,13 @@ fn gen_def_lt_tokens(lifetime_defs: &Vec<LifetimeDef>) -> Tokens {
     quote! { #( #lts ),* }
 }
 
-fn gen_impl_lt_tokens(lifetime_defs: &Vec<LifetimeDef>) -> Tokens {
+fn gen_impl_lt_tokens(lifetime_defs: &[&LifetimeDef]) -> Tokens {
     let lts: Vec<Lifetime> = lifetime_defs.iter().map(|x| x.lifetime.clone()).collect();
 
     quote! { #( #lts ),* }
 }
 
-fn gen_def_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
+fn gen_def_ty_params(ty_params: &[&TypeParam]) -> Tokens {
     let ty_params: Vec<Tokens> = ty_params
         .iter()
         .map(|x| {
@@ -125,42 +161,45 @@ fn gen_def_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
     quote! { #( #ty_params ),* }
 }
 
-fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
+fn gen_impl_ty_params(ty_params: &[&TypeParam]) -> Tokens {
     let ty_params: Vec<Ident> = ty_params.iter().map(|x| x.ident.clone()).collect();
 
     quote! { #( #ty_params ),* }
 }
 
-fn gen_where_clause(clause: &WhereClause, fetch_lt: &Lifetime, tys: &Vec<Ty>) -> Tokens {
-    let user_predicates = clause.predicates.iter().map(|x| quote! { #x });
-    let system_data_predicates = tys.iter()
-        .map(|ty| {
-            quote! { #ty : ::shred::SystemData< #fetch_lt > }
-        });
+fn gen_where_clause(clause: Option<&WhereClause>, fetch_lt: &Lifetime, tys: &[Type]) -> Tokens {
+    let user_predicates =
+        clause.map(|where_clause| where_clause.predicates.iter().map(|x| quote! { #x , }));
+
+    let system_data_predicates = tys.iter().map(|ty| {
+        quote! { #ty : ::shred::SystemData< #fetch_lt >,  }
+    });
 
     let mut tokens = Tokens::new();
-    tokens.append_separated(user_predicates.chain(system_data_predicates), ",");
+
+    if let Some(user_predicates) = user_predicates {
+        tokens.append_all(user_predicates.chain(system_data_predicates));
+    } else {
+        tokens.append_all(system_data_predicates);
+    }
 
     tokens
 }
 
-fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Ty>) {
-    enum BodyType {
-        Struct,
-        Tuple,
+fn gen_from_body(data: &Data, name: &Ident) -> (Tokens, Vec<Type>) {
+    let structdef: &DataStruct;
+
+    if let &Data::Struct(ref struct_defenition) = data {
+        structdef = struct_defenition;
+    } else {
+        panic!("Enums and unions are not supported");
     }
 
-    let (body, fields) = match *ast {
-        Body::Struct(VariantData::Struct(ref x)) => (BodyType::Struct, x),
-        Body::Struct(VariantData::Tuple(ref x)) => (BodyType::Tuple, x),
-        _ => panic!("Enums are not supported"),
-    };
+    let (tys, body_type) = collect_field_types(&structdef.fields);
 
-    let tys = collect_field_types(fields);
-
-    let fetch_return = match body {
+    let fetch_return = match body_type {
         BodyType::Struct => {
-            let identifiers = gen_identifiers(fields);
+            let identifiers = gen_identifiers(&structdef.fields);
 
             quote! {
                 #name {
@@ -179,4 +218,9 @@ fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Ty>) {
     };
 
     (fetch_return, tys)
+}
+
+enum BodyType {
+    Struct,
+    Tuple,
 }
