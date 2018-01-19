@@ -31,6 +31,7 @@
 //!
 
 use arrayvec::ArrayVec;
+use fxhash::FxHashMap;
 use smallvec::SmallVec;
 
 use dispatch::dispatcher::{SystemExecSend, SystemId};
@@ -154,6 +155,32 @@ impl<'a> StagesBuilder<'a> {
 
     pub fn build(self) -> Vec<Stage<'a>> {
         self.stages
+    }
+
+    pub fn print_par_seq(&self, map: &FxHashMap<String, SystemId>) {
+        println!("seq![");
+        for stage in &self.ids {
+            println!("\tpar![");
+            for group in stage {
+                println!("\t\tseq![");
+                for system in group {
+                    let system: &SystemId = system;
+
+                    let mut name = map
+                        .iter()
+                        .find(|&(_, id)| *id == *system)
+                        .map(|(name, _)| name)
+                        .unwrap()
+                        .to_string();
+                    name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
+
+                    println!("\t\t\t{},", name);
+                }
+                println!("\t\t],");
+            }
+            println!("\t],");
+        }
+        println!("]");
     }
 
     fn add_stage(&mut self) {

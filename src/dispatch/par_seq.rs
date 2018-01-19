@@ -33,7 +33,7 @@ pub struct Nil;
 /// ```
 #[macro_export]
 macro_rules! par {
-    ($head:expr, $( $tail:expr ,)+) => {
+    ($head:expr, $( $tail:expr ,)*) => {
         {
             $crate::Par::new($head)
                 $( .with($tail) )*
@@ -63,7 +63,7 @@ macro_rules! par {
 /// ```
 #[macro_export]
 macro_rules! seq {
-    ($head:expr, $( $tail:expr ,)+) => {
+    ($head:expr, $( $tail:expr ,)*) => {
         {
             $crate::Seq::new($head)
                 $( .with($tail) )*

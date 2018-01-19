@@ -253,6 +253,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.thread_pool = Some(pool);
     }
 
+    /// Prints the equivalent system graph
+    /// that can be easily used to get the graph using the `seq!` and `par!`
+    /// macros. This is only recommended for advanced users.
+    pub fn print_par_seq(&self) {
+        self.stages_builder.print_par_seq(&self.map);
+    }
+
     /// Builds the `Dispatcher`.
     ///
     /// In the future, this method will

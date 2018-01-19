@@ -61,4 +61,50 @@ fn main() {
     );
 
     dispatcher.dispatch(&res);
+
+    // If we want to generate this graph from a `DispatcherBuilder`,
+    // we can use `print_par_seq`:
+
+    use shred::DispatcherBuilder;
+
+    DispatcherBuilder::new()
+        .with(SysA, "sys_a", &[])
+        .with(SysWithLifetime(&x), "sys_lt", &[])
+        .with(SysC, "sys_c", &[])
+        .with(SysD, "sys_d", &["sys_c"])
+        .with(SysB, "sys_b", &["sys_a", "sys_lt", "sys_c", "sys_d"])
+        // doesn't work with `Dispatcher`
+        // .with(SysLocal(&x as *const u8), "sys_local", &["sys_b"])
+        .print_par_seq();
+
+    // This prints:
+
+    /*
+seq![
+    par![
+        seq![
+            sys_a,
+        ],
+        seq![
+            sys_lt,
+        ],
+        seq![
+            sys_c,
+        ],
+    ],
+    par![
+        seq![
+            sys_d,
+        ],
+    ],
+    par![
+        seq![
+            sys_b,
+        ],
+    ],
+]
+    */
+
+    // This can now be pasted into a source file.
+    // After replacing the system names with the actual systems, you can optimize it.
 }
