@@ -9,7 +9,8 @@ use system::RunNow;
 pub struct Dispatcher<'a, 'b> {
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
-    #[cfg(not(target_os = "emscripten"))] thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
+    #[cfg(feature = "parallel")]
+    thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
@@ -29,10 +30,10 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
     pub fn dispatch(&mut self, res: &Resources) {
-        #[cfg(not(target_os = "emscripten"))]
+        #[cfg(feature = "parallel")]
         self.dispatch_par(res);
 
-        #[cfg(target_os = "emscripten")]
+        #[cfg(not(feature = "parallel"))]
         self.dispatch_seq(res);
 
         self.dispatch_thread_local(res);
@@ -44,12 +45,11 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// This operation blocks the
     /// executing thread.
     ///
-    /// Only available on platforms with
-    /// multithreading support (so not on emscripten).
+    /// Only available with "parallel" feature enabled.
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     pub fn dispatch_par(&mut self, res: &Resources) {
         let stages = &mut self.stages;
 
@@ -88,7 +88,7 @@ pub struct SystemId(pub usize);
 pub type SystemExecSend<'b> = Box<for<'a> RunNow<'a> + Send + 'b>;
 pub type ThreadLocal<'a> = SmallVec<[Box<for<'b> RunNow<'b> + 'a>; 4]>;
 
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 pub fn new_dispatcher<'a, 'b>(
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
@@ -101,7 +101,7 @@ pub fn new_dispatcher<'a, 'b>(
     }
 }
 
-#[cfg(target_os = "emscripten")]
+#[cfg(not(feature = "parallel"))]
 pub fn new_dispatcher<'a, 'b>(
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
@@ -185,6 +185,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "parallel")]
     fn stages_async() {
         let mut d = new_builder().build_async(new_resources());
 
