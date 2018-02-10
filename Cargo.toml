@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["torkleyy <torkleyy@gmail.com>"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -18,15 +18,15 @@ exclude = ["bors.toml", ".travis.yml"]
 travis-ci = { repository = "torkleyy/shred" }
 
 [dependencies]
-arrayvec = "0.3"
+arrayvec = "0.4"
 fxhash = "0.2"
 mopa = "0.2"
 rayon = { version = "0.9", optional = true }
 shred-derive = { path = "shred-derive", version = "0.3" }
-smallvec = "0.4"
+smallvec = "0.6"
 
 [dev-dependencies]
-cgmath = "0.15"
+cgmath = "0.16"
 
 [features]
 default = ["parallel"]

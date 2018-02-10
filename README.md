@@ -71,7 +71,7 @@ Please see [the benchmark](benches/bench.rs) for a bigger (and useful) example.
 
 * lock-free
 * no channels or similar functionality used (-> less overhead)
-* allows lifetimes (opposed to `'static` only)
+* allows both automated parallelization and fine-grained control
 
 ## Contribution
 
