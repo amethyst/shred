@@ -76,7 +76,7 @@ impl<'a> Stage<'a> {
         Default::default()
     }
 
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     pub fn execute(&mut self, res: &Resources) {
         use rayon::prelude::*;
 

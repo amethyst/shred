@@ -61,9 +61,9 @@ extern crate arrayvec;
 extern crate fxhash;
 #[macro_use]
 extern crate mopa;
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 extern crate pulse;
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 extern crate rayon;
 extern crate smallvec;
 
@@ -73,9 +73,9 @@ mod res;
 mod system;
 
 pub use dispatch::{Dispatcher, DispatcherBuilder};
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 pub use dispatch::{Par, ParSeq, Seq};
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
 pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
 pub use system::{RunNow, RunningTime, System, SystemData};

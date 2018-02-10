@@ -90,7 +90,7 @@ pub struct DispatcherBuilder<'a, 'b> {
     map: FxHashMap<String, SystemId>,
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     thread_pool:
         Option<::std::sync::Arc<::rayon::ThreadPool>>,
 }
@@ -239,7 +239,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Same as
     /// [`add_pool()`](struct.DispatcherBuilder.html#method.add_pool),
     /// but returns `self` to enable method chaining.
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) -> Self {
         self.add_pool(pool);
         
@@ -248,7 +248,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
 
     /// Attach a rayon thread pool to the builder
     /// and use that instead of creating one.
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     pub fn add_pool(&mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) {
         self.thread_pool = Some(pool);
     }
@@ -261,14 +261,14 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     pub fn build(self) -> Dispatcher<'a, 'b> {
         use dispatch::dispatcher::new_dispatcher;
 
-        #[cfg(not(target_os = "emscripten"))]
+        #[cfg(feature = "parallel")]
         let d = new_dispatcher(
             self.stages_builder.build(),
             self.thread_local,
             self.thread_pool.unwrap_or_else(Self::create_thread_pool),
         );
 
-        #[cfg(target_os = "emscripten")]
+        #[cfg(not(feature = "parallel"))]
         let d = new_dispatcher(self.stages_builder.build(), self.thread_local);
 
         d
@@ -281,7 +281,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         SystemId(id)
     }
 
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(feature = "parallel")]
     fn create_thread_pool() -> ::std::sync::Arc<::rayon::ThreadPool> {
         use std::sync::Arc;
         use rayon::{Configuration, ThreadPool};
@@ -292,7 +292,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     }
 }
 
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(feature = "parallel")]
 impl<'b> DispatcherBuilder<'static, 'b> {
     /// Builds an async dispatcher.
     ///
