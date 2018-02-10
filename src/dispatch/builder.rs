@@ -1,3 +1,5 @@
+use std::fmt;
+
 use fxhash::FxHashMap;
 
 use dispatch::Dispatcher;
@@ -257,7 +259,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// that can be easily used to get the graph using the `seq!` and `par!`
     /// macros. This is only recommended for advanced users.
     pub fn print_par_seq(&self) {
-        self.stages_builder.print_par_seq(&self.map);
+        println!("{:#?}", self);
     }
 
     /// Builds the `Dispatcher`.
@@ -314,5 +316,11 @@ impl<'b> DispatcherBuilder<'static, 'b> {
             self.thread_local,
             self.thread_pool.unwrap_or_else(Self::create_thread_pool),
         )
+    }
+}
+
+impl<'a, 'b> fmt::Debug for DispatcherBuilder<'a, 'b> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.stages_builder.write_par_seq(f, &self.map)
     }
 }

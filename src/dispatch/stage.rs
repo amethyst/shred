@@ -30,6 +30,8 @@
 //!   in code).
 //!
 
+use std::fmt;
+
 use arrayvec::ArrayVec;
 use fxhash::FxHashMap;
 use smallvec::SmallVec;
@@ -157,30 +159,27 @@ impl<'a> StagesBuilder<'a> {
         self.stages
     }
 
-    pub fn print_par_seq(&self, map: &FxHashMap<String, SystemId>) {
-        println!("seq![");
+    pub fn write_par_seq(&self, f: &mut fmt::Formatter, map: &FxHashMap<String, SystemId>) -> fmt::Result {
+        let map: FxHashMap<_, _> = map.iter().map(|(key, value)| (*value, key as &str)).collect();
+
+        writeln!(f, "seq![")?;
         for stage in &self.ids {
-            println!("\tpar![");
+            writeln!(f, "\tpar![")?;
             for group in stage {
-                println!("\t\tseq![");
+                writeln!(f, "\t\tseq![")?;
                 for system in group {
                     let system: &SystemId = system;
 
-                    let mut name = map
-                        .iter()
-                        .find(|&(_, id)| *id == *system)
-                        .map(|(name, _)| name)
-                        .unwrap()
-                        .to_string();
+                    let mut name = map.get(system).unwrap().to_string();
                     name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
 
-                    println!("\t\t\t{},", name);
+                    writeln!(f, "\t\t\t{},", name)?;
                 }
-                println!("\t\t],");
+                writeln!(f, "\t\t],")?;
             }
-            println!("\t],");
+            writeln!(f, "\t],")?;
         }
-        println!("]");
+        writeln!(f, "]")
     }
 
     fn add_stage(&mut self) {
