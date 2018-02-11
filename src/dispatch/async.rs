@@ -1,24 +1,11 @@
 use std::borrow::Borrow;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc};
 
-use pulse::Signal;
 use rayon::ThreadPool;
 
 use dispatch::dispatcher::ThreadLocal;
 use dispatch::stage::Stage;
 use res::Resources;
-
-const ERR_NO_DISPATCH: &str = "wait() called before dispatch or called twice";
-
-/// Like, `Dispatcher` but works
-/// asynchronously.
-pub struct AsyncDispatcher<'a, R> {
-    res: Arc<R>,
-    signal: Option<Signal>,
-    stages: Arc<Mutex<Vec<Stage<'static>>>>,
-    thread_local: ThreadLocal<'a>,
-    thread_pool: Arc<ThreadPool>,
-}
 
 pub fn new_async<'a, R>(
     res: R,
@@ -27,12 +14,18 @@ pub fn new_async<'a, R>(
     thread_pool: Arc<ThreadPool>,
 ) -> AsyncDispatcher<'a, R> {
     AsyncDispatcher {
-        res: Arc::new(res),
-        signal: None,
-        stages: Arc::new(Mutex::new(stages)),
-        thread_local: thread_local,
-        thread_pool: thread_pool,
+        data: Data::Inner(Inner { res, stages }),
+        thread_local,
+        thread_pool,
     }
+}
+
+/// Like, `Dispatcher` but works
+/// asynchronously.
+pub struct AsyncDispatcher<'a, R> {
+    data: Data<R>,
+    thread_local: ThreadLocal<'a>,
+    thread_pool: Arc<ThreadPool>,
 }
 
 impl<'a, R> AsyncDispatcher<'a, R>
@@ -45,34 +38,25 @@ where
     /// If you want to wait for the systems to finish,
     /// call `wait()`.
     pub fn dispatch(&mut self) {
-        let (signal, pulse) = Signal::new();
-        self.signal = Some(signal);
-
-        let stages = self.stages.clone();
-        let res = self.res.clone();
+        let (snd, mut inner) = self.data.sender();
 
         self.thread_pool.spawn(move || {
             {
-                let stages = stages;
-                let mut stages = stages.lock().expect("Mutex poisoned");
+                let res: &Resources = inner.res.borrow();
 
-                let res = res.as_ref().borrow();
-
-                for stage in &mut *stages {
+                for stage in &mut inner.stages {
                     stage.execute(res);
                 }
             }
 
-            pulse.pulse();
-        })
+            let _ = snd.send(inner);
+        });
     }
 
     /// Waits for all the asynchronously dispatched systems to finish
     /// and executes thread local systems (if there are any).
     pub fn wait(&mut self) {
-        self.wait_without_tl();
-
-        let res = self.res.as_ref().borrow();
+        let res = self.data.inner().res.borrow();
 
         for sys in &mut self.thread_local {
             sys.run_now(res);
@@ -81,49 +65,98 @@ where
 
     /// Waits for all the asynchronously dispatched systems to finish
     /// without executing thread local systems.
+    ///
+    /// See `wait` for executing thread local systems.
     pub fn wait_without_tl(&mut self) {
-        self.signal
-            .take()
-            .expect(ERR_NO_DISPATCH)
-            .wait()
-            .expect("The worker thread may have panicked");
+        self.data.inner();
     }
-
 
     /// Checks if any of the asynchronously dispatched systems are running.
-    pub fn is_running(&self) -> bool {
-        if let Some(ref signal) = self.signal {
-            signal.is_pending()
-        } else {
-            false
-        }
-    }
-
-    /// Dispatch only thread local systems sequentially.
-    ///
-    /// If `wait_without_tl()` or `wait()` wasn't called before,
-    /// this method will wait.
-    pub fn dispatch_thread_local(&mut self) {
-        if self.signal.is_some() {
-            self.wait_without_tl();
-        }
-
-        let res = self.res.as_ref().borrow();
-
-        for sys in &mut self.thread_local {
-            sys.run_now(res);
-        }
+    pub fn running(&mut self) -> bool {
+        self.data.inner_noblock().is_none()
     }
 
     /// Returns the resources.
     ///
-    /// If `wait_without_tl()` or `wait()` wasn't called before,
-    /// this method will do that.
+    /// This will wait for the asynchronous systems to finish.
+    pub fn res(&mut self) -> &R {
+        &self.data.inner().res
+    }
+
+    /// Returns the resources mutable.
+    ///
+    /// This will wait for the asynchronous systems to finish.
     pub fn mut_res(&mut self) -> &mut R {
-        if self.signal.is_some() {
-            self.wait();
+        &mut self.data.inner().res
+    }
+}
+
+enum Data<R> {
+    Inner(Inner<R>),
+    Rx(mpsc::Receiver<Inner<R>>),
+}
+
+impl<R> Data<R> {
+    fn inner(&mut self) -> &mut Inner<R> {
+        let new_self;
+
+        match *self {
+            Data::Inner(ref mut inner) => return inner,
+            Data::Rx(ref mut rx) => {
+                let inner = rx.recv().expect("Sender dropped");
+                new_self = Data::Inner(inner);
+            }
         }
 
-        Arc::get_mut(&mut self.res).expect(ERR_NO_DISPATCH)
+        *self = new_self;
+
+        self.inner()
     }
+
+    fn inner_noblock(&mut self) -> Option<&mut Inner<R>> {
+        use std::sync::mpsc::TryRecvError;
+
+        let new_self;
+
+        match *self {
+            Data::Inner(ref mut inner) => return Some(inner),
+            Data::Rx(ref mut rx) => {
+                let inner = rx.try_recv()
+                    .map(Some)
+                    .or_else(|e| match e {
+                        TryRecvError::Empty => Ok(None),
+                        TryRecvError::Disconnected => Err(e),
+                    })
+                    .expect("Sender dropped");
+                match inner {
+                    Some(inner) => new_self = Data::Inner(inner),
+                    None => return None,
+                }
+            }
+        }
+
+        *self = new_self;
+
+        self.inner_noblock()
+    }
+
+    fn sender(&mut self) -> (mpsc::Sender<Inner<R>>, Inner<R>) {
+        use std::mem::replace;
+
+        self.inner();
+
+        let (snd, rx) = mpsc::channel();
+        let inner = replace(&mut *self, Data::Rx(rx));
+        let inner = match inner {
+            Data::Inner(inner) => inner,
+            Data::Rx(_) => unreachable!(),
+        };
+
+        (snd, inner)
+    }
+}
+
+struct Inner<R> {
+    res: R,
+    stages: Vec<Stage<'static>>,
 }

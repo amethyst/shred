@@ -1,14 +1,14 @@
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 extern crate proc_macro;
-extern crate syn;
 #[macro_use]
 extern crate quote;
+extern crate syn;
 
 use proc_macro::TokenStream;
+use quote::Tokens;
 use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, Ty, TyParam, VariantData,
           WhereClause};
-use quote::Tokens;
 
 /// Used to `#[derive]` the trait
 /// `SystemData`.
@@ -133,10 +133,9 @@ fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
 
 fn gen_where_clause(clause: &WhereClause, fetch_lt: &Lifetime, tys: &Vec<Ty>) -> Tokens {
     let user_predicates = clause.predicates.iter().map(|x| quote! { #x });
-    let system_data_predicates = tys.iter()
-        .map(|ty| {
-            quote! { #ty : ::shred::SystemData< #fetch_lt > }
-        });
+    let system_data_predicates = tys.iter().map(|ty| {
+        quote! { #ty : ::shred::SystemData< #fetch_lt > }
+    });
 
     let mut tokens = Tokens::new();
     tokens.append_separated(user_predicates.chain(system_data_predicates), ",");

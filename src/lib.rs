@@ -62,8 +62,6 @@ extern crate fxhash;
 #[macro_use]
 extern crate mopa;
 #[cfg(feature = "parallel")]
-extern crate pulse;
-#[cfg(feature = "parallel")]
 extern crate rayon;
 extern crate smallvec;
 
