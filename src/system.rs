@@ -20,7 +20,7 @@ where
     T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
-        let data = T::SystemData::fetch(res, 0);
+        let data = T::SystemData::fetch(res);
         self.run(data);
     }
 }
@@ -77,7 +77,7 @@ pub trait SystemData<'a> {
     /// returned from `reads` / `writes`!
     ///
     /// [`Resources`]: trait.Resources.html
-    fn fetch(res: &'a Resources, id: usize) -> Self;
+    fn fetch(res: &'a Resources) -> Self;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs read access to in order to
@@ -94,7 +94,7 @@ pub trait SystemData<'a> {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn reads(id: usize) -> Vec<ResourceId>;
+    fn reads() -> Vec<ResourceId>;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs write access to in order to
@@ -111,19 +111,19 @@ pub trait SystemData<'a> {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn writes(id: usize) -> Vec<ResourceId>;
+    fn writes() -> Vec<ResourceId>;
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
-    fn fetch(_: &'a Resources, _: usize) -> Self {
+    fn fetch(_: &'a Resources) -> Self {
         PhantomData
     }
 
-    fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads() -> Vec<ResourceId> {
         Vec::new()
     }
 
-    fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes() -> Vec<ResourceId> {
         Vec::new()
     }
 }
@@ -133,32 +133,32 @@ macro_rules! impl_data {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
             where $( $ty : SystemData<'a> ),*
         {
-            fn fetch(res: &'a Resources, id: usize) -> Self {
+            fn fetch(res: &'a Resources) -> Self {
                 #![allow(unused_variables)]
 
-                ( $( <$ty as SystemData<'a>>::fetch(res, id.clone()), )* )
+                ( $( <$ty as SystemData<'a>>::fetch(res), )* )
             }
 
-            fn reads(id: usize) -> Vec<ResourceId> {
+            fn reads() -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
 
                 $( {
-                        let mut reads = <$ty as SystemData>::reads(id.clone());
+                        let mut reads = <$ty as SystemData>::reads();
                         r.append(&mut reads);
                     } )*
 
                 r
             }
 
-            fn writes(id: usize) -> Vec<ResourceId> {
+            fn writes() -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
 
                 $( {
-                        let mut writes = <$ty as SystemData>::writes(id.clone());
+                        let mut writes = <$ty as SystemData>::writes();
                         r.append(&mut writes);
                     } )*
 
@@ -169,15 +169,15 @@ macro_rules! impl_data {
 }
 
 impl<'a> SystemData<'a> for () {
-    fn fetch(_: &'a Resources, _: usize) -> Self {
+    fn fetch(_: &'a Resources) -> Self {
         ()
     }
 
-    fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads() -> Vec<ResourceId> {
         Vec::new()
     }
 
-    fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes() -> Vec<ResourceId> {
         Vec::new()
     }
 }

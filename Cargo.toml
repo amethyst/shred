@@ -22,7 +22,7 @@ arrayvec = "0.4"
 fxhash = "0.2"
 mopa = "0.2"
 rayon = { version = "0.9", optional = true }
-shred-derive = { path = "shred-derive", version = "0.3" }
+shred-derive = { path = "shred-derive", version = "0.4" }
 smallvec = "0.6"
 
 [dev-dependencies]

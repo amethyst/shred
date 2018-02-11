@@ -254,13 +254,13 @@ where
     fn reads(&self, reads: &mut Vec<ResourceId>) {
         use system::SystemData;
 
-        reads.extend(T::SystemData::reads(0))
+        reads.extend(T::SystemData::reads())
     }
 
     fn writes(&self, writes: &mut Vec<ResourceId>) {
         use system::SystemData;
 
-        writes.extend(T::SystemData::writes(0))
+        writes.extend(T::SystemData::writes())
     }
 }
 

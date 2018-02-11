@@ -10,8 +10,7 @@ use quote::Tokens;
 use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, Ty, TyParam, VariantData,
           WhereClause};
 
-/// Used to `#[derive]` the trait
-/// `SystemData`.
+/// Used to `#[derive]` the trait `SystemData`.
 #[proc_macro_derive(SystemData)]
 pub fn system_data(input: TokenStream) -> TokenStream {
     let s = input.to_string();
@@ -50,26 +49,26 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
             for #name< #impl_lt_tokens , #impl_ty_params >
             where #where_clause
         {
-            fn fetch(res: & #impl_fetch_lt ::shred::Resources, id: usize) -> Self {
+            fn fetch(res: & #impl_fetch_lt ::shred::Resources) -> Self {
                 #fetch_return
             }
 
-            fn reads(id: usize) -> Vec<::shred::ResourceId> {
+            fn reads() -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut reads = <#tys as ::shred::SystemData> :: reads(id);
+                        let mut reads = <#tys as ::shred::SystemData> :: reads();
                         r.append(&mut reads);
                     } )*
 
                 r
             }
 
-            fn writes(id: usize) -> Vec<::shred::ResourceId> {
+            fn writes() -> Vec<::shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut writes = <#tys as ::shred::SystemData> :: writes(id);
+                        let mut writes = <#tys as ::shred::SystemData> :: writes();
                         r.append(&mut writes);
                     } )*
 
@@ -163,13 +162,13 @@ fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Ty>) {
 
             quote! {
                 #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res, id) ),*
+                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
                 }
             }
         }
         BodyType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { ::shred::SystemData::fetch(res, id) }; count];
+            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
 
             quote! {
                 #name ( #( #fetch ),* )

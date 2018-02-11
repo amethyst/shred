@@ -170,7 +170,7 @@ fn dispatch_async_res() {
     d.dispatch();
 
     let res = d.mut_res();
-    res.add_with_id(Res, 2);
+    res.add(ResB);
 }
 
 #[test]

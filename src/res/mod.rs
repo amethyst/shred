@@ -40,15 +40,15 @@ impl<'a, T> SystemData<'a> for Fetch<'a, T>
 where
     T: Resource,
 {
-    fn fetch(res: &'a Resources, id: usize) -> Self {
-        res.fetch(id)
+    fn fetch(res: &'a Resources) -> Self {
+        res.fetch()
     }
 
-    fn reads(id: usize) -> Vec<ResourceId> {
-        vec![ResourceId::new_with_id::<T>(id)]
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<T>()]
     }
 
-    fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes() -> Vec<ResourceId> {
         vec![]
     }
 }
@@ -121,16 +121,16 @@ impl<'a, T> SystemData<'a> for FetchMut<'a, T>
 where
     T: Resource,
 {
-    fn fetch(res: &'a Resources, id: usize) -> Self {
-        res.fetch_mut(id)
+    fn fetch(res: &'a Resources) -> Self {
+        res.fetch_mut()
     }
 
-    fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads() -> Vec<ResourceId> {
         vec![]
     }
 
-    fn writes(id: usize) -> Vec<ResourceId> {
-        vec![ResourceId::new_with_id::<T>(id)]
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<T>()]
     }
 }
 
@@ -138,15 +138,15 @@ impl<'a, T> SystemData<'a> for Option<Fetch<'a, T>>
 where
     T: Resource,
 {
-    fn fetch(res: &'a Resources, id: usize) -> Self {
-        res.try_fetch(id)
+    fn fetch(res: &'a Resources) -> Self {
+        res.try_fetch()
     }
 
-    fn reads(id: usize) -> Vec<ResourceId> {
-        vec![ResourceId::new_with_id::<T>(id)]
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<T>()]
     }
 
-    fn writes(_: usize) -> Vec<ResourceId> {
+    fn writes() -> Vec<ResourceId> {
         vec![]
     }
 }
@@ -155,16 +155,16 @@ impl<'a, T> SystemData<'a> for Option<FetchMut<'a, T>>
 where
     T: Resource,
 {
-    fn fetch(res: &'a Resources, id: usize) -> Self {
-        res.try_fetch_mut(id)
+    fn fetch(res: &'a Resources) -> Self {
+        res.try_fetch_mut()
     }
 
-    fn reads(_: usize) -> Vec<ResourceId> {
+    fn reads() -> Vec<ResourceId> {
         vec![]
     }
 
-    fn writes(id: usize) -> Vec<ResourceId> {
-        vec![ResourceId::new_with_id::<T>(id)]
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<T>()]
     }
 }
 
@@ -189,20 +189,12 @@ where
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ResourceId(pub TypeId, pub usize);
+pub struct ResourceId(pub TypeId);
 
 impl ResourceId {
-    /// Creates a new resource id from
-    /// a given type with the default
-    /// extra id.
+    /// Creates a new resource id from a given type.
     pub fn new<T: Resource>() -> Self {
-        Self::new_with_id::<T>(0)
-    }
-
-    /// Creates a new resource id from
-    /// a given type and an additional id.
-    pub fn new_with_id<T: Resource>(id: usize) -> Self {
-        ResourceId(TypeId::of::<T>(), id)
+        ResourceId(TypeId::of::<T>())
     }
 }
 
@@ -213,10 +205,7 @@ impl ResourceId {
 /// # Resource Ids
 ///
 /// Resources are in general identified
-/// by `ResourceId`, which consists of a `TypeId`
-/// and a `usize`. The `usize` may be used as
-/// an additional identifier. In many cases, there
-/// are convenience methods which assume this id is `0`.
+/// by `ResourceId`, which consists of a `TypeId`.
 #[derive(Default)]
 pub struct Resources {
     resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
@@ -229,9 +218,6 @@ impl Resources {
     }
 
     /// Adds a new resource to this container.
-    ///
-    /// This method calls `add_with_id` with
-    /// 0 for the id.
     ///
     /// # Panics
     ///
@@ -262,30 +248,21 @@ impl Resources {
     where
         R: Resource,
     {
-        self.add_with_id(r, 0)
-    }
-
-    /// Like `add()`, but allows specifying
-    /// and id while `add()` assumes `0`.
-    pub fn add_with_id<R>(&mut self, r: R, id: usize)
-    where
-        R: Resource,
-    {
         use std::collections::hash_map::Entry;
 
-        let entry = self.resources.entry(ResourceId::new_with_id::<R>(id));
+        let entry = self.resources.entry(ResourceId::new::<R>());
 
         if let Entry::Vacant(e) = entry {
             e.insert(TrustCell::new(Box::new(r)));
         } else {
-            panic!("Tried to add a resource though it is already registered");
+            panic!("Tried to add a resource though \
+                    an instance of this type already exists in `Resources`");
         }
     }
 
-    /// Returns true if the specified type / id combination
-    /// is registered.
-    pub fn has_value(&self, res_id: ResourceId) -> bool {
-        self.resources.contains_key(&res_id)
+    /// Returns true if the specified resource type exists in `self`.
+    pub fn has_value(&self, id: ResourceId) -> bool {
+        self.resources.contains_key(&id)
     }
 
     /// Returns an entry for the resource with type `R` and id 0.
@@ -306,20 +283,20 @@ impl Resources {
     ///
     /// Panics if the resource is being accessed mutably.
     /// Also panics if there is no such resource.
-    pub fn fetch<T>(&self, id: usize) -> Fetch<T>
+    pub fn fetch<T>(&self) -> Fetch<T>
     where
         T: Resource,
     {
-        self.try_fetch(id).expect(RESOURCE_NOT_FOUND)
+        self.try_fetch().expect(RESOURCE_NOT_FOUND)
     }
 
     /// Like `fetch`, but returns an `Option` instead of panicking in the case of the resource
     /// being accessed mutably.
-    pub fn try_fetch<T>(&self, id: usize) -> Option<Fetch<T>>
+    pub fn try_fetch<T>(&self) -> Option<Fetch<T>>
     where
         T: Resource,
     {
-        self.try_fetch_internal(TypeId::of::<T>(), id).map(|r| {
+        self.try_fetch_internal(TypeId::of::<T>()).map(|r| {
             Fetch {
                 inner: r.borrow(),
                 phantom: PhantomData,
@@ -330,20 +307,20 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
-    pub fn fetch_mut<T>(&self, id: usize) -> FetchMut<T>
+    pub fn fetch_mut<T>(&self) -> FetchMut<T>
     where
         T: Resource,
     {
-        self.try_fetch_mut(id).expect(RESOURCE_NOT_FOUND)
+        self.try_fetch_mut().expect(RESOURCE_NOT_FOUND)
     }
 
     /// Like `fetch_mut`, but returns an `Option` instead of panicking in the case of the resource
     /// being accessed mutably.
-    pub fn try_fetch_mut<T>(&self, id: usize) -> Option<FetchMut<T>>
+    pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<T>>
     where
         T: Resource,
     {
-        self.try_fetch_internal(TypeId::of::<T>(), id).map(|r| {
+        self.try_fetch_internal(TypeId::of::<T>()).map(|r| {
             FetchMut {
                 inner: r.borrow_mut(),
                 phantom: PhantomData,
@@ -351,46 +328,8 @@ impl Resources {
         })
     }
 
-    /// Fetches the resource with the specified type id.
-    ///
-    /// Please see `fetch` for details.
-    ///
-    /// # Panics
-    ///
-    /// Panics if no resource with the id exists.
-    pub fn fetch_id(&self, id: TypeId, comp_id: usize) -> FetchId {
-        self.try_fetch_id(id, comp_id).expect(RESOURCE_NOT_FOUND)
-    }
-
-    /// Like `fetch_id`, but returns an `Option` rather than panicking.
-    pub fn try_fetch_id(&self, id: TypeId, comp_id: usize) -> Option<FetchId> {
-        self.try_fetch_internal(id, comp_id)
-            .map(|r| FetchId { inner: r.borrow() })
-    }
-
-    /// Fetches the resource with the specified type id mutably.
-    ///
-    /// Please see `fetch` for details.
-    ///
-    /// # Panics
-    ///
-    /// Panics if no resource with the id exists.
-    pub fn fetch_id_mut(&self, id: TypeId, comp_id: usize) -> FetchIdMut {
-        self.try_fetch_id_mut(id, comp_id)
-            .expect(RESOURCE_NOT_FOUND)
-    }
-
-    /// Like `fetch_id_mut`, but returns an `Option` rather than panicking.
-    pub fn try_fetch_id_mut(&self, id: TypeId, comp_id: usize) -> Option<FetchIdMut> {
-        self.try_fetch_internal(id, comp_id).map(|r| {
-            FetchIdMut {
-                inner: r.borrow_mut(),
-            }
-        })
-    }
-
-    fn try_fetch_internal(&self, id: TypeId, cid: usize) -> Option<&TrustCell<Box<Resource>>> {
-        self.resources.get(&ResourceId(id, cid))
+    fn try_fetch_internal(&self, id: TypeId) -> Option<&TrustCell<Box<Resource>>> {
+        self.resources.get(&ResourceId(id))
     }
 }
 
@@ -401,48 +340,40 @@ mod tests {
     struct Res;
 
     #[test]
-    fn res_id() {
-        assert_eq!(ResourceId::new::<Res>(), ResourceId::new_with_id::<Res>(0));
-        assert_eq!(
-            ResourceId::new_with_id::<Res>(5),
-            ResourceId(TypeId::of::<Res>(), 5)
-        );
-    }
-
-    #[test]
     fn fetch_aspects() {
         assert_eq!(
-            Fetch::<Res>::reads(4),
-            vec![ResourceId::new_with_id::<Res>(4)]
+            Fetch::<Res>::reads(),
+            vec![ResourceId::new::<Res>()]
         );
-        assert_eq!(Fetch::<Res>::writes(8), vec![]);
+        assert_eq!(Fetch::<Res>::writes(), vec![]);
 
         let mut res = Resources::new();
-        res.add_with_id(Res, 56);
-        Fetch::<Res>::fetch(&res, 56);
+        res.add(Res);
+        Fetch::<Res>::fetch(&res);
     }
 
     #[test]
     fn fetch_mut_aspects() {
-        assert_eq!(FetchMut::<Res>::reads(4), vec![]);
+        assert_eq!(FetchMut::<Res>::reads(), vec![]);
         assert_eq!(
-            FetchMut::<Res>::writes(8),
-            vec![ResourceId::new_with_id::<Res>(8)]
+            FetchMut::<Res>::writes(),
+            vec![ResourceId::new::<Res>()]
         );
 
         let mut res = Resources::new();
-        res.add_with_id(Res, 56);
-        FetchMut::<Res>::fetch(&res, 56);
+        res.add(Res);
+        FetchMut::<Res>::fetch(&res);
     }
 
     #[test]
     fn add() {
+        struct Foo;
+
         let mut res = Resources::new();
         res.add(Res);
 
         assert!(res.has_value(ResourceId::new::<Res>()));
-        assert!(!res.has_value(ResourceId::new_with_id::<Res>(1)));
-        assert!(!res.has_value(ResourceId::new_with_id::<Res>(1)));
+        assert!(!res.has_value(ResourceId::new::<Foo>()));
     }
 
     #[allow(unused)]
@@ -452,8 +383,8 @@ mod tests {
         let mut res = Resources::new();
         res.add(Res);
 
-        let read = res.fetch::<Res>(0);
-        let write = res.fetch_mut::<Res>(0);
+        let read = res.fetch::<Res>();
+        let write = res.fetch_mut::<Res>();
     }
 
     #[allow(unused)]
@@ -463,29 +394,7 @@ mod tests {
         let mut res = Resources::new();
         res.add(Res);
 
-        let write = res.fetch_mut::<Res>(0);
-        let read = res.fetch::<Res>(0);
-    }
-
-    #[test]
-    fn fetch_uses_id() {
-        let mut res = Resources::new();
-        res.add_with_id(5i32, 1);
-        res.add_with_id(50i32, 2);
-
-        {
-            assert_eq!(*res.fetch::<i32>(1), 5);
-            assert_eq!(*res.fetch::<i32>(2), 50);
-        }
-
-        {
-            *res.fetch_mut::<i32>(1) *= 2;
-            *res.fetch_mut::<i32>(2) *= 2;
-        }
-
-        {
-            assert_eq!(*res.fetch::<i32>(1), 10);
-            assert_eq!(*res.fetch::<i32>(2), 100);
-        }
+        let write = res.fetch_mut::<Res>();
+        let read = res.fetch::<Res>();
     }
 }
