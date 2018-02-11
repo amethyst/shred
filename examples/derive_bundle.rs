@@ -29,7 +29,7 @@ fn main() {
 
 
     {
-        let mut bundle = AutoBundle::fetch(&res, 0);
+        let mut bundle = AutoBundle::fetch(&res);
 
         *bundle.b = ResB;
 
@@ -38,7 +38,7 @@ fn main() {
     }
 
     {
-        let nested = Nested::fetch(&res, 0);
+        let nested = Nested::fetch(&res);
 
         println!("a: {:?}", *nested.inner.a);
     }

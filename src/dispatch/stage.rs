@@ -120,8 +120,8 @@ impl<'a> StagesBuilder<'a> {
     {
         use system::SystemData;
 
-        let mut reads = T::SystemData::reads(0);
-        let writes = T::SystemData::writes(0);
+        let mut reads = T::SystemData::reads();
+        let writes = T::SystemData::writes();
 
         reads.sort();
         reads.dedup();
