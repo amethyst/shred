@@ -2,7 +2,7 @@ extern crate rayon;
 #[macro_use(par, seq)]
 extern crate shred;
 
-use rayon::ThreadPool;
+use rayon::ThreadPoolBuilder;
 
 use shred::{ParSeq, Resources, System};
 
@@ -39,7 +39,7 @@ impl<'a, 'b> System<'a> for SysWithLifetime<'b> {
 fn main() {
     #![cfg_attr(rustfmt, rustfmt_skip)]
 
-    let pool = ThreadPool::new(Default::default()).unwrap();
+    let pool = ThreadPoolBuilder::new().build().expect("OS error");
 
     let res = Resources::new();
     let x = 5u8;

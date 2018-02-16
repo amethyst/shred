@@ -293,10 +293,10 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     #[cfg(feature = "parallel")]
     fn create_thread_pool() -> ::std::sync::Arc<::rayon::ThreadPool> {
         use std::sync::Arc;
-        use rayon::{Configuration, ThreadPool};
+        use rayon::ThreadPoolBuilder;
 
         Arc::new(
-            ThreadPool::new(Configuration::new()).expect("Invalid thread pool configuration"),
+            ThreadPoolBuilder::new().build().expect("Invalid configuration"),
         )
     }
 }

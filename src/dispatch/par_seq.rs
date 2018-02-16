@@ -348,16 +348,22 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::*;
 
+    fn new_tp() -> ThreadPool {
+        use rayon::ThreadPoolBuilder;
+
+        ThreadPoolBuilder::new().build().unwrap()
+    }
+
     #[test]
     fn nested_joins() {
-        let pool = ThreadPool::new(Default::default()).unwrap();
+        let pool = new_tp();
 
         pool.join(|| join(|| join(|| join(|| (), || ()), || ()), || ()), || ());
     }
 
     #[test]
     fn build_par() {
-        let pool = ThreadPool::new(Default::default()).unwrap();
+        let pool = new_tp();
 
         struct A(Arc<AtomicUsize>);
 
@@ -385,7 +391,7 @@ mod tests {
 
     #[test]
     fn build_seq() {
-        let pool = ThreadPool::new(Default::default()).unwrap();
+        let pool = new_tp();
 
         struct A(Arc<AtomicUsize>);
 
