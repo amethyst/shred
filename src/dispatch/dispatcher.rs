@@ -164,7 +164,7 @@ mod tests {
 
     fn new_resources() -> Resources {
         let mut res = Resources::new();
-        res.add_assert(Res(0));
+        res.add_no_overwrite(Res(0));
 
         res
     }

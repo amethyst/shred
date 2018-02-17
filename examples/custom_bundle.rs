@@ -16,8 +16,8 @@ struct ExampleBundle<'a> {
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
-            a: res.fetch(),
-            b: res.fetch_mut(),
+            a: SystemData::fetch(res),
+            b: SystemData::fetch(res),
         }
     }
 
