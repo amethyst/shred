@@ -1,10 +1,9 @@
 //! Module for resource related types
 
 pub use self::entry::Entry;
+pub use self::fallback::{DefaultProvider, FallbackHandler, PanicHandler};
 
 use std::any::TypeId;
-#[cfg(feature = "nightly")]
-use std::intrinsics::type_name;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -17,46 +16,25 @@ use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
 
 mod entry;
-
-#[cfg(feature = "nightly")]
-macro_rules! fetch_panic {
-    () => {
-        {
-            panic!(
-                "Tried to fetch a resource of type {:?}, but the resource does not exist.\n\
-                 Try adding the resource or \
-                 using `Option<Fetch>` / `Fetch` instead of `FetchExpect`.",
-                unsafe { type_name::<T>() },
-            )
-        }
-    };
-}
-
-#[cfg(not(feature = "nightly"))]
-macro_rules! fetch_panic {
-    () => {
-        {
-            panic!(
-                "Tried to fetch a resource, but the resource does not exist.\n\
-                 Try adding the resource or \
-                 using `Option<Fetch>` / `Fetch` instead of `FetchExpect`.\n\
-                 You can get the type name of the resource by enabling `shred`'s `nightly` feature"
-            )
-        }
-    };
-}
+mod fallback;
 
 /// Allows to fetch a resource in a system immutably.
 ///
 /// This requires a `Default` implementation for the resource.
 /// If the resource does not have a `Default` implementation or
-/// it isn't strictly required, you should use `Option<Fetch<T>>`.
-pub struct Fetch<'a, T: 'a> {
+/// it isn't strictly required, you should use `Option<Fetch<T>>`
+/// or a custom fallback handler.
+///
+/// # Type parameters
+///
+/// * `T`: The type of the resource
+/// * `F`: The fallback handler (default: `DefaultProvider`)
+pub struct Fetch<'a, T: 'a, F = DefaultProvider> {
     inner: Ref<'a, Box<Resource>>,
-    phantom: PhantomData<&'a T>,
+    phantom: PhantomData<(&'a T, F)>,
 }
 
-impl<'a, T> Deref for Fetch<'a, T>
+impl<'a, T, F> Deref for Fetch<'a, T, F>
 where
     T: Resource,
 {
@@ -67,20 +45,25 @@ where
     }
 }
 
-impl<'a, T> SystemData<'a> for Fetch<'a, T>
+impl<'a, T, F> SystemData<'a> for Fetch<'a, T, F>
 where
-    T: Default + Resource,
+    T: Resource,
+    F: FallbackHandler<T>,
 {
     fn fetch(res: &'a Resources) -> Self {
-        res.fetch()
+        F::fetch(res)
     }
 
     fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
+        let mut reads = F::reads();
+
+        reads.push(ResourceId::new::<T>());
+
+        reads
     }
 
     fn writes() -> Vec<ResourceId> {
-        vec![]
+        F::writes()
     }
 }
 
@@ -90,52 +73,25 @@ where
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
-pub struct FetchExpect<'a, T: 'a> {
-    f: Fetch<'a, T>,
-}
-
-impl<'a, T> Deref for FetchExpect<'a, T>
-where
-    T: Resource,
-{
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.f
-    }
-}
-
-impl<'a, T> SystemData<'a> for FetchExpect<'a, T>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        match res.try_fetch() {
-            Some(f) => FetchExpect { f },
-            None => fetch_panic!(),
-        }
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![]
-    }
-}
+pub type FetchExpect<'a, T> = Fetch<'a, T, PanicHandler>;
 
 /// Allows to fetch a resource in a system mutably.
 ///
 /// This requires a `Default` implementation for the resource.
 /// If the resource does not have a `Default` implementation or
-/// it isn't strictly required, you should use `Option<FetchMut<T>>`.
-pub struct FetchMut<'a, T: 'a> {
+/// it isn't strictly required, you should use `Option<FetchMut<T>>`
+/// or a custom fallback handler.
+///
+/// # Type parameters
+///
+/// * `T`: The type of the resource
+/// * `F`: The fallback handler (default: `DefaultProvider`)
+pub struct FetchMut<'a, T: 'a, F = DefaultProvider> {
     inner: RefMut<'a, Box<Resource>>,
-    phantom: PhantomData<&'a mut T>,
+    phantom: PhantomData<(&'a mut T, F)>,
 }
 
-impl<'a, T> Deref for FetchMut<'a, T>
+impl<'a, T, F> Deref for FetchMut<'a, T, F>
 where
     T: Resource,
 {
@@ -146,7 +102,7 @@ where
     }
 }
 
-impl<'a, T> DerefMut for FetchMut<'a, T>
+impl<'a, T, F> DerefMut for FetchMut<'a, T, F>
 where
     T: Resource,
 {
@@ -155,20 +111,25 @@ where
     }
 }
 
-impl<'a, T> SystemData<'a> for FetchMut<'a, T>
+impl<'a, T, F> SystemData<'a> for FetchMut<'a, T, F>
 where
     T: Default + Resource,
+    F: FallbackHandler<T>,
 {
     fn fetch(res: &'a Resources) -> Self {
-        res.fetch_mut()
+        F::fetch_mut(res)
     }
 
     fn reads() -> Vec<ResourceId> {
-        vec![]
+        F::reads()
     }
 
     fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
+        let mut writes = F::writes();
+
+        writes.push(ResourceId::new::<T>());
+
+        writes
     }
 }
 
@@ -212,49 +173,7 @@ where
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
-pub struct FetchMutExpect<'a, T: 'a> {
-    f: FetchMut<'a, T>,
-}
-
-impl<'a, T> Deref for FetchMutExpect<'a, T>
-where
-    T: Resource,
-{
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.f
-    }
-}
-
-impl<'a, T> DerefMut for FetchMutExpect<'a, T>
-where
-    T: Resource,
-{
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.f
-    }
-}
-
-impl<'a, T> SystemData<'a> for FetchMutExpect<'a, T>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        match res.try_fetch_mut() {
-            Some(f) => FetchMutExpect { f },
-            None => fetch_panic!(),
-        }
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
-    }
-}
+pub type FetchMutExpect<'a, T> = FetchMut<'a, T, PanicHandler>;
 
 /// A resource defines a set of data
 /// which can only be accessed according
@@ -314,7 +233,7 @@ impl Resources {
     ///
     /// # Other variants
     ///
-    /// See `add_assert` for the panicking version.
+    /// See `add_no_overwrite` for the panicking version.
     /// See `add_or_overwrite` for a version that just assures a resource has a certain value.
     ///
     /// # Examples
@@ -370,7 +289,7 @@ impl Resources {
     ///
     /// See `add` for the non-panicking version.
     /// See `add_or_overwrite` for a version that just assures a resource has a certain value.
-    pub fn add_assert<R>(&mut self, r: R)
+    pub fn add_no_overwrite<R>(&mut self, r: R)
     where
         R: Resource,
     {
@@ -467,7 +386,7 @@ impl Resources {
     /// The following methods call `maintain` at the beginning:
     ///
     /// * `add`
-    /// * `add_assert`
+    /// * `add_no_overwrite`
     /// * `add_or_overwrite`
     /// * `entry`
     ///
@@ -479,23 +398,25 @@ impl Resources {
             .extend(self.new.get_mut().drain().map(|(k, b)| (k, *b)));
     }
 
-    /// Fetches the resource with the specified type `T`.
+    /// Fetches the resource with the specified type `T` or calls `with` to
+    /// get a value which will be inserted.
     ///
-    /// If the resource does not exist, the value returned by `T::default()` will
+    /// If the resource does not exist, the value returned by `with` will
     /// be stored in a temporary map and fetched from there.
     /// See `maintain` for more information.
     ///
     /// # Panics
     ///
     /// Panics if the resource is being accessed mutably.
-    pub fn fetch<T>(&self) -> Fetch<T>
+    pub fn fetch<T, F, P>(&self, with: F) -> Fetch<T, P>
     where
-        T: Default + Resource,
+        T: Resource,
+        F: FnOnce() -> T,
     {
         let res_id = ResourceId::new::<T>();
         let r = self.resources
             .get(&res_id)
-            .unwrap_or_else(|| self.def_res::<T>(res_id));
+            .unwrap_or_else(|| self.def_res(res_id, with()));
 
         Fetch {
             inner: r.borrow(),
@@ -505,7 +426,7 @@ impl Resources {
 
     /// Like `fetch`, but returns an `Option` instead of inserting a default value
     /// in case the resource does not exist.
-    pub fn try_fetch<T>(&self) -> Option<Fetch<T>>
+    pub fn try_fetch<T, P>(&self) -> Option<Fetch<T, P>>
     where
         T: Resource,
     {
@@ -523,14 +444,15 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
-    pub fn fetch_mut<T>(&self) -> FetchMut<T>
+    pub fn fetch_mut<T, F, P>(&self, with: F) -> FetchMut<T, P>
     where
-        T: Default + Resource,
+        T: Resource,
+        F: FnOnce() -> T,
     {
         let res_id = ResourceId::new::<T>();
         let r = self.resources
             .get(&res_id)
-            .unwrap_or_else(|| self.def_res::<T>(res_id));
+            .unwrap_or_else(|| self.def_res::<T>(res_id, with()));
 
         FetchMut {
             inner: r.borrow_mut(),
@@ -540,7 +462,7 @@ impl Resources {
 
     /// Like `fetch_mut`, but returns an `Option` instead of inserting a default value
     /// in case the resource does not exist.
-    pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<T>>
+    pub fn try_fetch_mut<T, P>(&self) -> Option<FetchMut<T, P>>
     where
         T: Resource,
     {
@@ -555,13 +477,13 @@ impl Resources {
             })
     }
 
-    fn def_res<T>(&self, res_id: ResourceId) -> &TrustCell<Box<Resource>>
+    fn def_res<T>(&self, res_id: ResourceId, value: T) -> &TrustCell<Box<Resource>>
     where
-        T: Default + Resource,
+        T: Resource,
     {
         let mut new = self.new.lock();
         let b: &mut Box<_> = new.entry(res_id)
-            .or_insert_with(|| Box::new(TrustCell::new(Box::new(T::default()) as Box<Resource>)));
+            .or_insert_with(|| Box::new(TrustCell::new(Box::new(value) as Box<Resource>)));
 
         unsafe {
             // This is correct because the returned can only live until the mutable borrow
@@ -606,8 +528,8 @@ impl Resources {
 
 #[cfg(test)]
 mod tests {
-    use {RunNow, System};
     use super::*;
+    use {RunNow, System};
 
     #[derive(Default)]
     struct Res;
@@ -618,7 +540,7 @@ mod tests {
         assert_eq!(Fetch::<Res>::writes(), vec![]);
 
         let mut res = Resources::new();
-        res.add_assert(Res);
+        res.add_no_overwrite(Res);
         Fetch::<Res>::fetch(&res);
     }
 
@@ -628,7 +550,7 @@ mod tests {
         assert_eq!(FetchMut::<Res>::writes(), vec![ResourceId::new::<Res>()]);
 
         let mut res = Resources::new();
-        res.add_assert(Res);
+        res.add_no_overwrite(Res);
         FetchMut::<Res>::fetch(&res);
     }
 
@@ -637,7 +559,7 @@ mod tests {
         struct Foo;
 
         let mut res = Resources::new();
-        res.add_assert(Res);
+        res.add_no_overwrite(Res);
 
         assert!(res.has_value(ResourceId::new::<Res>()));
         assert!(!res.has_value(ResourceId::new::<Foo>()));
@@ -648,10 +570,10 @@ mod tests {
     #[should_panic(expected = "Already borrowed")]
     fn read_write_fails() {
         let mut res = Resources::new();
-        res.add_assert(Res);
+        res.add_no_overwrite(Res);
 
-        let read = res.fetch::<Res>();
-        let write = res.fetch_mut::<Res>();
+        let read: Fetch<Res> = res.fetch(Default::default);
+        let write: FetchMut<Res> = res.fetch_mut(Default::default);
     }
 
     #[allow(unused)]
@@ -659,10 +581,10 @@ mod tests {
     #[should_panic(expected = "Already borrowed mutably")]
     fn write_read_fails() {
         let mut res = Resources::new();
-        res.add_assert(Res);
+        res.add_no_overwrite(Res);
 
-        let write = res.fetch_mut::<Res>();
-        let read = res.fetch::<Res>();
+        let write: FetchMut<Res> = res.fetch_mut(Default::default);
+        let read: Fetch<Res> = res.fetch(Default::default);
     }
 
     #[test]
@@ -680,16 +602,16 @@ mod tests {
         }
 
         let mut res = Resources::new();
-        assert!(res.try_fetch::<i32>().is_none());
+        assert!(res.try_fetch::<i32, ()>().is_none());
 
         let mut sys = Sys;
         sys.run_now(&res);
 
-        assert!(res.try_fetch::<i32>().is_some());
-        assert_eq!(*res.fetch::<i32>(), 33);
+        assert!(res.try_fetch::<i32, ()>().is_some());
+        assert_eq!(*res.fetch::<i32, _, ()>(Default::default), 33);
 
         res.maintain();
 
-        assert_eq!(*res.fetch::<i32>(), 33);
+        assert_eq!(*res.fetch::<i32, _, ()>(Default::default), 33);
     }
 }

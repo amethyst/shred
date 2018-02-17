@@ -27,9 +27,7 @@ impl<T: Clone> VecStorage<T> {
 
 impl<T> Default for VecStorage<T> {
     fn default() -> Self {
-        VecStorage {
-            data: vec![],
-        }
+        VecStorage { data: vec![] }
     }
 }
 

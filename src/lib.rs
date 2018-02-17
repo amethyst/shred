@@ -77,5 +77,6 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use dispatch::{Par, ParSeq, Seq};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
-pub use res::{Entry, Fetch, FetchExpect, FetchMut, FetchMutExpect, Resource, ResourceId, Resources};
+pub use res::{DefaultProvider, Entry, FallbackHandler, Fetch, FetchExpect, FetchMut,
+              FetchMutExpect, PanicHandler, Resource, ResourceId, Resources};
 pub use system::{RunNow, RunningTime, System, SystemData};
