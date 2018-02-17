@@ -13,10 +13,10 @@
 //!
 //! use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 //!
-//! #[derive(Debug)]
+//! #[derive(Debug, Default)]
 //! struct ResA;
 //!
-//! #[derive(Debug)]
+//! #[derive(Debug, Default)]
 //! struct ResB;
 //!
 //! #[derive(SystemData)]
@@ -54,6 +54,7 @@
 //! Using it is bit trickier, but it allows dispatching without any virtual function calls.
 //!
 
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 
@@ -61,6 +62,7 @@ extern crate arrayvec;
 extern crate fxhash;
 #[macro_use]
 extern crate mopa;
+extern crate parking_lot;
 #[cfg(feature = "parallel")]
 extern crate rayon;
 extern crate smallvec;
@@ -75,5 +77,5 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use dispatch::{Par, ParSeq, Seq};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
-pub use res::{Fetch, FetchId, FetchIdMut, FetchMut, Resource, ResourceId, Resources};
+pub use res::{Entry, Fetch, FetchExpect, FetchMut, FetchMutExpect, Resource, ResourceId, Resources};
 pub use system::{RunNow, RunningTime, System, SystemData};

@@ -75,6 +75,13 @@ pub trait SystemData<'a> {
     ///
     /// Only fetch the resources you
     /// returned from `reads` / `writes`!
+    /// This function may panic if this contract is violated.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if the above contract is violated.
+    /// This function may panic if the resource doesn't exist, but it's
+    /// **highly recommended to provide a fallback instead of panicking**.
     ///
     /// [`Resources`]: trait.Resources.html
     fn fetch(res: &'a Resources) -> Self;

@@ -4,10 +4,10 @@ extern crate shred_derive;
 
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResB;
 
 #[derive(SystemData)]
@@ -26,7 +26,6 @@ fn main() {
     let mut res = Resources::new();
     res.add(ResA);
     res.add(ResB);
-
 
     {
         let mut bundle = AutoBundle::fetch(&res);

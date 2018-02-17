@@ -118,6 +118,7 @@ mod tests {
     use res::*;
     use system::*;
 
+    #[derive(Default)]
     struct Res(i32);
 
     struct Dummy(i32);
@@ -163,7 +164,7 @@ mod tests {
 
     fn new_resources() -> Resources {
         let mut res = Resources::new();
-        res.add(Res(0));
+        res.add_assert(Res(0));
 
         res
     }

@@ -4,10 +4,10 @@ extern crate shred_derive;
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResB;
 
 #[derive(SystemData)]

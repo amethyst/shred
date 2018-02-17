@@ -11,7 +11,9 @@ fn sleep_short() {
     sleep(Duration::new(0, 1_000));
 }
 
+#[derive(Default)]
 struct Res;
+#[derive(Default)]
 struct ResB;
 
 #[derive(SystemData)]
