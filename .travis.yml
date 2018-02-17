@@ -11,11 +11,15 @@ branches:
     - trying
     - master
 script:
-- |
-  cargo build --verbose --all-features &&
-  cargo test --verbose --all-features &&
-  cargo build --verbose --no-default-features &&
-  cargo test --verbose --no-default-features
 - if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then
+    cargo build --verbose --all-features;
+    cargo test --verbose --all-features;
+    cargo build --verbose --no-default-features;
+    cargo test --verbose --no-default-features;
     cargo bench --verbose --no-run;
+  else
+    cargo build --verbose --features=parallel;
+    cargo test --verbose --features=parallel;
+    cargo build --verbose --no-default-features;
+    cargo test --verbose --no-default-features;
   fi
