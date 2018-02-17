@@ -25,6 +25,14 @@ impl<T: Clone> VecStorage<T> {
     }
 }
 
+impl<T> Default for VecStorage<T> {
+    fn default() -> Self {
+        VecStorage {
+            data: vec![],
+        }
+    }
+}
+
 impl<T> Index<usize> for VecStorage<T> {
     type Output = T;
 
@@ -110,7 +118,7 @@ struct IntegrationData<'a> {
     pos: FetchMut<'a, PosStorage>,
     vel: FetchMut<'a, VelStorage>,
 
-    time: Fetch<'a, DeltaTime>,
+    time: Option<Fetch<'a, DeltaTime>>,
 }
 
 struct IntegrationSystem;
@@ -119,6 +127,11 @@ impl<'a> System<'a> for IntegrationSystem {
     type SystemData = IntegrationData<'a>;
 
     fn run(&mut self, mut data: IntegrationData) {
+        let delta = match data.time {
+            Some(time) => time.0,
+            None => return,
+        };
+
         for elem in 0..NUM_COMPONENTS {
             let mass = data.mass[elem].0;
 
@@ -127,7 +140,6 @@ impl<'a> System<'a> for IntegrationSystem {
                 continue;
             }
 
-            let delta = data.time.0;
             let pos = &mut data.pos[elem].0;
             let vel = data.vel[elem].0;
 
