@@ -21,6 +21,7 @@ travis-ci = { repository = "torkleyy/shred" }
 arrayvec = "0.4"
 fxhash = "0.2"
 mopa = "0.2"
+parking_lot = "0.5.3"
 rayon = { version = "1.0", optional = true }
 shred-derive = { path = "shred-derive", version = "0.4" }
 smallvec = "0.6"
@@ -30,6 +31,7 @@ cgmath = "0.16"
 
 [features]
 default = ["parallel"]
+nightly = ["parking_lot/nightly"]
 parallel = ["rayon"]
 
 [[example]]

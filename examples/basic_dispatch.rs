@@ -2,10 +2,12 @@ extern crate shred;
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+// A resource usually has a `Default` implementation
+// which will be used if the resource has not been added.
+#[derive(Debug, Default)]
 struct ResB;
 
 struct PrintSystem;
@@ -20,7 +22,7 @@ impl<'a> System<'a> for PrintSystem {
         println!("{:?}", &*b);
 
         *b = ResB; // We can mutate ResB here
-        // because it's `FetchMut`.
+                   // because it's `FetchMut`.
     }
 }
 
@@ -33,4 +35,6 @@ fn main() {
     resources.add(ResB);
 
     dispatcher.dispatch(&resources);
+
+    resources.maintain();
 }

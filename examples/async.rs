@@ -4,10 +4,10 @@ extern crate shred_derive;
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResB;
 
 #[derive(SystemData)]
@@ -39,7 +39,7 @@ impl<'a> System<'a> for PrintSystem {
         println!("{:?}", &*b);
 
         *b = ResB; // We can mutate ResB here
-        // because it's `FetchMut`.
+                   // because it's `FetchMut`.
     }
 }
 

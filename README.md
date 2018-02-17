@@ -26,10 +26,10 @@ extern crate shred;
 
 use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResB;
 
 struct PrintSystem;
@@ -56,10 +56,11 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    resources.add(ResA);
+    //resources.add(ResA); (We don't need to add `ResA`, a default value will be instantiated)
     resources.add(ResB);
 
     dispatcher.dispatch(&mut resources);
+    resources.maintain();
 }
 ```
 

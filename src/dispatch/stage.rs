@@ -367,8 +367,11 @@ mod tests {
             .collect()
     }
 
+    #[derive(Default)]
     struct ResA;
+    #[derive(Default)]
     struct ResB;
+    #[derive(Default)]
     struct ResC;
 
     #[test]
