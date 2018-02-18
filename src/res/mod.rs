@@ -500,16 +500,18 @@ impl Resources {
         Some(Resources::box_to_cell_ref(b))
     }
 
+    /// May only be called by `def_res` or `get_res`.
     fn box_to_cell_ref<'a, 'b>(
         b: &'a Box<TrustCell<Box<Resource>>>,
     ) -> &'b TrustCell<Box<Resource>> {
         unsafe {
-            // This is correct because the returned value can only live until the mutable borrow
-            // of `Resources`. This `Box` also lives at least until another mutable borrow,
-            // because the only way to drop it is calling `maintain` (which borrows `Resources`
-            // mutably).
-            // The raw pointer of a `Box` stays stable and valid as long as the `Box` doesn't
-            // get dropped.
+            // Because `b` is allocated on the heap its pointer stays stable;
+            // the only way to invalidate the `TrustCell` pointer is by dropping the `Box`.
+            // Because the `maintain` method is the only place where these `Box`es get dropped,
+            // the reference created here must not outlive the next maintain call.
+            // This is ensured by the fact that the `maintain` method borrows `self` mutably
+            // which makes sure the `TrustCell` reference bound to `'self` by `def_res` / `get_res`
+            // was dropped already.
 
             let t: &TrustCell<_> = b.as_ref();
             let raw = t as *const TrustCell<_>;
