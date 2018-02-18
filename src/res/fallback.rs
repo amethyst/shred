@@ -60,13 +60,13 @@ where
 /// does not exist.
 pub trait FallbackHandler<T>: Sized {
     /// Returns the resource ids of all resources
-    /// that get fetched immutably in `fallback`/`fallback_mut`.
+    /// that get fetched immutably in `fetch`/`fetch_mut`.
     ///
     /// Do not include `T` here!
     fn reads() -> Vec<ResourceId>;
 
     /// Returns the resource ids of all resources
-    /// that get fetched mutably in `fallback`/`fallback_mut`.
+    /// that get fetched mutably in `fetch`/`fetch_mut`.
     ///
     /// Do not include `T` here!
     fn writes() -> Vec<ResourceId>;

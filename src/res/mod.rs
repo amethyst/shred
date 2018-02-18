@@ -277,7 +277,6 @@ impl Resources {
     }
 
     /// Adds a resource or panics if it already exists.
-    /// This was the old behavior of `add`.
     ///
     /// Calls `maintain` at the beginning.
     ///
@@ -485,19 +484,7 @@ impl Resources {
         let b: &mut Box<_> = new.entry(res_id)
             .or_insert_with(|| Box::new(TrustCell::new(Box::new(value) as Box<Resource>)));
 
-        unsafe {
-            // This is correct because the returned can only live until the mutable borrow
-            // of `Resources`. This `Box` also lives at least until another mutable borrow,
-            // because the only way to drop it is calling `maintain` (which borrows `Resources`
-            // mutably).
-            // The raw pointer of a `Box` stays stable and valid as long as the `Box` doesn't
-            // get dropped.
-
-            let t: &TrustCell<_> = b.as_ref();
-            let raw = t as *const TrustCell<_>;
-
-            &*raw
-        }
+        Resources::box_to_cell_ref(b)
     }
 
     fn get_res<T>(&self, res_id: &ResourceId) -> Option<&TrustCell<Box<Resource>>>
@@ -510,8 +497,14 @@ impl Resources {
             None => return None,
         };
 
+        Some(Resources::box_to_cell_ref(b))
+    }
+
+    fn box_to_cell_ref<'a, 'b>(
+        b: &'a Box<TrustCell<Box<Resource>>>,
+    ) -> &'b TrustCell<Box<Resource>> {
         unsafe {
-            // This is correct because the returned can only live until the mutable borrow
+            // This is correct because the returned value can only live until the mutable borrow
             // of `Resources`. This `Box` also lives at least until another mutable borrow,
             // because the only way to drop it is calling `maintain` (which borrows `Resources`
             // mutably).
@@ -521,7 +514,7 @@ impl Resources {
             let t: &TrustCell<_> = b.as_ref();
             let raw = t as *const TrustCell<_>;
 
-            Some(&*raw)
+            &*raw
         }
     }
 }
