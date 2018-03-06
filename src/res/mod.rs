@@ -1,7 +1,7 @@
 //! Module for resource related types
 
 pub use self::entry::Entry;
-pub use self::fallback::{DefaultProvider, FallbackHandler, PanicHandler};
+pub use self::setup::{DefaultProvider, SetupHandler, PanicHandler};
 
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -16,7 +16,7 @@ use cell::{Ref, RefMut, TrustCell};
 use system::SystemData;
 
 mod entry;
-mod fallback;
+mod setup;
 
 /// Allows to fetch a resource in a system immutably.
 ///
@@ -48,7 +48,7 @@ where
 impl<'a, T, F> SystemData<'a> for Fetch<'a, T, F>
 where
     T: Resource,
-    F: FallbackHandler<T>,
+    F: SetupHandler<T>,
 {
     fn fetch(res: &'a Resources) -> Self {
         F::fetch(res)
@@ -114,7 +114,7 @@ where
 impl<'a, T, F> SystemData<'a> for FetchMut<'a, T, F>
 where
     T: Default + Resource,
-    F: FallbackHandler<T>,
+    F: SetupHandler<T>,
 {
     fn fetch(res: &'a Resources) -> Self {
         F::fetch_mut(res)
@@ -205,17 +205,14 @@ impl ResourceId {
     }
 }
 
-/// A resource container, which
-/// provides methods to access to
+/// A resource container, which provides methods to access to
 /// the contained resources.
 ///
 /// # Resource Ids
 ///
-/// Resources are in general identified
-/// by `ResourceId`, which consists of a `TypeId`.
+/// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct Resources {
-    new: Mutex<FxHashMap<ResourceId, Box<TrustCell<Box<Resource>>>>>,
     resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
 
@@ -332,8 +329,6 @@ impl Resources {
     {
         use std::collections::hash_map::Entry;
 
-        self.maintain();
-
         let entry = self.resources.entry(ResourceId::new::<R>());
 
         match entry {
@@ -346,71 +341,36 @@ impl Resources {
         }
     }
 
-    /// Returns true if the specified resource type exists in `self`.
-    /// This also checks resources that were added after the last `maintain`.
-    /// If you only want to check maintained resources, use `has_maintained_value`.
-    /// If you only want to add a resource if it hasn't been added yet, use `entry`.
-    pub fn has_value(&self, id: ResourceId) -> bool {
-        self.has_maintained_value(id) || self.new.lock().contains_key(&id)
+    /// Returns true if the specified resource type `R` exists in `self`.
+    pub fn has_value<R>(&self) -> bool
+    where
+        R: Resource,
+    {
+        self.has_value_raw(ResourceId::new::<R>())
     }
 
     /// Returns true if the specified resource type exists in `self`.
-    /// Note that this only checks if there's a maintained resource of that id.
-    pub fn has_maintained_value(&self, id: ResourceId) -> bool {
+    pub fn has_value_raw(&self, id: ResourceId) -> bool {
         self.resources.contains_key(&id)
     }
 
-    /// Returns an entry for the resource with type `R` and id 0.
-    /// This calls `maintain` before creating the `Entry`.
+    /// Returns an entry for the resource with type `R`.
     pub fn entry<R>(&mut self) -> Entry<R>
     where
         R: Resource,
     {
-        self.maintain();
-
         create_entry(self.resources.entry(ResourceId::new::<R>()))
     }
 
-    /// Maintains the resources. This merges resources into the persistent
-    /// map. When `fetch`ing a resource that is not available, a `Default` will
-    /// be created. These values are inserted into a temporary map and get merged
-    /// on each `maintain`.
-    ///
-    /// The following methods are checking the temporary map:
-    ///
-    /// * `has_value`
-    /// * `try_fetch`
-    /// * `try_fetch_mut`
-    ///
-    /// The following methods call `maintain` at the beginning:
-    ///
-    /// * `add`
-    /// * `add_no_overwrite`
-    /// * `add_or_overwrite`
-    /// * `entry`
-    ///
-    /// These methods do not take care of unmaintained resources:
-    ///
-    /// * `has_maintained_value`
-    pub fn maintain(&mut self) {
-        self.resources
-            .extend(self.new.get_mut().drain().map(|(k, b)| (k, *b)));
-    }
-
-    /// Fetches the resource with the specified type `T` or calls `with` to
-    /// get a value which will be inserted.
-    ///
-    /// If the resource does not exist, the value returned by `with` will
-    /// be stored in a temporary map and fetched from there.
-    /// See `maintain` for more information.
+    /// Fetches the resource with the specified type `T` or panics if it doesn't exist.
     ///
     /// # Panics
     ///
+    /// Panics if the resource doesn't exist.
     /// Panics if the resource is being accessed mutably.
-    pub fn fetch<T, F, P>(&self, with: F) -> Fetch<T, P>
+    pub fn fetch<T, P>(&self) -> Fetch<T, P>
     where
         T: Resource,
-        F: FnOnce() -> T,
     {
         let res_id = ResourceId::new::<T>();
         let r = self.resources
@@ -433,7 +393,6 @@ impl Resources {
 
         self.resources
             .get(&res_id)
-            .or_else(|| self.get_res::<T>(&res_id))
             .map(|r| Fetch {
                 inner: r.borrow(),
                 phantom: PhantomData,
@@ -469,55 +428,10 @@ impl Resources {
 
         self.resources
             .get(&res_id)
-            .or_else(|| self.get_res::<T>(&res_id))
             .map(|r| FetchMut {
                 inner: r.borrow_mut(),
                 phantom: PhantomData,
             })
-    }
-
-    fn def_res<T>(&self, res_id: ResourceId, value: T) -> &TrustCell<Box<Resource>>
-    where
-        T: Resource,
-    {
-        let mut new = self.new.lock();
-        let b: &mut Box<_> = new.entry(res_id)
-            .or_insert_with(|| Box::new(TrustCell::new(Box::new(value) as Box<Resource>)));
-
-        Resources::box_to_cell_ref(b)
-    }
-
-    fn get_res<T>(&self, res_id: &ResourceId) -> Option<&TrustCell<Box<Resource>>>
-    where
-        T: Resource,
-    {
-        let new = self.new.lock();
-        let b: &Box<_> = match new.get(&res_id) {
-            Some(x) => x,
-            None => return None,
-        };
-
-        Some(Resources::box_to_cell_ref(b))
-    }
-
-    /// May only be called by `def_res` or `get_res`.
-    fn box_to_cell_ref<'a, 'b>(
-        b: &'a Box<TrustCell<Box<Resource>>>,
-    ) -> &'b TrustCell<Box<Resource>> {
-        unsafe {
-            // Because `b` is allocated on the heap its pointer stays stable;
-            // the only way to invalidate the `TrustCell` pointer is by dropping the `Box`.
-            // Because the `maintain` method is the only place where these `Box`es get dropped,
-            // the reference created here must not outlive the next maintain call.
-            // This is ensured by the fact that the `maintain` method borrows `self` mutably
-            // which makes sure the `TrustCell` reference bound to `'self` by `def_res` / `get_res`
-            // was dropped already.
-
-            let t: &TrustCell<_> = b.as_ref();
-            let raw = t as *const TrustCell<_>;
-
-            &*raw
-        }
     }
 }
 
@@ -556,8 +470,8 @@ mod tests {
         let mut res = Resources::new();
         res.add_no_overwrite(Res);
 
-        assert!(res.has_value(ResourceId::new::<Res>()));
-        assert!(!res.has_value(ResourceId::new::<Foo>()));
+        assert!(res.has_value::<Res>());
+        assert!(!res.has_value::<Foo>());
     }
 
     #[allow(unused)]
