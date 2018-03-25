@@ -1,3 +1,7 @@
+//! Helper module for some internals, most users don't need to interact with it.
+
+#![allow(missing_docs)]
+
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Error as FormatError, Formatter};
@@ -100,7 +104,6 @@ impl<T> TrustCell<T> {
         }
     }
 
-    #[allow(unused)]
     pub fn get_mut(&mut self) -> &mut T {
         unsafe { &mut *self.inner.get() }
     }

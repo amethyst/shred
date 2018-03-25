@@ -66,8 +66,10 @@ extern crate mopa;
 extern crate rayon;
 extern crate smallvec;
 
-mod cell;
+pub mod cell;
+
 mod dispatch;
+mod meta;
 mod res;
 mod system;
 
@@ -76,6 +78,7 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use dispatch::{Par, ParSeq, Seq};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
+pub use meta::{MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
 pub use system::{RunNow, RunningTime, System, SystemData};

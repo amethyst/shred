@@ -223,6 +223,27 @@ impl Resources {
             phantom: PhantomData,
         })
     }
+
+    /// Internal function for fetching resources, should only be used if you know what you're doing.
+    pub fn try_fetch_internal(&self, id: TypeId) -> Option<&TrustCell<Box<Resource>>> {
+        self.resources.get(&ResourceId(id))
+    }
+
+    /// Retrieves a resource without fetching, which is cheaper, but only available with
+    /// `&mut self`.
+    pub fn get_mut<T: Resource>(&mut self) -> Option<&mut T> {
+        self.get_mut_raw(TypeId::of::<T>())
+            .map(|res| unsafe { res.downcast_mut_unchecked() })
+    }
+
+    /// Retrieves a resource without fetching, which is cheaper, but only available with
+    /// `&mut self`.
+    pub fn get_mut_raw(&mut self, id: TypeId) -> Option<&mut Resource> {
+        self.resources
+            .get_mut(&ResourceId(id))
+            .map(TrustCell::get_mut)
+            .map(Box::as_mut)
+    }
 }
 
 #[cfg(test)]
