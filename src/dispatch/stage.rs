@@ -80,10 +80,9 @@ impl<'a> Stage<'a> {
     }
 
     pub fn setup(&mut self, res: &mut Resources) {
-        self.groups
-            .iter_mut()
-            .flat_map(|group| group.iter_mut())
-            .for_each(move |sys| sys.setup(res));
+        for sys in self.groups.iter_mut().flat_map(|group| group.iter_mut()) {
+            sys.setup(res);
+        }
     }
 
     #[cfg(feature = "parallel")]
