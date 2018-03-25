@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{Fetch, FetchMut, ResourceId, Resources, SystemData};
+use shred::{Read, ResourceId, Resources, SystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -9,11 +9,16 @@ struct ResA;
 struct ResB;
 
 struct ExampleBundle<'a> {
-    a: Fetch<'a, ResA>,
-    b: FetchMut<'a, ResB>,
+    a: Read<'a, ResA>,
+    b: Write<'a, ResB>,
 }
 
 impl<'a> SystemData<'a> for ExampleBundle<'a> {
+    fn setup(res: &mut Resources) {
+        res.entry().or_insert(ResA);
+        res.entry().or_insert(ResB);
+    }
+
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
             a: SystemData::fetch(res),
@@ -32,8 +37,8 @@ impl<'a> SystemData<'a> for ExampleBundle<'a> {
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA);
-    res.add(ResB);
+    res.insert(ResA);
+    res.insert(ResB);
 
     let mut bundle = ExampleBundle::fetch(&res);
     *bundle.b = ResB;

@@ -13,6 +13,9 @@ pub trait RunNow<'a> {
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
     fn run_now(&mut self, res: &'a Resources);
+
+    /// Sets up `Resources` for a later call to `run_now`.
+    fn setup(&mut self, res: &mut Resources);
 }
 
 impl<'a, T> RunNow<'a> for T
@@ -22,6 +25,10 @@ where
     fn run_now(&mut self, res: &'a Resources) {
         let data = T::SystemData::fetch(res);
         self.run(data);
+    }
+
+    fn setup(&mut self, res: &mut Resources) {
+        T::setup(res);
     }
 }
 
@@ -60,6 +67,11 @@ pub trait System<'a> {
     fn running_time(&self) -> RunningTime {
         RunningTime::Average
     }
+
+    /// Sets up the `Resources` using `Self::SystemData::setup`.
+    fn setup(res: &mut Resources) {
+        <Self::SystemData as SystemData>::setup(res)
+    }
 }
 
 /// A struct implementing
@@ -67,6 +79,13 @@ pub trait System<'a> {
 /// bundles some resources which are
 /// required for the execution.
 pub trait SystemData<'a> {
+    /// Sets up `Resources` for fetching this system data.
+    ///
+    /// # Contract
+    ///
+    /// After `setup`, `SystemData::fetch` may only panic in case of a contract violation.
+    fn setup(res: &mut Resources);
+
     /// Creates a new resource bundle
     /// by fetching the required resources
     /// from the [`Resources`] struct.
@@ -80,8 +99,7 @@ pub trait SystemData<'a> {
     /// # Panics
     ///
     /// This function may panic if the above contract is violated.
-    /// This function may panic if the resource doesn't exist, but it's
-    /// **highly recommended to provide a fallback instead of panicking**.
+    /// This function may panic if `setup` was not called and the resource doesn't exist.
     ///
     /// [`Resources`]: trait.Resources.html
     fn fetch(res: &'a Resources) -> Self;
@@ -122,6 +140,8 @@ pub trait SystemData<'a> {
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
+    fn setup(_: &mut Resources) {}
+
     fn fetch(_: &'a Resources) -> Self {
         PhantomData
     }
@@ -140,6 +160,14 @@ macro_rules! impl_data {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
             where $( $ty : SystemData<'a> ),*
         {
+            fn setup(res: &mut Resources) {
+                #![allow(unused_variables)]
+
+                $(
+                    <$ty as SystemData>::setup(&mut *res);
+                )*
+            }
+
             fn fetch(res: &'a Resources) -> Self {
                 #![allow(unused_variables)]
 
@@ -176,6 +204,8 @@ macro_rules! impl_data {
 }
 
 impl<'a> SystemData<'a> for () {
+    fn setup(_: &mut Resources) {}
+
     fn fetch(_: &'a Resources) -> Self {
         ()
     }
@@ -183,7 +213,6 @@ impl<'a> SystemData<'a> for () {
     fn reads() -> Vec<ResourceId> {
         Vec::new()
     }
-
     fn writes() -> Vec<ResourceId> {
         Vec::new()
     }

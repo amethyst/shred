@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{DispatcherBuilder, Fetch, FetchExpect, FetchMut, Resources, System};
+use shred::{DispatcherBuilder, Read, ReadExpect, Resources, System, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -16,14 +16,14 @@ struct ResWithoutSensibleDefault {
 struct PrintSystem;
 
 impl<'a> System<'a> for PrintSystem {
-    // We can simply use `Option<Fetch>` or `Option<FetchMut>` if a resource
+    // We can simply use `Option<Read>` or `Option<Write>` if a resource
     // isn't strictly required or can't be created (by a `Default` implementation).
     type SystemData = (
-        Fetch<'a, ResA>,
-        Option<FetchMut<'a, ResB>>,
-        // WARNING: using `FetchExpect` might lead to a panic!
+        Read<'a, ResA>,
+        Option<Write<'a, ResB>>,
+        // WARNING: using `ReadExpect` might lead to a panic!
         // If `ResWithoutSensibleDefault` does not exist, fetching will `panic!`.
-        FetchExpect<'a, ResWithoutSensibleDefault>,
+        ReadExpect<'a, ResWithoutSensibleDefault>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -49,18 +49,18 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    resources.add(ResA);
-    resources.add(ResWithoutSensibleDefault {
+
+    // Will automatically insert `ResB` (the only one that has a default provider).
+    dispatcher.setup(&mut resources);
+    resources.insert(ResWithoutSensibleDefault {
         magic_number_that_we_cant_compute: 42,
     });
 
     // `ResB` is not in resources, but `PrintSystem` still works.
     dispatcher.dispatch(&resources);
-    resources.maintain();
 
-    resources.add(ResB);
+    resources.insert(ResB);
 
     // Now `ResB` can be printed, too.
     dispatcher.dispatch(&resources);
-    resources.maintain();
 }

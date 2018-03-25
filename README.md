@@ -24,7 +24,7 @@ shared and exclusive resource access, in parallel.
 ```rust
 extern crate shred;
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
+use shred::{DispatcherBuilder, Read, Resource, Resources, System, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -38,7 +38,7 @@ struct PrintSystem;
 // context if possible, so it's easy
 // to introduce one.
 impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
+    type SystemData = (Read<'a, ResA>, Write<'a, ResB>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;
@@ -57,10 +57,9 @@ fn main() {
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
     //resources.add(ResA); (We don't need to add `ResA`, a default value will be instantiated)
-    resources.add(ResB);
+    resources.insert(ResB);
 
     dispatcher.dispatch(&mut resources);
-    resources.maintain();
 }
 ```
 

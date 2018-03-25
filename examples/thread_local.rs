@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
+use shred::{DispatcherBuilder, Read, Resources, System, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -12,8 +12,8 @@ struct ResB;
 
 #[derive(SystemData)]
 struct Data<'a> {
-    a: Fetch<'a, ResA>,
-    b: FetchMut<'a, ResB>,
+    a: Read<'a, ResA>,
+    b: Write<'a, ResB>,
 }
 
 struct EmptySystem(*mut i8); // System is not thread-safe
@@ -34,8 +34,7 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with_thread_local(EmptySystem(&mut x))
         .build();
-    resources.add(ResA);
-    resources.add(ResB);
+    dispatcher.setup(&mut resources);
 
     dispatcher.dispatch(&resources);
 }

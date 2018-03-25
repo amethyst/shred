@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{DispatcherBuilder, Fetch, FetchMut, Resources, System};
+use shred::{DispatcherBuilder, Read, Resources, System, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -13,7 +13,7 @@ struct ResB;
 struct PrintSystem;
 
 impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Fetch<'a, ResA>, FetchMut<'a, ResB>);
+    type SystemData = (Read<'a, ResA>, Write<'a, ResB>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;
@@ -22,7 +22,7 @@ impl<'a> System<'a> for PrintSystem {
         println!("{:?}", &*b);
 
         *b = ResB; // We can mutate ResB here
-                   // because it's `FetchMut`.
+                   // because it's `Write`.
     }
 }
 
@@ -31,10 +31,10 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    resources.add(ResA);
-    resources.add(ResB);
+    dispatcher.setup(&mut resources);
 
+    // Dispatch as often as you want to
     dispatcher.dispatch(&resources);
-
-    resources.maintain();
+    dispatcher.dispatch(&resources);
+    // ...
 }

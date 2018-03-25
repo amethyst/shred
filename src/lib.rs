@@ -11,7 +11,7 @@
 //! #[macro_use]
 //! extern crate shred_derive;
 //!
-//! use shred::{DispatcherBuilder, Fetch, FetchMut, Resource, Resources, System};
+//! use shred::{DispatcherBuilder, Read, Resource, Resources, System, Write};
 //!
 //! #[derive(Debug, Default)]
 //! struct ResA;
@@ -21,8 +21,8 @@
 //!
 //! #[derive(SystemData)]
 //! struct Data<'a> {
-//!     a: Fetch<'a, ResA>,
-//!     b: FetchMut<'a, ResB>,
+//!     a: Read<'a, ResA>,
+//!     b: Write<'a, ResB>,
 //! }
 //!
 //! struct EmptySystem;
@@ -42,8 +42,8 @@
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .with(EmptySystem, "empty", &[])
 //!         .build();
-//!     resources.add(ResA);
-//!     resources.add(ResB);
+//!     resources.insert(ResA);
+//!     resources.insert(ResB);
 //!
 //!     dispatcher.dispatch(&mut resources);
 //! }
@@ -77,6 +77,6 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use dispatch::{Par, ParSeq, Seq};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
-pub use res::{DefaultProvider, Entry, SetupHandler, Fetch, FetchExpect, FetchMut,
-              FetchMutExpect, PanicHandler, Resource, ResourceId, Resources};
+pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
+              ResourceId, Resources, SetupHandler, Write, WriteExpect};
 pub use system::{RunNow, RunningTime, System, SystemData};

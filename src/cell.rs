@@ -100,6 +100,7 @@ impl<T> TrustCell<T> {
         }
     }
 
+    #[allow(unused)]
     pub fn get_mut(&mut self) -> &mut T {
         unsafe { &mut *self.inner.get() }
     }

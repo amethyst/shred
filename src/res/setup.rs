@@ -1,7 +1,4 @@
-#[cfg(feature = "nightly")]
-use std::intrinsics::type_name;
-
-use {Fetch, FetchMut, Resource, ResourceId, Resources};
+use {Resource, Resources};
 
 #[cfg(feature = "nightly")]
 macro_rules! fetch_panic {
@@ -9,9 +6,8 @@ macro_rules! fetch_panic {
         {
             panic!(
                 "Tried to fetch a resource of type {:?}, but the resource does not exist.\n\
-                 Try adding the resource or \
-                 using `Option<Fetch>` / `Fetch` instead of `FetchExpect`.",
-                unsafe { type_name::<T>() },
+                 Try adding the resource by inserting it manually or using the `setup` method.",
+                unsafe { ::std::intrinsics::type_name::<T>() },
             )
         }
     };
@@ -23,9 +19,9 @@ macro_rules! fetch_panic {
         {
             panic!(
                 "Tried to fetch a resource, but the resource does not exist.\n\
-                 Try adding the resource or \
-                 using `Option<Fetch>` / `Fetch` instead of `FetchExpect`.\n\
-                 You can get the type name of the resource by enabling `shred`'s `nightly` feature"
+                 Try adding the resource by inserting it manually or using the `setup` method.\n\
+                 You can get the type name of the missing resource by enabling `shred`'s `nightly` \
+                 feature"
             )
         }
     };
@@ -49,19 +45,16 @@ pub trait SetupHandler<T>: Sized {
     fn setup(res: &mut Resources);
 }
 
-/// A setup handler that panics if the resource does not exist.
-/// This will provide the type name if the `nightly` feature of shred is enabled.
+/// A setup handler that simply does nothing and thus will cause a panic on fetching.
+/// The panic will provide the type name if the `nightly` feature of shred is enabled.
 ///
-/// A typedef called `FetchExpect` exists, so you usually don't use this type directly.
+/// A typedef called `ReadExpect` exists, so you usually don't use this type directly.
 pub struct PanicHandler;
 
 impl<T> SetupHandler<T> for PanicHandler
 where
     T: Resource,
 {
-    fn setup(res: &mut Resources) {
-        if !res.has_value::<T>() {
-            fetch_panic!()
-        }
+    fn setup(_: &mut Resources) {
     }
 }

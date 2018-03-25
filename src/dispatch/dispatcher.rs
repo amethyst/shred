@@ -14,6 +14,18 @@ pub struct Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
+    /// Sets up all the systems which means they are gonna add default values for the resources
+    /// they need.
+    pub fn setup(&mut self, res: &mut Resources) {
+        for stage in &mut self.stages {
+            stage.setup(res);
+        }
+
+        for sys in &mut self.thread_local {
+            sys.setup(res);
+        }
+    }
+
     /// Dispatch all the systems with given resources and context
     /// and then run thread local systems.
     ///
@@ -124,7 +136,7 @@ mod tests {
     struct Dummy(i32);
 
     impl<'a> System<'a> for Dummy {
-        type SystemData = FetchMut<'a, Res>;
+        type SystemData = Write<'a, Res>;
 
         fn run(&mut self, mut data: Self::SystemData) {
             if self.0 == 4 {
@@ -164,7 +176,7 @@ mod tests {
 
     fn new_resources() -> Resources {
         let mut res = Resources::new();
-        res.add_no_overwrite(Res(0));
+        res.insert(Res(0));
 
         res
     }
