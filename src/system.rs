@@ -88,9 +88,7 @@ pub trait SystemData<'a> {
     ///
     /// # Contract
     ///
-    /// Only fetch the resources you
-    /// returned from `reads` / `writes`!
-    /// This function may panic if this contract is violated.
+    /// Only fetch the resources you returned from `reads` / `writes`!
     ///
     /// # Panics
     ///

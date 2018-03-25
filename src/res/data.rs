@@ -6,7 +6,7 @@ use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resou
 
 /// Allows to fetch a resource in a system immutably.
 ///
-/// If the resource isn't strictly required, you should use `Option<Fetch<T>>`.
+/// If the resource isn't strictly required, you should use `Option<Read<T>>`.
 ///
 /// # Type parameters
 ///
@@ -163,7 +163,7 @@ where
 
 /// Allows to fetch a resource in a system mutably.
 /// **This will panic if the resource does not exist.**
-/// Usage of `FetchMut` or `Option<FetchMut>` is therefore recommended.
+/// Usage of `Read` or `Option<Read>` is therefore recommended.
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
@@ -171,7 +171,7 @@ pub type ReadExpect<'a, T> = Read<'a, T, PanicHandler>;
 
 /// Allows to fetch a resource in a system mutably.
 /// **This will panic if the resource does not exist.**
-/// Usage of `FetchMut` or `Option<FetchMut>` is therefore recommended.
+/// Usage of `Write` or `Option<Write>` is therefore recommended.
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
