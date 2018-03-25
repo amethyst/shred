@@ -80,10 +80,6 @@ pub trait System<'a> {
 /// required for the execution.
 pub trait SystemData<'a> {
     /// Sets up `Resources` for fetching this system data.
-    ///
-    /// # Contract
-    ///
-    /// After `setup`, `SystemData::fetch` may only panic in case of a contract violation.
     fn setup(res: &mut Resources);
 
     /// Creates a new resource bundle
@@ -99,7 +95,8 @@ pub trait SystemData<'a> {
     /// # Panics
     ///
     /// This function may panic if the above contract is violated.
-    /// This function may panic if `setup` was not called and the resource doesn't exist.
+    /// This function may panic if the resource doesn't exist. This is only the case if either
+    /// `setup` was not called or it didn't insert any fallback value.
     ///
     /// [`Resources`]: trait.Resources.html
     fn fetch(res: &'a Resources) -> Self;

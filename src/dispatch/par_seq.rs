@@ -110,9 +110,9 @@ impl<H> Par<H, Nil> {
                 sys.reads(&mut sys_reads);
                 sys.writes(&mut sys_writes);
 
-                !(check_intersection(writes.iter(), sys_reads.iter()) ||
-                    check_intersection(writes.iter(), sys_writes.iter()) ||
-                    check_intersection(reads.iter(), sys_writes.iter()))
+                !(check_intersection(writes.iter(), sys_reads.iter())
+                    || check_intersection(writes.iter(), sys_writes.iter())
+                    || check_intersection(reads.iter(), sys_writes.iter()))
             },
             "Tried to add system with conflicting reads / writes"
         );
@@ -226,6 +226,12 @@ where
         ParSeq { run, pool }
     }
 
+    /// Sets up `res` for `dispatch`ing.
+    /// This will add default values for required resources by calling `System::setup`.
+    pub fn setup(&mut self, res: &mut Resources) {
+        self.run.setup(res);
+    }
+
     /// Dispatches the systems using `res`.
     /// This doesn't call any virtual functions.
     ///
@@ -237,6 +243,7 @@ where
 }
 
 pub trait RunWithPool<'a> {
+    fn setup(&mut self, res: &mut Resources);
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
 
     fn reads(&self, reads: &mut Vec<ResourceId>);
@@ -247,6 +254,10 @@ impl<'a, T> RunWithPool<'a> for T
 where
     T: System<'a>,
 {
+    fn setup(&mut self, res: &mut Resources) {
+        T::setup(res);
+    }
+
     fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
         RunNow::run_now(self, res);
     }
@@ -256,7 +267,6 @@ where
 
         reads.extend(T::SystemData::reads())
     }
-
     fn writes(&self, writes: &mut Vec<ResourceId>) {
         use system::SystemData;
 
@@ -269,6 +279,11 @@ where
     H: RunWithPool<'a> + Send,
     T: RunWithPool<'a> + Send,
 {
+    fn setup(&mut self, res: &mut Resources) {
+        self.head.setup(res);
+        self.tail.setup(res);
+    }
+
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
         let head = &mut self.head;
         let tail = &mut self.tail;
@@ -287,7 +302,6 @@ where
         self.head.reads(reads);
         self.tail.reads(reads);
     }
-
     fn writes(&self, writes: &mut Vec<ResourceId>) {
         self.head.writes(writes);
         self.tail.writes(writes);
@@ -326,6 +340,11 @@ where
     H: RunWithPool<'a>,
     T: RunWithPool<'a>,
 {
+    fn setup(&mut self, res: &mut Resources) {
+        self.head.setup(res);
+        self.tail.setup(res);
+    }
+
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
         self.head.run(res, pool);
         self.tail.run(res, pool);
