@@ -80,8 +80,10 @@ impl<'a> Stage<'a> {
     }
 
     pub fn setup(&mut self, res: &mut Resources) {
-        for sys in self.groups.iter_mut().flat_map(|group| group.iter_mut()) {
-            sys.setup(res);
+        for group in &mut self.groups {
+            for sys in group {
+                sys.setup(res);
+            }
         }
     }
 

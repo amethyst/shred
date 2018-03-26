@@ -62,7 +62,6 @@ extern crate arrayvec;
 extern crate fxhash;
 #[macro_use]
 extern crate mopa;
-extern crate parking_lot;
 #[cfg(feature = "parallel")]
 extern crate rayon;
 extern crate smallvec;
