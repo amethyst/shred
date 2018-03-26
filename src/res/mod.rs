@@ -1,6 +1,8 @@
 //! Module for resource related types
 
+pub use self::data::{Read, ReadExpect, Write, WriteExpect};
 pub use self::entry::Entry;
+pub use self::setup::{DefaultProvider, PanicHandler, SetupHandler};
 
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -11,15 +13,19 @@ use mopa::Any;
 
 use self::entry::create_entry;
 use cell::{Ref, RefMut, TrustCell};
-use system::SystemData;
 
+mod data;
 mod entry;
+#[macro_use]
+mod setup;
 
-const RESOURCE_NOT_FOUND: &str = "No resource with the given id";
-
-/// Return value of [`Resources::fetch`].
+/// Allows to fetch a resource in a system immutably.
 ///
-/// [`Resources::fetch`]: struct.Resources.html#method.fetch
+/// If the resource isn't strictly required, you should use `Option<Fetch<T>>`.
+///
+/// # Type parameters
+///
+/// * `T`: The type of the resource
 pub struct Fetch<'a, T: 'a> {
     inner: Ref<'a, Box<Resource>>,
     phantom: PhantomData<&'a T>,
@@ -36,62 +42,13 @@ where
     }
 }
 
-impl<'a, T> SystemData<'a> for Fetch<'a, T>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch()
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![]
-    }
-}
-
-/// Return value of [`Resources::fetch_id`].
+/// Allows to fetch a resource in a system mutably.
 ///
-/// [`Resources::fetch_id`]: struct.Resources.html#method.fetch_id
-pub struct FetchId<'a> {
-    inner: Ref<'a, Box<Resource>>,
-}
-
-impl<'a> Deref for FetchId<'a> {
-    type Target = Resource;
-
-    fn deref(&self) -> &Resource {
-        self.inner.as_ref()
-    }
-}
-
-/// Return value of [`Resources::fetch_id_mut`].
+/// If the resource isn't strictly required, you should use `Option<FetchMut<T>>`.
 ///
-/// [`Resources::fetch_id_mut`]: struct.Resources.html#method.fetch_id_mut
-pub struct FetchIdMut<'a> {
-    inner: RefMut<'a, Box<Resource>>,
-}
-
-impl<'a> Deref for FetchIdMut<'a> {
-    type Target = Resource;
-
-    fn deref(&self) -> &Resource {
-        self.inner.as_ref()
-    }
-}
-
-impl<'a> DerefMut for FetchIdMut<'a> {
-    fn deref_mut(&mut self) -> &mut Resource {
-        self.inner.as_mut()
-    }
-}
-
-/// Return value of [`Resources::fetch_mut`].
+/// # Type parameters
 ///
-/// [`Resources::fetch_mut`]: struct.Resources.html#method.fetch_mut
+/// * `T`: The type of the resource
 pub struct FetchMut<'a, T: 'a> {
     inner: RefMut<'a, Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
@@ -114,57 +71,6 @@ where
 {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.inner.downcast_mut_unchecked() }
-    }
-}
-
-impl<'a, T> SystemData<'a> for FetchMut<'a, T>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch_mut()
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
-    }
-}
-
-impl<'a, T> SystemData<'a> for Option<Fetch<'a, T>>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        res.try_fetch()
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![]
-    }
-}
-
-impl<'a, T> SystemData<'a> for Option<FetchMut<'a, T>>
-where
-    T: Resource,
-{
-    fn fetch(res: &'a Resources) -> Self {
-        res.try_fetch_mut()
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<T>()]
     }
 }
 
@@ -198,14 +104,12 @@ impl ResourceId {
     }
 }
 
-/// A resource container, which
-/// provides methods to access to
+/// A resource container, which provides methods to access to
 /// the contained resources.
 ///
 /// # Resource Ids
 ///
-/// Resources are in general identified
-/// by `ResourceId`, which consists of a `TypeId`.
+/// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct Resources {
     resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
@@ -217,16 +121,13 @@ impl Resources {
         Default::default()
     }
 
-    /// Adds a new resource to this container.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the resource is already registered.
+    /// Inserts a resource into this container. If the resource existed before, it will be
+    /// overwritten.
     ///
     /// # Examples
     ///
-    /// Every type satisfying `Any + Debug + Send + Sync`
-    /// automatically implements `Resource`:
+    /// Every type satisfying `Any + Debug + Send + Sync` automatically implements `Resource`,
+    /// thus can be added:
     ///
     /// ```rust
     /// # #![allow(dead_code)]
@@ -234,38 +135,37 @@ impl Resources {
     /// struct MyRes(i32);
     /// ```
     ///
-    /// When you have a resource, simply
-    /// register it like this:
+    /// When you have a resource, simply insert it like this:
     ///
     /// ```rust
     /// # #[derive(Debug)] struct MyRes(i32);
     /// use shred::Resources;
     ///
     /// let mut res = Resources::new();
-    /// res.add(MyRes(5));
+    /// res.insert(MyRes(5));
     /// ```
-    pub fn add<R>(&mut self, r: R)
+    pub fn insert<R>(&mut self, r: R)
     where
         R: Resource,
     {
-        use std::collections::hash_map::Entry;
+        self.resources
+            .insert(ResourceId::new::<R>(), TrustCell::new(Box::new(r)));
+    }
 
-        let entry = self.resources.entry(ResourceId::new::<R>());
-
-        if let Entry::Vacant(e) = entry {
-            e.insert(TrustCell::new(Box::new(r)));
-        } else {
-            panic!("Tried to add a resource though \
-                    an instance of this type already exists in `Resources`");
-        }
+    /// Returns true if the specified resource type `R` exists in `self`.
+    pub fn has_value<R>(&self) -> bool
+    where
+        R: Resource,
+    {
+        self.has_value_raw(ResourceId::new::<R>())
     }
 
     /// Returns true if the specified resource type exists in `self`.
-    pub fn has_value(&self, id: ResourceId) -> bool {
+    pub fn has_value_raw(&self, id: ResourceId) -> bool {
         self.resources.contains_key(&id)
     }
 
-    /// Returns an entry for the resource with type `R` and id 0.
+    /// Returns an entry for the resource with type `R`.
     pub fn entry<R>(&mut self) -> Entry<R>
     where
         R: Resource,
@@ -273,34 +173,30 @@ impl Resources {
         create_entry(self.resources.entry(ResourceId::new::<R>()))
     }
 
-    /// Fetches the resource with the specified type `T`.
-    /// The id is useful if you don't define your resources
-    /// in Rust or you want a more dynamic resource handling.
-    /// By default, the `#[derive(SystemData)]` passes `()`
-    /// as id.
+    /// Fetches the resource with the specified type `T` or panics if it doesn't exist.
     ///
     /// # Panics
     ///
+    /// Panics if the resource doesn't exist.
     /// Panics if the resource is being accessed mutably.
-    /// Also panics if there is no such resource.
     pub fn fetch<T>(&self) -> Fetch<T>
     where
         T: Resource,
     {
-        self.try_fetch().expect(RESOURCE_NOT_FOUND)
+        self.try_fetch().unwrap_or_else(|| fetch_panic!())
     }
 
-    /// Like `fetch`, but returns an `Option` instead of panicking in the case of the resource
-    /// being accessed mutably.
+    /// Like `fetch`, but returns an `Option` instead of inserting a default value
+    /// in case the resource does not exist.
     pub fn try_fetch<T>(&self) -> Option<Fetch<T>>
     where
         T: Resource,
     {
-        self.try_fetch_internal(TypeId::of::<T>()).map(|r| {
-            Fetch {
-                inner: r.borrow(),
-                phantom: PhantomData,
-            }
+        let res_id = ResourceId::new::<T>();
+
+        self.resources.get(&res_id).map(|r| Fetch {
+            inner: r.borrow(),
+            phantom: PhantomData,
         })
     }
 
@@ -311,58 +207,50 @@ impl Resources {
     where
         T: Resource,
     {
-        self.try_fetch_mut().expect(RESOURCE_NOT_FOUND)
+        self.try_fetch_mut().unwrap_or_else(|| fetch_panic!())
     }
 
-    /// Like `fetch_mut`, but returns an `Option` instead of panicking in the case of the resource
-    /// being accessed mutably.
+    /// Like `fetch_mut`, but returns an `Option` instead of inserting a default value
+    /// in case the resource does not exist.
     pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<T>>
     where
         T: Resource,
     {
-        self.try_fetch_internal(TypeId::of::<T>()).map(|r| {
-            FetchMut {
-                inner: r.borrow_mut(),
-                phantom: PhantomData,
-            }
-        })
-    }
+        let res_id = ResourceId::new::<T>();
 
-    fn try_fetch_internal(&self, id: TypeId) -> Option<&TrustCell<Box<Resource>>> {
-        self.resources.get(&ResourceId(id))
+        self.resources.get(&res_id).map(|r| FetchMut {
+            inner: r.borrow_mut(),
+            phantom: PhantomData,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {RunNow, System, SystemData};
 
+    #[derive(Default)]
     struct Res;
 
     #[test]
     fn fetch_aspects() {
-        assert_eq!(
-            Fetch::<Res>::reads(),
-            vec![ResourceId::new::<Res>()]
-        );
-        assert_eq!(Fetch::<Res>::writes(), vec![]);
+        assert_eq!(Read::<Res>::reads(), vec![ResourceId::new::<Res>()]);
+        assert_eq!(Read::<Res>::writes(), vec![]);
 
         let mut res = Resources::new();
-        res.add(Res);
-        Fetch::<Res>::fetch(&res);
+        res.insert(Res);
+        Read::<Res>::fetch(&res);
     }
 
     #[test]
     fn fetch_mut_aspects() {
-        assert_eq!(FetchMut::<Res>::reads(), vec![]);
-        assert_eq!(
-            FetchMut::<Res>::writes(),
-            vec![ResourceId::new::<Res>()]
-        );
+        assert_eq!(Write::<Res>::reads(), vec![]);
+        assert_eq!(Write::<Res>::writes(), vec![ResourceId::new::<Res>()]);
 
         let mut res = Resources::new();
-        res.add(Res);
-        FetchMut::<Res>::fetch(&res);
+        res.insert(Res);
+        Write::<Res>::fetch(&res);
     }
 
     #[test]
@@ -370,10 +258,10 @@ mod tests {
         struct Foo;
 
         let mut res = Resources::new();
-        res.add(Res);
+        res.insert(Res);
 
-        assert!(res.has_value(ResourceId::new::<Res>()));
-        assert!(!res.has_value(ResourceId::new::<Foo>()));
+        assert!(res.has_value::<Res>());
+        assert!(!res.has_value::<Foo>());
     }
 
     #[allow(unused)]
@@ -381,10 +269,10 @@ mod tests {
     #[should_panic(expected = "Already borrowed")]
     fn read_write_fails() {
         let mut res = Resources::new();
-        res.add(Res);
+        res.insert(Res);
 
-        let read = res.fetch::<Res>();
-        let write = res.fetch_mut::<Res>();
+        let read: Fetch<Res> = res.fetch();
+        let write: FetchMut<Res> = res.fetch_mut();
     }
 
     #[allow(unused)]
@@ -392,9 +280,35 @@ mod tests {
     #[should_panic(expected = "Already borrowed mutably")]
     fn write_read_fails() {
         let mut res = Resources::new();
-        res.add(Res);
+        res.insert(Res);
 
-        let write = res.fetch_mut::<Res>();
-        let read = res.fetch::<Res>();
+        let write: FetchMut<Res> = res.fetch_mut();
+        let read: Fetch<Res> = res.fetch();
+    }
+
+    #[test]
+    fn default_works() {
+        struct Sys;
+
+        impl<'a> System<'a> for Sys {
+            type SystemData = Write<'a, i32>;
+
+            fn run(&mut self, mut data: Self::SystemData) {
+                assert_eq!(*data, 0);
+
+                *data = 33;
+            }
+        }
+
+        let mut res = Resources::new();
+        assert!(res.try_fetch::<i32>().is_none());
+
+        let mut sys = Sys;
+        sys.setup(&mut res);
+
+        sys.run_now(&res);
+
+        assert!(res.try_fetch::<i32>().is_some());
+        assert_eq!(*res.fetch::<i32>(), 33);
     }
 }

@@ -25,6 +25,12 @@ impl<T: Clone> VecStorage<T> {
     }
 }
 
+impl<T> Default for VecStorage<T> {
+    fn default() -> Self {
+        VecStorage { data: vec![] }
+    }
+}
+
 impl<T> Index<usize> for VecStorage<T> {
     type Output = T;
 
@@ -73,10 +79,10 @@ const NUM_COMPONENTS: usize = 200;
 
 #[derive(SystemData)]
 struct SpringForceData<'a> {
-    pos: Fetch<'a, PosStorage>,
-    spring: Fetch<'a, SpringStorage>,
+    pos: Read<'a, PosStorage>,
+    spring: Read<'a, SpringStorage>,
 
-    force: FetchMut<'a, ForceStorage>,
+    force: Write<'a, ForceStorage>,
 }
 
 struct SpringForce;
@@ -105,12 +111,12 @@ impl<'a> System<'a> for SpringForce {
 
 #[derive(SystemData)]
 struct IntegrationData<'a> {
-    force: Fetch<'a, ForceStorage>,
-    mass: Fetch<'a, MassStorage>,
-    pos: FetchMut<'a, PosStorage>,
-    vel: FetchMut<'a, VelStorage>,
+    force: Read<'a, ForceStorage>,
+    mass: Read<'a, MassStorage>,
+    pos: Write<'a, PosStorage>,
+    vel: Write<'a, VelStorage>,
 
-    time: Fetch<'a, DeltaTime>,
+    time: Option<Read<'a, DeltaTime>>,
 }
 
 struct IntegrationSystem;
@@ -119,6 +125,11 @@ impl<'a> System<'a> for IntegrationSystem {
     type SystemData = IntegrationData<'a>;
 
     fn run(&mut self, mut data: IntegrationData) {
+        let delta = match data.time {
+            Some(time) => time.0,
+            None => return,
+        };
+
         for elem in 0..NUM_COMPONENTS {
             let mass = data.mass[elem].0;
 
@@ -127,7 +138,6 @@ impl<'a> System<'a> for IntegrationSystem {
                 continue;
             }
 
-            let delta = data.time.0;
             let pos = &mut data.pos[elem].0;
             let vel = data.vel[elem].0;
 
@@ -146,7 +156,7 @@ impl<'a> System<'a> for IntegrationSystem {
 
 #[derive(SystemData)]
 struct ClearForceAccumData<'a> {
-    force: FetchMut<'a, ForceStorage>,
+    force: Write<'a, ForceStorage>,
 }
 
 struct ClearForceAccum;
@@ -187,12 +197,12 @@ fn basic(b: &mut Bencher) {
 
     pos.data[0] = Pos(Vec3::new(-5.0, -5.0, -5.0));
 
-    res.add(DeltaTime(0.05));
-    res.add(mass);
-    res.add(pos);
-    res.add(vel);
-    res.add(force);
-    res.add(spring);
+    res.insert(DeltaTime(0.05));
+    res.insert(mass);
+    res.insert(pos);
+    res.insert(vel);
+    res.insert(force);
+    res.insert(spring);
 
     b.iter(|| dispatcher.dispatch(&mut res));
 }

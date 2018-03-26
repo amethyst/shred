@@ -79,15 +79,23 @@ impl<'a> Stage<'a> {
         Default::default()
     }
 
+    pub fn setup(&mut self, res: &mut Resources) {
+        for group in &mut self.groups {
+            for sys in group {
+                sys.setup(res);
+            }
+        }
+    }
+
     #[cfg(feature = "parallel")]
     pub fn execute(&mut self, res: &Resources) {
         use rayon::prelude::*;
 
-        self.groups
-            .par_iter_mut()
-            .for_each(|group| for system in group {
+        self.groups.par_iter_mut().for_each(|group| {
+            for system in group {
                 system.run_now(res);
-            });
+            }
+        });
     }
 
     pub fn execute_seq(&mut self, res: &Resources) {
@@ -159,8 +167,14 @@ impl<'a> StagesBuilder<'a> {
         self.stages
     }
 
-    pub fn write_par_seq(&self, f: &mut fmt::Formatter, map: &FxHashMap<String, SystemId>) -> fmt::Result {
-        let map: FxHashMap<_, _> = map.iter().map(|(key, value)| (*value, key as &str)).collect();
+    pub fn write_par_seq(
+        &self,
+        f: &mut fmt::Formatter,
+        map: &FxHashMap<String, SystemId>,
+    ) -> fmt::Result {
+        let map: FxHashMap<_, _> = map.iter()
+            .map(|(key, value)| (*value, key as &str))
+            .collect();
 
         writeln!(f, "seq![")?;
         for stage in &self.ids {
@@ -231,8 +245,8 @@ impl<'a> StagesBuilder<'a> {
             .find(|&(stage, conflict)| match conflict {
                 Conflict::None => true,
                 Conflict::Single(group) => {
-                    self.stages[stage].groups[group].len() < MAX_SYSTEMS_PER_GROUP - 1 &&
-                        self.improves_balance(stage, group, new_time as u8)
+                    self.stages[stage].groups[group].len() < MAX_SYSTEMS_PER_GROUP - 1
+                        && self.improves_balance(stage, group, new_time as u8)
                 }
                 Conflict::Multiple => false,
             })
@@ -284,8 +298,8 @@ impl<'a> StagesBuilder<'a> {
                     .iter()
                     .chain(reads[stage][group].iter());
 
-                let inters = check_intersection(new_writes.clone(), reads_and_writes) ||
-                    check_intersection(new_reads.clone(), writes[stage][group].iter());
+                let inters = check_intersection(new_writes.clone(), reads_and_writes)
+                    || check_intersection(new_reads.clone(), writes[stage][group].iter());
 
                 if inters {
                     true
@@ -335,9 +349,7 @@ mod tests {
             .map(|groups| {
                 groups
                     .into_iter()
-                    .map(|systems| {
-                        systems.into_iter().map(|id| SystemId(*id)).collect()
-                    })
+                    .map(|systems| systems.into_iter().map(|id| SystemId(*id)).collect())
                     .collect()
             })
             .collect()
@@ -367,8 +379,11 @@ mod tests {
             .collect()
     }
 
+    #[derive(Default)]
     struct ResA;
+    #[derive(Default)]
     struct ResB;
+    #[derive(Default)]
     struct ResC;
 
     #[test]
@@ -442,12 +457,12 @@ mod tests {
 
     #[test]
     fn uses_group() {
-        use res::{Fetch, FetchMut};
+        use {Read, Write};
 
         struct SysA;
 
         impl<'a> System<'a> for SysA {
-            type SystemData = Fetch<'a, ResA>;
+            type SystemData = Read<'a, ResA>;
 
             fn run(&mut self, _: Self::SystemData) {}
         }
@@ -455,7 +470,7 @@ mod tests {
         struct SysB;
 
         impl<'a> System<'a> for SysB {
-            type SystemData = FetchMut<'a, ResB>;
+            type SystemData = Write<'a, ResB>;
 
             fn run(&mut self, _: Self::SystemData) {}
 
@@ -467,7 +482,7 @@ mod tests {
         struct SysC;
 
         impl<'a> System<'a> for SysC {
-            type SystemData = Fetch<'a, ResB>;
+            type SystemData = Read<'a, ResB>;
 
             fn run(&mut self, _: Self::SystemData) {}
 

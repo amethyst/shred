@@ -49,6 +49,12 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
             for #name< #impl_lt_tokens , #impl_ty_params >
             where #where_clause
         {
+            fn setup(res: &mut ::shred::Resources) {
+                #(
+                    <#tys as ::shred::SystemData> :: setup(res);
+                )*
+            }
+
             fn fetch(res: & #impl_fetch_lt ::shred::Resources) -> Self {
                 #fetch_return
             }

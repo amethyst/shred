@@ -62,7 +62,6 @@ pub fn create_entry<'a, T>(e: StdEntry<'a, ResourceId, TrustCell<Box<Resource>>>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use res::Resources;
 
     #[test]
@@ -72,6 +71,6 @@ mod tests {
         let mut res = Resources::new();
         res.entry().or_insert(Res);
 
-        assert!(res.has_value(ResourceId::new::<Res>()));
+        assert!(res.has_value::<Res>());
     }
 }

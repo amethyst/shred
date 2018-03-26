@@ -27,9 +27,9 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System};
-/// # #[derive(Debug)] struct Res;
-/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
+/// # #[derive(Debug, Default)] struct Res;
+/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
 /// # impl<'a> System<'a> for Dummy {
 /// #   type SystemData = Data<'a>;
@@ -61,9 +61,9 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Fetch, System};
-/// # #[derive(Debug)] struct Res;
-/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Fetch<'a, Res> }
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
+/// # #[derive(Debug, Default)] struct Res;
+/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
 /// # impl<'a> System<'a> for Dummy {
 /// #   type SystemData = Data<'a>;
@@ -305,8 +305,8 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
 impl<'b> DispatcherBuilder<'static, 'b> {
     /// Builds an async dispatcher.
     ///
-    /// It does not allow non-static types and
-    /// accepts a `Resource` struct.
+    /// It does not allow non-static types and accepts a `Resources` struct or a value that
+    /// can be borrowed as `Resources`.
     pub fn build_async<R>(self, res: R) -> ::dispatch::async::AsyncDispatcher<'b, R> {
         use dispatch::async::new_async;
 

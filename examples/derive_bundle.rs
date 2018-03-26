@@ -2,18 +2,18 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Fetch, FetchMut, Resources, SystemData};
+use shred::{Read, Resources, SystemData, Write};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResA;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ResB;
 
 #[derive(SystemData)]
 struct AutoBundle<'a> {
-    a: Fetch<'a, ResA>,
-    b: FetchMut<'a, ResB>,
+    a: Read<'a, ResA>,
+    b: Write<'a, ResB>,
 }
 
 // We can even nest system data
@@ -24,9 +24,8 @@ struct Nested<'a> {
 
 fn main() {
     let mut res = Resources::new();
-    res.add(ResA);
-    res.add(ResB);
-
+    res.insert(ResA);
+    res.insert(ResB);
 
     {
         let mut bundle = AutoBundle::fetch(&res);

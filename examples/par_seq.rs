@@ -4,7 +4,7 @@ extern crate shred;
 
 use rayon::ThreadPoolBuilder;
 
-use shred::{ParSeq, Resources, System};
+use shred::{ParSeq, Read, Resources, System};
 
 macro_rules! impl_sys {
     ($( $id:ident )*) => {
@@ -29,10 +29,10 @@ struct SysLocal(*const u8);
 impl_sys!(SysA SysB SysC SysD SysLocal);
 
 impl<'a, 'b> System<'a> for SysWithLifetime<'b> {
-    type SystemData = ();
+    type SystemData = Read<'a, u64>;
 
-    fn run(&mut self, _: Self::SystemData) {
-        println!("SysWithLifetime");
+    fn run(&mut self, nr: Read<'a, u64>) {
+        println!("SysWithLifetime, {}", *nr);
     }
 }
 
@@ -41,7 +41,7 @@ fn main() {
 
     let pool = ThreadPoolBuilder::new().build().expect("OS error");
 
-    let res = Resources::new();
+    let mut res = Resources::new();
     let x = 5u8;
 
     let mut dispatcher = ParSeq::new(
@@ -60,7 +60,8 @@ fn main() {
         &pool,
     );
 
-    dispatcher.dispatch(&res);
+    dispatcher.setup(&mut res);
+    dispatcher.dispatch(&mut res);
 
     // If we want to generate this graph from a `DispatcherBuilder`,
     // we can use `print_par_seq`:

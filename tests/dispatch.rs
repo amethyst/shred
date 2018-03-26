@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Dispatcher, DispatcherBuilder, Fetch, FetchMut, Resources, RunningTime, System};
+use shred::{Dispatcher, DispatcherBuilder, Read, Resources, RunningTime, System, Write};
 
 fn sleep_short() {
     use std::thread::sleep;
@@ -11,17 +11,19 @@ fn sleep_short() {
     sleep(Duration::new(0, 1_000));
 }
 
+#[derive(Default)]
 struct Res;
+#[derive(Default)]
 struct ResB;
 
 #[derive(SystemData)]
 struct DummyData<'a> {
-    _res: Fetch<'a, Res>,
+    _res: Read<'a, Res>,
 }
 
 #[derive(SystemData)]
 struct DummyDataMut<'a> {
-    _res: FetchMut<'a, Res>,
+    _res: Write<'a, Res>,
 }
 
 struct DummySys;
@@ -75,7 +77,7 @@ fn dispatch_builder_invalid() {
 #[test]
 fn dispatch_basic() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let number = 5;
 
@@ -91,7 +93,7 @@ fn dispatch_basic() {
 #[test]
 fn dispatch_ww_block() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
@@ -104,7 +106,7 @@ fn dispatch_ww_block() {
 #[test]
 fn dispatch_rw_block() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySys, "a", &[])
@@ -117,7 +119,7 @@ fn dispatch_rw_block() {
 #[test]
 fn dispatch_rw_block_rev() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
@@ -130,7 +132,7 @@ fn dispatch_rw_block_rev() {
 #[test]
 fn dispatch_sequential() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
@@ -144,7 +146,7 @@ fn dispatch_sequential() {
 #[test]
 fn dispatch_async() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
@@ -160,7 +162,7 @@ fn dispatch_async() {
 #[test]
 fn dispatch_async_res() {
     let mut res = Resources::new();
-    res.add(Res);
+    res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
@@ -170,19 +172,19 @@ fn dispatch_async_res() {
     d.dispatch();
 
     let res = d.mut_res();
-    res.add(ResB);
+    res.insert(ResB);
 }
 
 #[test]
 fn dispatch_stage_group() {
     let mut res = Resources::new();
-    res.add(Res);
-    res.add(ResB);
+    res.insert(Res);
+    res.insert(ResB);
 
     struct ReadingFromResB;
 
     impl<'a> System<'a> for ReadingFromResB {
-        type SystemData = Fetch<'a, ResB>;
+        type SystemData = Read<'a, ResB>;
 
         fn run(&mut self, _: Self::SystemData) {
             sleep_short()
@@ -196,7 +198,7 @@ fn dispatch_stage_group() {
     struct WritingToResB;
 
     impl<'a> System<'a> for WritingToResB {
-        type SystemData = FetchMut<'a, ResB>;
+        type SystemData = Write<'a, ResB>;
 
         fn run(&mut self, _: Self::SystemData) {
             sleep_short()

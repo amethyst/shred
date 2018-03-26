@@ -20,8 +20,7 @@ pub fn new_async<'a, R>(
     }
 }
 
-/// Like, `Dispatcher` but works
-/// asynchronously.
+/// Like, `Dispatcher` but works asynchronously.
 pub struct AsyncDispatcher<'a, R> {
     data: Data<R>,
     thread_local: ThreadLocal<'a>,
