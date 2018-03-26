@@ -78,7 +78,7 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 pub use dispatch::{Par, ParSeq, Seq};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
-pub use meta::{MetaIter, MetaIterMut, MetaTable};
+pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
 pub use system::{RunNow, RunningTime, System, SystemData};
