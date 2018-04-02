@@ -223,7 +223,7 @@ mod tests {
     fn panic_read_and_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
-        let mut a = cell.borrow();
+        let _a = cell.borrow();
 
         assert_eq!(7, *cell.borrow_mut());
     }
