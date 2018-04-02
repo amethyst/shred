@@ -1,15 +1,15 @@
 //! Helper module for some internals, most users don't need to interact with it.
 
-#![allow(missing_docs)]
-
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Error as FormatError, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::usize;
 
+/// Marker struct for an invalid borrow error
 #[derive(Clone, Copy, Debug)]
-pub struct InvalidBorrow;
+struct InvalidBorrow;
 
 impl Display for InvalidBorrow {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
@@ -24,6 +24,9 @@ impl Error for InvalidBorrow {
     }
 }
 
+/// An immutable reference to data in a `TrustedCell`.
+///
+/// Access the value via. `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
     flag: &'a AtomicUsize,
@@ -44,6 +47,9 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
+/// A mutable reference to data in a `TrustedCell`.
+///
+/// Access the value via. `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
     flag: &'a AtomicUsize,
@@ -70,8 +76,7 @@ impl<'a, T> Drop for RefMut<'a, T> {
     }
 }
 
-/// A custom cell similar to
-/// `RefCell`, but it is thread-safe.
+/// A custom cell container that is a `RefCell` with thread-safety.
 #[derive(Debug)]
 pub struct TrustCell<T> {
     flag: AtomicUsize,
@@ -79,6 +84,7 @@ pub struct TrustCell<T> {
 }
 
 impl<T> TrustCell<T> {
+    /// Create a new cell, similar to `RefCell::new`
     pub fn new(val: T) -> Self {
         TrustCell {
             flag: AtomicUsize::new(0),
@@ -86,6 +92,11 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Get an immutable reference to the inner data
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if there is a mutable reference to the data already in use.
     pub fn borrow(&self) -> Ref<T> {
         self.check_flag_read().expect("Already borrowed mutably");
 
@@ -95,6 +106,11 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Get a mutable reference to the inner data
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if there are any references to the data already in use.
     pub fn borrow_mut(&self) -> RefMut<T> {
         self.check_flag_write().expect("Already borrowed");
 
@@ -104,15 +120,20 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Gets exclusive access to the inner value, bypassing the Cell.
     pub fn get_mut(&mut self) -> &mut T {
+        // safe because we have exclusive access via. &mut self
         unsafe { &mut *self.inner.get() }
     }
 
+    /// Make sure we are allowed to aquire a read lock, and increment the read count by 1
     fn check_flag_read(&self) -> Result<(), InvalidBorrow> {
+        // Check that no write reference is out, then try to increment the read count and return
+        // once successful.
         loop {
             let val = self.flag.load(Ordering::Acquire);
 
-            if val == !0 {
+            if val == usize::MAX {
                 return Err(InvalidBorrow);
             }
 
@@ -122,8 +143,11 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Make sure we are allowed to aquire a write lock, and then set the write lock flag.
     fn check_flag_write(&self) -> Result<(), InvalidBorrow> {
-        match self.flag.compare_and_swap(0, !0, Ordering::AcqRel) {
+        // Check we have 0 references out, and then set the ref count to usize::MAX to
+        // indicate a write lock.
+        match self.flag.compare_and_swap(0, usize::MAX, Ordering::AcqRel) {
             0 => Ok(()),
             _ => Err(InvalidBorrow),
         }
@@ -150,7 +174,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn multi() {
+    fn allow_multiple_reads() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         let a = cell.borrow();
@@ -160,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn write() {
+    fn allow_single_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         {
@@ -172,10 +196,9 @@ mod tests {
         assert_eq!(10, *cell.borrow());
     }
 
-    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "Already borrowed mutably")]
-    fn panic_already() {
+    fn panic_write_and_read() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         let mut a = cell.borrow_mut();
@@ -184,10 +207,20 @@ mod tests {
         assert_eq!(7, *cell.borrow());
     }
 
-    #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "Already borrowed")]
-    fn panic_already_write() {
+    fn panic_write_and_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let mut a = cell.borrow_mut();
+        *a = 7;
+
+        assert_eq!(7, *cell.borrow_mut());
+    }
+
+    #[test]
+    #[should_panic(expected = "Already borrowed")]
+    fn panic_read_and_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         let mut a = cell.borrow_mut();
