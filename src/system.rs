@@ -69,7 +69,7 @@ pub trait System<'a> {
     }
 
     /// Return the accessor from the [`SystemData`].
-    fn accessor(&self) -> <Self::SystemData>::Accessor {
+    fn accessor(&self) -> <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor {
         <Self::SystemData>::Accessor::try_new().expect("Missing implementation for `accessor`");
     }
 
@@ -119,10 +119,10 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
 
 macro_rules! impl_data {
     ( $($ty:ident),* ) => {
-        impl<'a, T, $($ty),*> SystemData<'a> for ( $( $ty , )* )
-            where T: Accessor, $( $ty : SystemData<'a> ),*
+        impl<'a, Type, $($ty),*> SystemData<'a> for ( $( $ty , )* )
+            where Type: Accessor, $( $ty : SystemData<'a> ),*
         {
-            type Accessor = T;
+            type Accessor = Type;
 
             fn setup(res: &mut Resources) {
                 #![allow(unused_variables)]
@@ -289,6 +289,7 @@ mod impl_data {
     use super::*;
 
     impl_data!(A);
+    impl_data!(A, B);
     /*
     impl_data!(A, B, C);
     impl_data!(A, B, C, D);
