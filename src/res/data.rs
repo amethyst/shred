@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resources,
-     SetupHandler, SystemData};
+     SetupHandler, StaticSystemData};
 
 /// Allows to fetch a resource in a system immutably.
 ///
@@ -37,7 +37,7 @@ impl<'a, T, F> From<Fetch<'a, T>> for Read<'a, T, F> {
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Read<'a, T, F>
+impl<'a, T, F> StaticSystemData<'a> for Read<'a, T, F>
 where
     T: Resource,
     F: SetupHandler<T>,
@@ -100,7 +100,7 @@ impl<'a, T, F> From<FetchMut<'a, T>> for Write<'a, T, F> {
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Write<'a, T, F>
+impl<'a, T, F> StaticSystemData<'a> for Write<'a, T, F>
 where
     T: Resource,
     F: SetupHandler<T>,
@@ -124,7 +124,7 @@ where
 
 // ------------------
 
-impl<'a, T, F> SystemData<'a> for Option<Read<'a, T, F>>
+impl<'a, T, F> StaticSystemData<'a> for Option<Read<'a, T, F>>
 where
     T: Resource,
 {
@@ -143,7 +143,7 @@ where
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Option<Write<'a, T, F>>
+impl<'a, T, F> StaticSystemData<'a> for Option<Write<'a, T, F>>
 where
     T: Resource,
 {
