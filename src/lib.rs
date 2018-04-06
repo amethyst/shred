@@ -81,4 +81,4 @@ pub use dispatch::AsyncDispatcher;
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
-pub use system::{RunNow, RunningTime, System, SystemData};
+pub use system::{RunNow, RunningTime, System, SystemData, StaticSystemData, Accessor, StaticAccessor};

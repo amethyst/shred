@@ -20,7 +20,7 @@ pub trait RunNow<'a> {
 
 impl<'a, T> RunNow<'a> for T
 where
-    T: System<'a>,
+T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
         let data = T::SystemData::fetch(res);
@@ -80,6 +80,33 @@ pub trait System<'a> {
 }
 
 /// A struct implementing
+/// static system data adds a
+/// static accessor.
+pub trait StaticSystemData<'a> {
+    fn setup(res: &mut Resources);
+
+    fn fetch(res: &'a Resources) -> Self;
+
+    fn reads() -> Vec<ResourceId>;
+
+    fn writes() -> Vec<ResourceId>;
+}
+
+impl<'a, T> SystemData<'a> for T where T: StaticSystemData<'a> {
+    type Accessor = StaticAccessor<T>;
+}
+
+impl<'a, T> Accessor for StaticAccessor<T> where T: StaticSystemData<'a> {
+    fn reads(&self) -> Vec<ResourceId> {
+        T::reads()
+    }
+
+    fn writes(&self) -> Vec<ResourceId> {
+        T::writes()
+    }
+}
+
+/// A struct implementing
 /// system data indicates that it
 /// bundles some resources which are
 /// required for the execution.
@@ -108,11 +135,11 @@ pub trait SystemData<'a> {
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
-    type Accessor = StaticAccessor;
+    type Accessor = StaticAccessor<T>;
 
     fn setup(_: &mut Resources) {}
 
-    fn fetch(_: &'a Self::Accessor, _: &'a Resources) -> Self {
+    fn fetch(_: &Self::Accessor, _: &'a Resources) -> Self {
         PhantomData
     }
 }
@@ -121,28 +148,56 @@ macro_rules! impl_data {
     ( $($ty:ident),* ) => {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
             where $( $ty : SystemData<'a> ),*
-        {
-            type Accessor = StaticAccessor;
+            {
+                type Accessor = StaticAccessor<$($ty),*>;
 
-            fn setup(res: &mut Resources) {
-                #![allow(unused_variables)]
+                fn setup(res: &mut Resources) {
+                    #![allow(unused_variables)]
 
-                $(
-                    <$ty as SystemData>::setup(&mut *res);
-                )*
+                    $(
+                        <$ty as SystemData>::setup(&mut *res);
+                     )*
+                }
+
+                fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
+                    #![allow(unused_variables)]
+
+                    ( $( <$ty as SystemData<'a>>::fetch(access, res), )* )
+                }
             }
 
-            fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
-                #![allow(unused_variables)]
+        impl<$($ty),*> StaticAccessor<$($ty),*> {
+            fn reads() -> Vec<ResourceId> {
+                #![allow(unused_mut)]
 
-                ( $( <$ty as SystemData<'a>>::fetch(access, res), )* )
+                let mut r = Vec::new();
+
+                $( {
+                    let mut reads = <$ty as StaticSystemData>::reads();
+                    r.append(&mut reads);
+                } )*
+
+                r
+            }
+
+            fn writes() -> Vec<ResourceId> {
+                #![allow(unused_mut)]
+
+                let mut r = Vec::new();
+
+                $( {
+                    let mut writes = <$ty as StaticSystemData>::writes();
+                    r.append(&mut writes);
+                } )*
+
+                r
             }
         }
     };
 }
 
 impl<'a> SystemData<'a> for () {
-    type Accessor = StaticAccessor;
+    type Accessor = StaticAccessor<()>;
 
     fn setup(_: &mut Resources) {}
 
@@ -154,9 +209,6 @@ impl<'a> SystemData<'a> for () {
 /// A trait for accessing read/write bundles of [`ResourceId`]s in ['SystemData']. This can be used
 /// to create dynamic systems that don't specify what they fetch at compile-time.
 pub trait Accessor {
-    /// Should return `Some` for all accessors except custom ones.
-    fn try_new() -> Option<Self>;
-
     /// A list of [`ResourceId`]s the bundle
     /// needs read access to in order to
     /// build the target resource bundle.
@@ -172,7 +224,7 @@ pub trait Accessor {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn reads() -> Vec<ResourceId>;
+    fn reads(&self) -> Vec<ResourceId>;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs write access to in order to
@@ -189,51 +241,31 @@ pub trait Accessor {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn writes() -> Vec<ResourceId>;
+    fn writes(&self) -> Vec<ResourceId>;
 }
 
 impl Accessor for () {
-    fn try_new() -> Option<Self> {
-        Some(())
-    }
-    fn reads() -> Vec<ResourceId> {
+    fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
-    fn writes() -> Vec<ResourceId> {
+    fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
 }
 
-impl<'a, T: ?Sized> Accessor for PhantomData<T> {
-    fn reads() -> Vec<ResourceId> {
+impl<T: ?Sized> Accessor for PhantomData<T> {
+    fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
-    fn writes() -> Vec<ResourceId> {
+    fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
 }
 
 #[derive(Default)]
-struct StaticAccessor {
+pub struct StaticAccessor<T> {
     reads: Vec<ResourceId>,
     writes: Vec<ResourceId>
-}
-
-impl Accessor for StaticAccessor {
-    fn try_new() -> Option<Self> {
-        Some(StaticAccessor {
-            reads: Vec::new(),
-            writes: Vec::new(),
-        })
-    }
-
-    fn reads(&self) -> Vec<ResourceId> {
-        self.reads.clone()
-    }
-
-    fn writes(&self) -> Vec<ResourceId> {
-        self.writes.clone()
-    }
 }
 
 mod impl_data {
@@ -243,30 +275,30 @@ mod impl_data {
 
     impl_data!(A);
     /*
-    impl_data!(A, B);
-    impl_data!(A, B, C);
-    impl_data!(A, B, C, D);
-    impl_data!(A, B, C, D, E);
-    impl_data!(A, B, C, D, E, F);
-    impl_data!(A, B, C, D, E, F, G);
-    impl_data!(A, B, C, D, E, F, G, H);
-    impl_data!(A, B, C, D, E, F, G, H, I);
-    impl_data!(A, B, C, D, E, F, G, H, I, J);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
-    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
-    */
+       impl_data!(A, B);
+       impl_data!(A, B, C);
+       impl_data!(A, B, C, D);
+       impl_data!(A, B, C, D, E);
+       impl_data!(A, B, C, D, E, F);
+       impl_data!(A, B, C, D, E, F, G);
+       impl_data!(A, B, C, D, E, F, G, H);
+       impl_data!(A, B, C, D, E, F, G, H, I);
+       impl_data!(A, B, C, D, E, F, G, H, I, J);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
+       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+       */
 }
