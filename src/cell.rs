@@ -1,7 +1,5 @@
 //! Helper module for some internals, most users don't need to interact with it.
 
-use std::cmp;
-use std::hash;
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Error as FormatError, Formatter};
@@ -35,40 +33,6 @@ pub struct Ref<'a, T: 'a> {
     value: &'a T,
 }
 
-impl<'a, T> PartialEq for Ref<'a, T>
-    where T: PartialEq
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.value.eq(other.value)
-    }
-}
-
-impl<'a, T> Eq for Ref<'a, T> where T: Eq {}
-
-impl<'a, T> PartialOrd for Ref<'a, T>
-    where T: PartialOrd
-{
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.value.partial_cmp(other.value)
-    }
-}
-
-impl<'a, T> Ord for Ref<'a, T>
-    where T: Ord
-{
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.value.cmp(other.value)
-    }
-}
-
-impl<'a, T> hash::Hash for Ref<'a, T>
-    where T: hash::Hash
-{
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.value.hash(state);
-    }
-}
-
 impl<'a, T> Deref for Ref<'a, T> {
     type Target = T;
 
@@ -90,40 +54,6 @@ impl<'a, T> Drop for Ref<'a, T> {
 pub struct RefMut<'a, T: 'a> {
     flag: &'a AtomicUsize,
     value: &'a mut T,
-}
-
-impl<'a, T> PartialEq for RefMut<'a, T>
-    where T: PartialEq
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.value.eq(&other.value)
-    }
-}
-
-impl<'a, T> Eq for RefMut<'a, T> where T: Eq {}
-
-impl<'a, T> PartialOrd for RefMut<'a, T>
-    where T: PartialOrd
-{
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.value.partial_cmp(&other.value)
-    }
-}
-
-impl<'a, T> Ord for RefMut<'a, T>
-    where T: Ord
-{
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.value.cmp(&other.value)
-    }
-}
-
-impl<'a, T> hash::Hash for RefMut<'a, T>
-    where T: hash::Hash
-{
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.value.hash(state);
-    }
 }
 
 impl<'a, T> Deref for RefMut<'a, T> {
@@ -336,7 +266,7 @@ mod tests {
         let mut a = cell.try_borrow_mut().unwrap();
         *a = 7;
 
-        assert_eq!(Err(InvalidBorrow), cell.try_borrow());
+        assert!(cell.try_borrow().is_err());
     }
 
     #[test]
@@ -346,7 +276,7 @@ mod tests {
         let mut a = cell.try_borrow_mut().unwrap();
         *a = 7;
 
-        assert_eq!(Err(InvalidBorrow), cell.try_borrow_mut());
+        assert!(cell.try_borrow_mut().is_err());
     }
 
     #[test]
@@ -355,6 +285,6 @@ mod tests {
 
         let _a = cell.try_borrow().unwrap();
 
-        assert_eq!(Err(InvalidBorrow), cell.try_borrow_mut());
+        assert!(cell.try_borrow_mut().is_err());
     }
 }
