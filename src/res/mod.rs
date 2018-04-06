@@ -203,6 +203,11 @@ impl Resources {
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the resource doesn't exist.
+    /// Panics if the resource is already being accessed.
     pub fn fetch_mut<T>(&self) -> FetchMut<T>
     where
         T: Resource,
