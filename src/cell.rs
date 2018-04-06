@@ -1,5 +1,7 @@
 //! Helper module for some internals, most users don't need to interact with it.
 
+use std::cmp;
+use std::hash;
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Error as FormatError, Formatter};
@@ -8,8 +10,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::usize;
 
 /// Marker struct for an invalid borrow error
-#[derive(Clone, Copy, Debug)]
-struct InvalidBorrow;
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct InvalidBorrow;
 
 impl Display for InvalidBorrow {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
@@ -24,13 +26,47 @@ impl Error for InvalidBorrow {
     }
 }
 
-/// An immutable reference to data in a `TrustedCell`.
+/// An immutable reference to data in a `TrustCell`.
 ///
-/// Access the value via. `std::ops::Deref` (e.g. `*val`)
+/// Access the value via `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
     flag: &'a AtomicUsize,
     value: &'a T,
+}
+
+impl<'a, T> PartialEq for Ref<'a, T>
+    where T: PartialEq
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.value.eq(other.value)
+    }
+}
+
+impl<'a, T> Eq for Ref<'a, T> where T: Eq {}
+
+impl<'a, T> PartialOrd for Ref<'a, T>
+    where T: PartialOrd
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.value.partial_cmp(other.value)
+    }
+}
+
+impl<'a, T> Ord for Ref<'a, T>
+    where T: Ord
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.value.cmp(other.value)
+    }
+}
+
+impl<'a, T> hash::Hash for Ref<'a, T>
+    where T: hash::Hash
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 impl<'a, T> Deref for Ref<'a, T> {
@@ -47,13 +83,47 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
-/// A mutable reference to data in a `TrustedCell`.
+/// A mutable reference to data in a `TrustCell`.
 ///
-/// Access the value via. `std::ops::DerefMut` (e.g. `*val`)
+/// Access the value via `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
     flag: &'a AtomicUsize,
     value: &'a mut T,
+}
+
+impl<'a, T> PartialEq for RefMut<'a, T>
+    where T: PartialEq
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.value.eq(&other.value)
+    }
+}
+
+impl<'a, T> Eq for RefMut<'a, T> where T: Eq {}
+
+impl<'a, T> PartialOrd for RefMut<'a, T>
+    where T: PartialOrd
+{
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.value.partial_cmp(&other.value)
+    }
+}
+
+impl<'a, T> Ord for RefMut<'a, T>
+    where T: Ord
+{
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+impl<'a, T> hash::Hash for RefMut<'a, T>
+    where T: hash::Hash
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 impl<'a, T> Deref for RefMut<'a, T> {
@@ -92,7 +162,9 @@ impl<T> TrustCell<T> {
         }
     }
 
-    /// Get an immutable reference to the inner data
+    /// Get an immutable reference to the inner data.
+    ///
+    /// Absence of write accesses is checked at run-time.
     ///
     /// # Panics
     ///
@@ -106,7 +178,22 @@ impl<T> TrustCell<T> {
         }
     }
 
-    /// Get a mutable reference to the inner data
+    /// Get an immutable reference to the inner data.
+    ///
+    /// Absence of write accesses is checked at run-time. If access is not possible, an error is
+    /// returned.
+    pub fn try_borrow(&self) -> Result<Ref<T>, InvalidBorrow> {
+        self.check_flag_read()?;
+
+        Ok(Ref {
+            flag: &self.flag,
+            value: unsafe { &*self.inner.get() },
+        })
+    }
+
+    /// Get a mutable reference to the inner data.
+    ///
+    /// Exclusive access is checked at run-time.
     ///
     /// # Panics
     ///
@@ -120,9 +207,30 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Get a mutable reference to the inner data.
+    ///
+    /// Exclusive access is checked at run-time. If access is not possible, an error is returned.
+    pub fn try_borrow_mut(&self) -> Result<RefMut<T>, InvalidBorrow> {
+        self.check_flag_write()?;
+
+        Ok(RefMut {
+            flag: &self.flag,
+            value: unsafe { &mut *self.inner.get() },
+        })
+    }
+
+    /// Gets read-only access to the inner value, bypassing the Cell.
+    ///
+    /// Absence of write access is checked at compile time.
+    pub fn get(&self) -> &T {
+        unsafe { &*self.inner.get() }
+    }
+
     /// Gets exclusive access to the inner value, bypassing the Cell.
+    ///
+    /// Exclusive access is checked at compile time.
     pub fn get_mut(&mut self) -> &mut T {
-        // safe because we have exclusive access via. &mut self
+        // safe because we have exclusive access via &mut self
         unsafe { &mut *self.inner.get() }
     }
 
@@ -226,5 +334,34 @@ mod tests {
         let _a = cell.borrow();
 
         assert_eq!(7, *cell.borrow_mut());
+    }
+
+    #[test]
+    fn try_write_and_read() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let mut a = cell.try_borrow_mut().unwrap();
+        *a = 7;
+
+        assert_eq!(Err(InvalidBorrow), cell.try_borrow());
+    }
+
+    #[test]
+    fn try_write_and_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let mut a = cell.try_borrow_mut().unwrap();
+        *a = 7;
+
+        assert_eq!(Err(InvalidBorrow), cell.try_borrow_mut());
+    }
+
+    #[test]
+    fn try_read_and_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let _a = cell.try_borrow().unwrap();
+
+        assert_eq!(Err(InvalidBorrow), cell.try_borrow_mut());
     }
 }
