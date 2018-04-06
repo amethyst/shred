@@ -219,13 +219,6 @@ impl<T> TrustCell<T> {
         })
     }
 
-    /// Gets read-only access to the inner value, bypassing the Cell.
-    ///
-    /// Absence of write access is checked at compile time.
-    pub fn get(&self) -> &T {
-        unsafe { &*self.inner.get() }
-    }
-
     /// Gets exclusive access to the inner value, bypassing the Cell.
     ///
     /// Exclusive access is checked at compile time.
