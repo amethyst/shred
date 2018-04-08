@@ -1,7 +1,10 @@
-use {Resource, Resources};
+use std::any::TypeId;
+use std::marker::PhantomData;
+
 use fxhash::FxHashMap;
 use mopa::Any;
-use std::any::TypeId;
+
+use {Resource, Resources};
 
 /// Helper trait for the `MetaTable`.
 /// This trait is required to be implemented for a trait to be compatible with the meta table.
@@ -39,10 +42,12 @@ pub trait CastFrom<T> {
 
 /// An iterator for the `MetaTable`.
 pub struct MetaIter<'a, T: ?Sized + 'a> {
-    fat: &'a [unsafe fn(&Resource) -> &T],
+    fat: &'a [Fat],
     index: usize,
     res: &'a mut Resources,
     tys: &'a [TypeId],
+    // `MetaIter` is invariant over `T`
+    marker: PhantomData<*mut T>,
 }
 
 impl<'a, T> Iterator for MetaIter<'a, T>
@@ -64,18 +69,47 @@ where
                     Some(&x) => x,
                     None => return None,
                 })
-                .map(|res| (self.fat[index])(&*res))
+                .map(|res| self.fat[index].create_ptr::<T>(&*res as *const _ as *const ()))
+                .map(|ptr| &*ptr)
                 .or_else(|| self.next())
         }
     }
 }
 
+struct Fat(usize);
+
+impl Fat {
+    pub unsafe fn from_ptr<T: ?Sized>(t: &T) -> Self {
+        use std::ptr::read;
+
+        assert_unsized::<T>();
+
+        let fat_ptr = &t as *const &T as *const usize;
+        // Memory layout:
+        // [object pointer, vtable pointer]
+        //  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+        //  8 bytes       | 8 bytes
+        // (on 32-bit both have 4 bytes)
+        let vtable = read::<usize>(fat_ptr.offset(1));
+
+        Fat(vtable)
+    }
+
+    pub unsafe fn create_ptr<T: ?Sized>(&self, ptr: *const ()) -> *const T {
+        let fat_ptr: (*const (), usize) = (ptr, self.0);
+
+        *(&fat_ptr as *const (*const (), usize) as *const *const T)
+    }
+}
+
 /// A mutable iterator for the `MetaTable`.
 pub struct MetaIterMut<'a, T: ?Sized + 'a> {
-    fat_mut: &'a [unsafe fn(&mut Resource) -> &mut T],
+    fat: &'a [Fat],
     index: usize,
     res: &'a mut Resources,
     tys: &'a [TypeId],
+    // `MetaIterMut` is invariant over `T`
+    marker: PhantomData<*mut T>,
 }
 
 impl<'a, T> Iterator for MetaIterMut<'a, T>
@@ -97,7 +131,8 @@ where
                     Some(&x) => x,
                     None => return None,
                 })
-                .map(|res| (self.fat_mut[index])(res))
+                .map(|res| self.fat[index].create_ptr::<T>(res as *mut _ as *const ()) as *mut T)
+                .map(|ptr| &mut *ptr)
                 .or_else(|| self.next())
         }
     }
@@ -163,8 +198,8 @@ where
 /// res.insert(ImplementorB(1));
 ///
 /// let mut table = MetaTable::<Object>::new();
-/// table.register::<ImplementorA>();
-/// table.register::<ImplementorB>();
+/// table.register(&ImplementorA(31415)); // Can just be some instance of type `&ImplementorA`.
+/// table.register(&ImplementorB(27182));
 ///
 /// {
 ///     let mut iter = table.iter(&mut res);
@@ -173,48 +208,32 @@ where
 /// }
 /// ```
 pub struct MetaTable<T: ?Sized> {
-    fat: Vec<unsafe fn(&Resource) -> &T>,
-    fat_mut: Vec<unsafe fn(&mut Resource) -> &mut T>,
+    fat: Vec<Fat>,
     indices: FxHashMap<TypeId, usize>,
     tys: Vec<TypeId>,
+    // `MetaTable` is invariant over `T`
+    marker: PhantomData<*mut T>,
 }
 
 impl<T: ?Sized> MetaTable<T> {
     /// Creates a new `MetaTable`.
     pub fn new() -> Self {
+        assert_unsized::<T>();
+
         Default::default()
     }
 
     /// Registers a resource `R` that implements the trait `T`.
-    pub fn register<R>(&mut self)
+    /// This just needs some instance of type `R` to retrieve the vtable.
+    /// It doesn't have to be the same object you're calling `get` with later.
+    pub fn register<R>(&mut self, r: &R)
     where
         R: Resource,
         T: CastFrom<R> + 'static,
     {
         use std::collections::hash_map::Entry;
 
-        unsafe fn fat<R, T>(r: &Resource) -> &T
-        where
-            R: Resource,
-            T: CastFrom<R> + ?Sized + 'static,
-        {
-            let r: &R = r.downcast_ref_unchecked();
-
-            T::cast(r)
-        }
-
-        unsafe fn fat_mut<R, T>(r: &mut Resource) -> &mut T
-        where
-            R: Resource,
-            T: CastFrom<R> + ?Sized + 'static,
-        {
-            let r: &mut R = r.downcast_mut_unchecked();
-
-            T::cast_mut(r)
-        }
-
-        let fat = fat::<R, T>;
-        let fat_mut = fat_mut::<R, T>;
+        let fat = unsafe { Fat::from_ptr(<T as CastFrom<R>>::cast(r)) };
 
         let ty_id = TypeId::of::<R>();
 
@@ -225,13 +244,11 @@ impl<T: ?Sized> MetaTable<T> {
                 let ind = *occ.get();
 
                 self.fat[ind] = fat;
-                self.fat_mut[ind] = fat_mut;
             }
             Entry::Vacant(vac) => {
                 vac.insert(len);
 
                 self.fat.push(fat);
-                self.fat_mut.push(fat_mut);
                 self.tys.push(ty_id);
             }
         }
@@ -244,7 +261,7 @@ impl<T: ?Sized> MetaTable<T> {
         unsafe {
             self.indices
                 .get(&Any::get_type_id(res))
-                .map(move |&ind| (self.fat[ind])(res))
+                .map(move |&ind| &*self.fat[ind].create_ptr(res as *const _ as *const ()))
         }
     }
 
@@ -253,9 +270,9 @@ impl<T: ?Sized> MetaTable<T> {
     /// this will return `None`.
     pub fn get_mut<'a>(&self, res: &'a mut Resource) -> Option<&'a mut T> {
         unsafe {
-            self.indices
-                .get(&Any::get_type_id(res))
-                .map(move |&ind| (self.fat_mut[ind])(res))
+            self.indices.get(&Any::get_type_id(res)).map(move |&ind| {
+                &mut *(self.fat[ind].create_ptr::<T>(res as *const _ as *const ()) as *mut T)
+            })
         }
     }
 
@@ -266,16 +283,18 @@ impl<T: ?Sized> MetaTable<T> {
             index: 0,
             res,
             tys: &self.tys,
+            marker: PhantomData,
         }
     }
 
     /// Iterates all resources that implement `T` and were registered mutably.
     pub fn iter_mut<'a>(&'a self, res: &'a mut Resources) -> MetaIterMut<'a, T> {
         MetaIterMut {
-            fat_mut: &self.fat_mut,
+            fat: &self.fat,
             index: 0,
             res,
             tys: &self.tys,
+            marker: PhantomData,
         }
     }
 }
@@ -286,12 +305,18 @@ where
 {
     fn default() -> Self {
         MetaTable {
-            fat: vec![],
-            fat_mut: vec![],
+            fat: Default::default(),
             indices: Default::default(),
-            tys: vec![],
+            tys: Default::default(),
+            marker: Default::default(),
         }
     }
+}
+
+fn assert_unsized<T: ?Sized>() {
+    use std::mem::size_of;
+
+    assert_eq!(size_of::<&T>(), 2 * size_of::<usize>());
 }
 
 #[cfg(test)]
@@ -350,8 +375,8 @@ mod tests {
         res.insert(ImplementorB(1));
 
         let mut table = MetaTable::<Object>::new();
-        table.register::<ImplementorA>();
-        table.register::<ImplementorB>();
+        table.register(&ImplementorA(125));
+        table.register(&ImplementorB(111111));
 
         {
             let mut iter = table.iter(&mut res);
