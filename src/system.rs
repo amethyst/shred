@@ -135,7 +135,7 @@ pub trait SystemData<'a> {
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
-    type Accessor = StaticAccessor<T>;
+    type Accessor = StaticAccessor<()>;
 
     fn setup(_: &mut Resources) {}
 
@@ -173,7 +173,7 @@ macro_rules! impl_data {
                 let mut r = Vec::new();
 
                 $( {
-                    let mut reads = <$ty as StaticSystemData>::reads();
+                    let mut reads = <$ty as Accessor>::reads();
                     r.append(&mut reads);
                 } )*
 
@@ -186,7 +186,7 @@ macro_rules! impl_data {
                 let mut r = Vec::new();
 
                 $( {
-                    let mut writes = <$ty as StaticSystemData>::writes();
+                    let mut writes = <$ty as Accessor>::writes();
                     r.append(&mut writes);
                 } )*
 
