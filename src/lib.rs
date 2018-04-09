@@ -73,11 +73,11 @@ mod meta;
 mod res;
 mod system;
 
+#[cfg(feature = "parallel")]
+pub use dispatch::AsyncDispatcher;
 pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
 pub use dispatch::{Par, ParSeq, Seq};
-#[cfg(feature = "parallel")]
-pub use dispatch::AsyncDispatcher;
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
