@@ -94,6 +94,12 @@ pub trait StaticSystemData<'a> {
 
 impl<'a, T> SystemData<'a> for T where T: StaticSystemData<'a> {
     type Accessor = StaticAccessor<T>;
+
+    fn setup(res: &mut Resources) { }
+
+    fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
+        T::fetch(res)
+    }
 }
 
 impl<'a> StaticSystemData<'a> for () {
@@ -104,19 +110,27 @@ impl<'a> StaticSystemData<'a> for () {
         ()
     }
 
-    fn reads(&self) -> Vec<ResourceId> {
+    fn reads() -> Vec<ResourceId> {
         Vec::new()
     }
-    fn writes(&self) -> Vec<ResourceId> {
+
+    fn writes() -> Vec<ResourceId> {
         Vec::new()
     }
+}
+
+#[derive(Default)]
+pub struct StaticAccessor<T> {
+    reads: Vec<ResourceId>,
+    writes: Vec<ResourceId>,
+
+    marker: PhantomData<fn() ->T>
 }
 
 impl<'a, T> Accessor for StaticAccessor<T> where T: StaticSystemData<'a> {
     fn reads(&self) -> Vec<ResourceId> {
         T::reads()
     }
-
     fn writes(&self) -> Vec<ResourceId> {
         T::writes()
     }
@@ -162,26 +176,6 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
 
 macro_rules! impl_data {
     ( $($ty:ident),* ) => {
-        impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
-            where $( $ty : SystemData<'a> ),*
-            {
-                type Accessor = StaticAccessor<$($ty),*>;
-
-                fn setup(res: &mut Resources) {
-                    #![allow(unused_variables)]
-
-                    $(
-                        <$ty as SystemData>::setup(&mut *res);
-                     )*
-                }
-
-                fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
-                    #![allow(unused_variables)]
-
-                    ( $( <$ty as SystemData<'a>>::fetch(access, res), )* )
-                }
-            }
-
         impl<'a, $($ty),*> StaticSystemData<'a> for ( $( $ty , )* )
             where $( $ty : StaticSystemData<'a> ),*
             {
@@ -233,7 +227,7 @@ macro_rules! impl_data {
                 let mut r = Vec::new();
 
                 $( {
-                    let mut reads = <$ty as Accessor>::reads();
+                    let mut reads = <$ty as StaticAccessor>::reads();
                     r.append(&mut reads);
                 } )*
 
@@ -246,7 +240,7 @@ macro_rules! impl_data {
                 let mut r = Vec::new();
 
                 $( {
-                    let mut writes = <$ty as Accessor>::writes();
+                    let mut writes = <$ty as StaticAccessor>::writes();
                     r.append(&mut writes);
                 } )*
 
@@ -310,14 +304,6 @@ impl<T: ?Sized> Accessor for PhantomData<T> {
     fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
-}
-
-#[derive(Default)]
-pub struct StaticAccessor<T> {
-    reads: Vec<ResourceId>,
-    writes: Vec<ResourceId>,
-
-    __: PhantomData<fn() ->T>
 }
 
 mod impl_data {
