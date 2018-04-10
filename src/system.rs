@@ -182,6 +182,50 @@ macro_rules! impl_data {
                 }
             }
 
+        impl<'a, $($ty),*> StaticSystemData<'a> for ( $( $ty , )* )
+            where $( $ty : StaticSystemData<'a> ),*
+            {
+                fn setup(res: &mut Resources) {
+                    #![allow(unused_variables)]
+
+                    $(
+                        <$ty as StaticSystemData>::setup(&mut *res);
+                     )*
+                }
+
+                fn fetch(res: &'a Resources) -> Self {
+                    #![allow(unused_variables)]
+
+                    ( $( <$ty as StaticSystemData<'a>>::fetch(res), )* )
+                }
+
+                fn reads() -> Vec<ResourceId> {
+                    #![allow(unused_mut)]
+
+                    let mut r = Vec::new();
+
+                    $( {
+                        let mut reads = <$ty as StaticSystemData>::reads();
+                        r.append(&mut reads);
+                    } )*
+
+                    r
+                }
+
+                fn writes() -> Vec<ResourceId> {
+                    #![allow(unused_mut)]
+
+                    let mut r = Vec::new();
+
+                    $( {
+                        let mut writes = <$ty as StaticSystemData>::writes();
+                        r.append(&mut writes);
+                    } )*
+
+                    r
+                }
+            }
+
         impl<$($ty),*> StaticAccessor<$($ty),*> {
             fn reads() -> Vec<ResourceId> {
                 #![allow(unused_mut)]
@@ -210,16 +254,6 @@ macro_rules! impl_data {
             }
         }
     };
-}
-
-impl<'a> SystemData<'a> for () {
-    type Accessor = StaticAccessor<()>;
-
-    fn setup(_: &mut Resources) {}
-
-    fn fetch(_: &Self::Accessor, _: &'a Resources) -> Self {
-        ()
-    }
 }
 
 /// A trait for accessing read/write bundles of [`ResourceId`]s in ['SystemData']. This can be used
@@ -281,7 +315,9 @@ impl<T: ?Sized> Accessor for PhantomData<T> {
 #[derive(Default)]
 pub struct StaticAccessor<T> {
     reads: Vec<ResourceId>,
-    writes: Vec<ResourceId>
+    writes: Vec<ResourceId>,
+
+    __: PhantomData<fn() ->T>
 }
 
 mod impl_data {
