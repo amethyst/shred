@@ -6,6 +6,20 @@ use mopa::Any;
 
 use {Resource, Resources};
 
+struct Invariant<T: ?Sized>(*mut T);
+
+unsafe impl<T> Send for Invariant<T>
+where
+    T: Send + Sync + ?Sized,
+{
+}
+
+unsafe impl<T> Sync for Invariant<T>
+where
+    T: Sync + ?Sized,
+{
+}
+
 /// Helper trait for the `MetaTable`.
 /// This trait is required to be implemented for a trait to be compatible with the meta table.
 ///
@@ -47,7 +61,7 @@ pub struct MetaIter<'a, T: ?Sized + 'a> {
     res: &'a mut Resources,
     tys: &'a [TypeId],
     // `MetaIter` is invariant over `T`
-    marker: PhantomData<*mut T>,
+    marker: PhantomData<Invariant<T>>,
 }
 
 impl<'a, T> Iterator for MetaIter<'a, T>
@@ -109,7 +123,7 @@ pub struct MetaIterMut<'a, T: ?Sized + 'a> {
     res: &'a mut Resources,
     tys: &'a [TypeId],
     // `MetaIterMut` is invariant over `T`
-    marker: PhantomData<*mut T>,
+    marker: PhantomData<Invariant<T>>,
 }
 
 impl<'a, T> Iterator for MetaIterMut<'a, T>
@@ -212,7 +226,7 @@ pub struct MetaTable<T: ?Sized> {
     indices: FxHashMap<TypeId, usize>,
     tys: Vec<TypeId>,
     // `MetaTable` is invariant over `T`
-    marker: PhantomData<*mut T>,
+    marker: PhantomData<Invariant<T>>,
 }
 
 impl<T: ?Sized> MetaTable<T> {
@@ -393,5 +407,50 @@ mod tests {
             obj.method2(4);
             assert_eq!(obj.method1(), 4);
         }
+    }
+
+    struct ImplementorC;
+
+    impl Object for ImplementorC {
+        fn method1(&self) -> i32 {
+            33
+        }
+
+        fn method2(&mut self, _x: i32) {
+            unimplemented!()
+        }
+    }
+
+    struct ImplementorD;
+
+    impl Object for ImplementorD {
+        fn method1(&self) -> i32 {
+            42
+        }
+
+        fn method2(&mut self, _x: i32) {
+            unimplemented!()
+        }
+    }
+
+    #[test]
+    fn get() {
+        let mut res = Resources::new();
+
+        res.insert(ImplementorC);
+        res.insert(ImplementorD);
+
+        let mut table = MetaTable::<Object>::new();
+        table.register(&ImplementorC);
+        table.register(&ImplementorD);
+
+        assert_eq!(
+            table.get(&*res.fetch::<ImplementorC>()).unwrap().method1(),
+            33
+        );
+        assert_eq!(
+            table.get(&*res.fetch::<ImplementorD>()).unwrap().method1(),
+            42
+        );
     }
 }
