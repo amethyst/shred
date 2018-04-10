@@ -6,17 +6,20 @@ use mopa::Any;
 
 use {Resource, Resources};
 
+/// This implements `Send` and `Sync` unconditionally.
+/// (the trait itself doesn't need to have these bounds and the
+/// resources are already guaranteed to fulfill it).
 struct Invariant<T: ?Sized>(*mut T);
 
 unsafe impl<T> Send for Invariant<T>
 where
-    T: Send + Sync + ?Sized,
+    T: ?Sized,
 {
 }
 
 unsafe impl<T> Sync for Invariant<T>
 where
-    T: Sync + ?Sized,
+    T: ?Sized,
 {
 }
 
@@ -452,5 +455,8 @@ mod tests {
             table.get(&*res.fetch::<ImplementorD>()).unwrap().method1(),
             42
         );
+
+        // Make sure it fulfills `Resource` requirements
+        res.insert(table);
     }
 }
