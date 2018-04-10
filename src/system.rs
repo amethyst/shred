@@ -93,16 +93,12 @@ pub trait StaticSystemData<'a> {
 }
 
 impl<'a, T> SystemData<'a> for T where T: StaticSystemData<'a> {
-    type Accessor = StaticAccessor<T>;
-}
+    type Accessor = StaticAccessor;
 
-impl<'a, T> Accessor for StaticAccessor<T> where T: StaticSystemData<'a> {
-    fn reads(&self) -> Vec<ResourceId> {
-        T::reads()
-    }
+    fn setup(res: &mut Resources) { }
 
-    fn writes(&self) -> Vec<ResourceId> {
-        T::writes()
+    fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
+        T
     }
 }
 
@@ -135,7 +131,7 @@ pub trait SystemData<'a> {
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
-    type Accessor = StaticAccessor<()>;
+    type Accessor = StaticAccessor;
 
     fn setup(_: &mut Resources) {}
 
@@ -149,7 +145,7 @@ macro_rules! impl_data {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
             where $( $ty : SystemData<'a> ),*
             {
-                type Accessor = StaticAccessor<$($ty),*>;
+                type Accessor = StaticAccessor;
 
                 fn setup(res: &mut Resources) {
                     #![allow(unused_variables)]
@@ -165,39 +161,11 @@ macro_rules! impl_data {
                     ( $( <$ty as SystemData<'a>>::fetch(access, res), )* )
                 }
             }
-
-        impl<$($ty),*> StaticAccessor<$($ty),*> {
-            fn reads() -> Vec<ResourceId> {
-                #![allow(unused_mut)]
-
-                let mut r = Vec::new();
-
-                $( {
-                    let mut reads = <$ty as Accessor>::reads();
-                    r.append(&mut reads);
-                } )*
-
-                r
-            }
-
-            fn writes() -> Vec<ResourceId> {
-                #![allow(unused_mut)]
-
-                let mut r = Vec::new();
-
-                $( {
-                    let mut writes = <$ty as Accessor>::writes();
-                    r.append(&mut writes);
-                } )*
-
-                r
-            }
-        }
     };
 }
 
 impl<'a> SystemData<'a> for () {
-    type Accessor = StaticAccessor<()>;
+    type Accessor = StaticAccessor;
 
     fn setup(_: &mut Resources) {}
 
@@ -263,9 +231,18 @@ impl<T: ?Sized> Accessor for PhantomData<T> {
 }
 
 #[derive(Default)]
-pub struct StaticAccessor<T> {
+pub struct StaticAccessor {
     reads: Vec<ResourceId>,
     writes: Vec<ResourceId>
+}
+
+impl Accessor for StaticAccessor {
+    fn reads(&self) -> Vec<ResourceId> {
+        self.reads
+    }
+    fn writes(&self) -> Vec<ResourceId> {
+        self.reads
+    }
 }
 
 mod impl_data {
