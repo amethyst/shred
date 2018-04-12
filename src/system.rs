@@ -220,33 +220,35 @@ macro_rules! impl_data {
                 }
             }
 
+        /*
         impl<$($ty),*> StaticAccessor<$($ty),*> {
-            fn reads() -> Vec<ResourceId> {
+            fn reads(&self) -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
 
                 $( {
-                    let mut reads = <$ty as StaticAccessor>::reads();
+                    let mut reads = <$ty as Accessor>::reads();
                     r.append(&mut reads);
                 } )*
 
                 r
             }
 
-            fn writes() -> Vec<ResourceId> {
+            fn writes(&self) -> Vec<ResourceId> {
                 #![allow(unused_mut)]
 
                 let mut r = Vec::new();
 
                 $( {
-                    let mut writes = <$ty as StaticAccessor>::writes();
+                    let mut writes = <$ty as Accessor>::writes();
                     r.append(&mut writes);
                 } )*
 
                 r
             }
         }
+            */
     };
 }
 
