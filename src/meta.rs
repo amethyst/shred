@@ -81,10 +81,12 @@ where
         unsafe {
             self.res
                 .try_fetch_internal(match self.tys.get(index) {
-                    Some(&x) => x,None => return None,
+                    Some(&x) => x,
+                    None => return None,
                 })
-                .map(|res| self.fat[index].create_ptr::<T>(
-                        Box::as_ref(&res.borrow()) as *const Resource as *const ()))
+                .map(|res| self.fat[index].create_ptr::<T>(Box::as_ref(&res.borrow())
+                    as *const Resource as *const ())
+                )
                 // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &*ptr)
                 .or_else(|| self.next())
@@ -142,10 +144,12 @@ where
         unsafe {
             self.res
                 .try_fetch_internal(match self.tys.get(index) {
-                    Some(&x) => x,None => return None,
+                    Some(&x) => x,
+                    None => return None,
                 })
                 .map(|res| self.fat[index].create_ptr::<T>(
-                    Box::as_mut(&mut res.borrow_mut()) as *mut Resource as *const ()) as *mut T)
+                    Box::as_mut(&mut res.borrow_mut()) as *mut Resource as *const ()) as *mut T
+                )
                 // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &mut *ptr)
                 .or_else(|| self.next())

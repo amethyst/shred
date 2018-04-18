@@ -364,8 +364,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use std::sync::atomic::*;
+    use std::sync::Arc;
 
     fn new_tp() -> ThreadPool {
         use rayon::ThreadPoolBuilder;
