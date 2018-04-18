@@ -23,7 +23,8 @@ where
 T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
-        let data = T::SystemData::fetch(res);
+        let accessor = <T::SystemData as SystemData<'a>>::Accessor::try_new().unwrap();
+        let data = T::SystemData::fetch(&accessor, res);
         self.run(data);
     }
 
@@ -70,7 +71,7 @@ pub trait System<'a> {
 
     /// Return the accessor from the [`SystemData`].
     fn accessor(&self) -> <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor {
-        <Self::SystemData>::Accessor::try_new().expect("Missing implementation for `accessor`")
+        <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor::try_new().expect("Missing implementation for `accessor`")
     }
 
     /// Sets up the `Resources` using `Self::SystemData::setup`.
@@ -128,6 +129,9 @@ pub struct StaticAccessor<T> {
 }
 
 impl<'a, T> Accessor for StaticAccessor<T> where T: StaticSystemData<'a> {
+    fn try_new() -> Option<Self> {
+        None
+    }
     fn reads(&self) -> Vec<ResourceId> {
         T::reads()
     }
@@ -254,7 +258,9 @@ macro_rules! impl_data {
 
 /// A trait for accessing read/write bundles of [`ResourceId`]s in ['SystemData']. This can be used
 /// to create dynamic systems that don't specify what they fetch at compile-time.
-pub trait Accessor {
+pub trait Accessor: Sized {
+    fn try_new() -> Option<Self>;
+
     /// A list of [`ResourceId`]s the bundle
     /// needs read access to in order to
     /// build the target resource bundle.
@@ -291,6 +297,9 @@ pub trait Accessor {
 }
 
 impl Accessor for () {
+    fn try_new() -> Option<Self> {
+        None
+    }
     fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
@@ -300,6 +309,9 @@ impl Accessor for () {
 }
 
 impl<T: ?Sized> Accessor for PhantomData<T> {
+    fn try_new() -> Option<Self> {
+        None
+    }
     fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
