@@ -61,7 +61,7 @@ pub trait CastFrom<T> {
 pub struct MetaIter<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a mut Resources,
+    res: &'a Resources,
     tys: &'a [TypeId],
     // `MetaIter` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
@@ -74,19 +74,18 @@ where
     type Item = &'a T;
 
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-        use std::mem::transmute;
-
         let index = self.index;
         self.index += 1;
 
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
-            transmute::<&mut Resources, &'a mut Resources>(&mut self.res)
-                .get_mut_raw(match self.tys.get(index) {
-                    Some(&x) => x,
-                    None => return None,
+            self.res
+                .try_fetch_internal(match self.tys.get(index) {
+                    Some(&x) => x,None => return None,
                 })
-                .map(|res| self.fat[index].create_ptr::<T>(&*res as *const _ as *const ()))
+                .map(|res| self.fat[index].create_ptr::<T>(
+                        Box::as_ref(&res.borrow()) as *const Resource as *const ()))
+                // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &*ptr)
                 .or_else(|| self.next())
         }
@@ -123,7 +122,7 @@ impl Fat {
 pub struct MetaIterMut<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a mut Resources,
+    res: &'a Resources,
     tys: &'a [TypeId],
     // `MetaIterMut` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
@@ -136,19 +135,18 @@ where
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-        use std::mem::transmute;
-
         let index = self.index;
         self.index += 1;
 
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
-            transmute::<&mut Resources, &'a mut Resources>(&mut self.res)
-                .get_mut_raw(match self.tys.get(index) {
-                    Some(&x) => x,
-                    None => return None,
+            self.res
+                .try_fetch_internal(match self.tys.get(index) {
+                    Some(&x) => x,None => return None,
                 })
-                .map(|res| self.fat[index].create_ptr::<T>(res as *mut _ as *const ()) as *mut T)
+                .map(|res| self.fat[index].create_ptr::<T>(
+                    Box::as_mut(&mut res.borrow_mut()) as *mut Resource as *const ()) as *mut T)
+                // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &mut *ptr)
                 .or_else(|| self.next())
         }
@@ -285,7 +283,7 @@ impl<T: ?Sized> MetaTable<T> {
     /// Tries to convert `res` to a trait object of type `&mut T`.
     /// If `res` doesn't have an implementation for `T` (or it wasn't registered),
     /// this will return `None`.
-    pub fn get_mut<'a>(&self, res: &'a mut Resource) -> Option<&'a mut T> {
+    pub fn get_mut<'a>(&self, res: &'a Resource) -> Option<&'a mut T> {
         unsafe {
             self.indices.get(&Any::get_type_id(res)).map(move |&ind| {
                 &mut *(self.fat[ind].create_ptr::<T>(res as *const _ as *const ()) as *mut T)
@@ -294,7 +292,7 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Iterates all resources that implement `T` and were registered.
-    pub fn iter<'a>(&'a self, res: &'a mut Resources) -> MetaIter<'a, T> {
+    pub fn iter<'a>(&'a self, res: &'a Resources) -> MetaIter<'a, T> {
         MetaIter {
             fat: &self.fat,
             index: 0,
@@ -305,7 +303,7 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Iterates all resources that implement `T` and were registered mutably.
-    pub fn iter_mut<'a>(&'a self, res: &'a mut Resources) -> MetaIterMut<'a, T> {
+    pub fn iter_mut<'a>(&'a self, res: &'a Resources) -> MetaIterMut<'a, T> {
         MetaIterMut {
             fat: &self.fat,
             index: 0,

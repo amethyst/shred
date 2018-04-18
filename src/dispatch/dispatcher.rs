@@ -65,8 +65,10 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn dispatch_par(&mut self, res: &Resources) {
         let stages = &mut self.stages;
 
-        self.thread_pool.install(move || for stage in stages {
-            stage.execute(res);
+        self.thread_pool.install(move || {
+            for stage in stages {
+                stage.execute(res);
+            }
         });
     }
 

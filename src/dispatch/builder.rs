@@ -77,11 +77,11 @@ use system::{RunNow, System};
 /// # let system_b = Dummy;
 /// let mut builder = DispatcherBuilder::new()
 ///     .with(system_a, "a", &[]);
-/// 
+///
 /// if b_enabled {
 ///    builder.add(system_b, "b", &[]);
 /// }
-/// 
+///
 /// let dispatcher = builder.build();
 /// # }
 /// ```
@@ -93,8 +93,7 @@ pub struct DispatcherBuilder<'a, 'b> {
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
-    thread_pool:
-        Option<::std::sync::Arc<::rayon::ThreadPool>>,
+    thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,
 }
 
 impl<'a, 'b> DispatcherBuilder<'a, 'b> {
@@ -127,7 +126,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         T: for<'c> System<'c> + Send + 'a,
     {
         self.add(system, name, dep);
-        
+
         self
     }
 
@@ -178,7 +177,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Please only use this if your struct is not `Send` and `Sync`.
     ///
     /// Thread-local systems are dispatched in-order.
-    /// 
+    ///
     /// Same as
     /// [`add_thread_local()`](struct.DispatcherBuilder.html#method.add_thread_local),
     /// but returns `self` to enable method chaining.
@@ -187,7 +186,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         T: for<'c> RunNow<'c> + 'b,
     {
         self.add_thread_local(system);
-        
+
         self
     }
 
@@ -218,7 +217,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// but returns `self` to enable method chaining.
     pub fn with_barrier(mut self) -> Self {
         self.add_barrier();
-        
+
         self
     }
 
@@ -244,7 +243,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     #[cfg(feature = "parallel")]
     pub fn with_pool(mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) -> Self {
         self.add_pool(pool);
-        
+
         self
     }
 
@@ -292,11 +291,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
 
     #[cfg(feature = "parallel")]
     fn create_thread_pool() -> ::std::sync::Arc<::rayon::ThreadPool> {
-        use std::sync::Arc;
         use rayon::ThreadPoolBuilder;
+        use std::sync::Arc;
 
         Arc::new(
-            ThreadPoolBuilder::new().build().expect("Invalid configuration"),
+            ThreadPoolBuilder::new()
+                .build()
+                .expect("Invalid configuration"),
         )
     }
 }

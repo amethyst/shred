@@ -2,29 +2,25 @@ use {Resource, Resources};
 
 #[cfg(feature = "nightly")]
 macro_rules! fetch_panic {
-    () => {
-        {
-            panic!(
-                "Tried to fetch a resource of type {:?}, but the resource does not exist.\n\
-                 Try adding the resource by inserting it manually or using the `setup` method.",
-                unsafe { ::std::intrinsics::type_name::<T>() },
-            )
-        }
-    };
+    () => {{
+        panic!(
+            "Tried to fetch a resource of type {:?}, but the resource does not exist.\n\
+             Try adding the resource by inserting it manually or using the `setup` method.",
+            unsafe { ::std::intrinsics::type_name::<T>() },
+        )
+    }};
 }
 
 #[cfg(not(feature = "nightly"))]
 macro_rules! fetch_panic {
-    () => {
-        {
-            panic!(
-                "Tried to fetch a resource, but the resource does not exist.\n\
-                 Try adding the resource by inserting it manually or using the `setup` method.\n\
-                 You can get the type name of the missing resource by enabling `shred`'s `nightly` \
-                 feature"
-            )
-        }
-    };
+    () => {{
+        panic!(
+            "Tried to fetch a resource, but the resource does not exist.\n\
+             Try adding the resource by inserting it manually or using the `setup` method.\n\
+             You can get the type name of the missing resource by enabling `shred`'s `nightly` \
+             feature"
+        )
+    }};
 }
 
 /// A `SetupHandler` that simply uses the default implementation.
@@ -55,6 +51,5 @@ impl<T> SetupHandler<T> for PanicHandler
 where
     T: Resource,
 {
-    fn setup(_: &mut Resources) {
-    }
+    fn setup(_: &mut Resources) {}
 }
