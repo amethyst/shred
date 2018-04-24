@@ -2,9 +2,9 @@ use std::fmt;
 
 use fxhash::FxHashMap;
 
+use dispatch::Dispatcher;
 use dispatch::dispatcher::{SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
-use dispatch::Dispatcher;
 use system::{RunNow, System};
 
 /// Builder for the [`Dispatcher`].

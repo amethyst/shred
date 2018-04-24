@@ -28,7 +28,7 @@ where
     }
 
     fn setup(&mut self, res: &mut Resources) {
-        T::setup(res);
+        T::setup(self, res);
     }
 }
 
@@ -69,7 +69,7 @@ pub trait System<'a> {
     }
 
     /// Sets up the `Resources` using `Self::SystemData::setup`.
-    fn setup(res: &mut Resources) {
+    fn setup(&mut self, res: &mut Resources) {
         <Self::SystemData as SystemData>::setup(res)
     }
 }
