@@ -255,7 +255,7 @@ where
     T: System<'a>,
 {
     fn setup(&mut self, res: &mut Resources) {
-        T::setup(res);
+        T::setup(self, res);
     }
 
     fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
@@ -364,8 +364,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::*;
     use std::sync::Arc;
+    use std::sync::atomic::*;
 
     fn new_tp() -> ThreadPool {
         use rayon::ThreadPoolBuilder;

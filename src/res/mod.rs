@@ -330,7 +330,7 @@ mod tests {
         assert!(res.try_fetch::<i32>().is_none());
 
         let mut sys = Sys;
-        sys.setup(&mut res);
+        RunNow::setup(&mut sys, &mut res);
 
         sys.run_now(&res);
 
