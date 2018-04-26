@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.7.0-alpha4"
+version = "0.7.0-alpha5"
 authors = ["torkleyy <torkleyy@gmail.com>"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -34,6 +34,7 @@ shred-derive = { path = "shred-derive", version = "0.5.0-alpha1" }
 [features]
 default = ["parallel"]
 parallel = ["rayon"]
+nightly = []
 
 [[example]]
 name = "async"
