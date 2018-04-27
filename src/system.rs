@@ -20,7 +20,7 @@ pub trait RunNow<'a> {
 
 impl<'a, T> RunNow<'a> for T
 where
-T: System<'a>,
+    T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
         let accessor = <T::SystemData as SystemData<'a>>::Accessor::try_new().unwrap();
@@ -71,7 +71,8 @@ pub trait System<'a> {
 
     /// Return the accessor from the [`SystemData`].
     fn accessor(&self) -> <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor {
-        <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor::try_new().expect("Missing implementation for `accessor`")
+        <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor::try_new()
+            .expect("Missing implementation for `accessor`")
     }
 
     /// Sets up the `Resources` using `Self::SystemData::setup`.
@@ -93,19 +94,23 @@ pub trait StaticSystemData<'a> {
     fn writes() -> Vec<ResourceId>;
 }
 
-impl<'a, T> SystemData<'a> for T where T: StaticSystemData<'a> {
+impl<'a, T> SystemData<'a> for T
+where
+    T: StaticSystemData<'a>,
+{
     type Accessor = StaticAccessor<T>;
 
-    fn setup(res: &mut Resources) { }
+    fn setup(res: &mut Resources) {
+        T::setup(res);
+    }
 
-    fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self {
+    fn fetch(access: &StaticAccessor<T>, res: &'a Resources) -> Self {
         T::fetch(res)
     }
 }
 
 impl<'a> StaticSystemData<'a> for () {
-    fn setup(res: &mut Resources) {
-    }
+    fn setup(res: &mut Resources) {}
 
     fn fetch(res: &'a Resources) -> Self {
         ()
@@ -122,15 +127,17 @@ impl<'a> StaticSystemData<'a> for () {
 
 #[derive(Default)]
 pub struct StaticAccessor<T> {
-    reads: Vec<ResourceId>,
-    writes: Vec<ResourceId>,
-
-    marker: PhantomData<fn() ->T>
+    marker: PhantomData<fn() -> T>,
 }
 
-impl<'a, T> Accessor for StaticAccessor<T> where T: StaticSystemData<'a> {
+impl<'a, T> Accessor for StaticAccessor<T>
+where
+    T: StaticSystemData<'a>,
+{
     fn try_new() -> Option<Self> {
-        None
+        Some(StaticAccessor {
+            marker: PhantomData,
+        })
     }
     fn reads(&self) -> Vec<ResourceId> {
         T::reads()
@@ -326,31 +333,29 @@ mod impl_data {
     use super::*;
 
     impl_data!(A);
-    /*
-       impl_data!(A, B);
-       impl_data!(A, B, C);
-       impl_data!(A, B, C, D);
-       impl_data!(A, B, C, D, E);
-       impl_data!(A, B, C, D, E, F);
-       impl_data!(A, B, C, D, E, F, G);
-       impl_data!(A, B, C, D, E, F, G, H);
-       impl_data!(A, B, C, D, E, F, G, H, I);
-       impl_data!(A, B, C, D, E, F, G, H, I, J);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
-       impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
-       */
+    impl_data!(A, B);
+    impl_data!(A, B, C);
+    impl_data!(A, B, C, D);
+    impl_data!(A, B, C, D, E);
+    impl_data!(A, B, C, D, E, F);
+    impl_data!(A, B, C, D, E, F, G);
+    impl_data!(A, B, C, D, E, F, G, H);
+    impl_data!(A, B, C, D, E, F, G, H, I);
+    impl_data!(A, B, C, D, E, F, G, H, I, J);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
+    impl_data!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
 }
