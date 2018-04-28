@@ -10,8 +10,8 @@ use quote::Tokens;
 use syn::{Body, Field, Ident, Lifetime, LifetimeDef, MacroInput, Ty, TyParam, VariantData,
           WhereClause};
 
-/// Used to `#[derive]` the trait `SystemData`.
-#[proc_macro_derive(SystemData)]
+/// Used to `#[derive]` the trait `StaticSystemData`.
+#[proc_macro_derive(StaticSystemData)]
 pub fn system_data(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_macro_input(&s).unwrap();
@@ -45,13 +45,13 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
 
     quote! {
         impl< #def_lt_tokens , #def_ty_params >
-            ::shred::SystemData< #impl_fetch_lt >
+            ::shred::StaticSystemData< #impl_fetch_lt >
             for #name< #impl_lt_tokens , #impl_ty_params >
             where #where_clause
         {
             fn setup(res: &mut ::shred::Resources) {
                 #(
-                    <#tys as ::shred::SystemData> :: setup(res);
+                    <#tys as ::shred::StaticSystemData> :: setup(res);
                 )*
             }
 
@@ -63,7 +63,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut reads = <#tys as ::shred::SystemData> :: reads();
+                        let mut reads = <#tys as ::shred::StaticSystemData> :: reads();
                         r.append(&mut reads);
                     } )*
 
@@ -74,7 +74,7 @@ fn impl_system_data(ast: &MacroInput) -> Tokens {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut writes = <#tys as ::shred::SystemData> :: writes();
+                        let mut writes = <#tys as ::shred::StaticSystemData> :: writes();
                         r.append(&mut writes);
                     } )*
 
@@ -139,7 +139,7 @@ fn gen_impl_ty_params(ty_params: &Vec<TyParam>) -> Tokens {
 fn gen_where_clause(clause: &WhereClause, fetch_lt: &Lifetime, tys: &Vec<Ty>) -> Tokens {
     let user_predicates = clause.predicates.iter().map(|x| quote! { #x });
     let system_data_predicates = tys.iter().map(|ty| {
-        quote! { #ty : ::shred::SystemData< #fetch_lt > }
+        quote! { #ty : ::shred::StaticSystemData< #fetch_lt > }
     });
 
     let mut tokens = Tokens::new();
@@ -168,13 +168,13 @@ fn gen_from_body(ast: &Body, name: &Ident) -> (Tokens, Vec<Ty>) {
 
             quote! {
                 #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
+                    #( #identifiers: ::shred::StaticSystemData::fetch(res) ),*
                 }
             }
         }
         BodyType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
+            let fetch = vec![quote! { ::shred::StaticSystemData::fetch(res) }; count];
 
             quote! {
                 #name ( #( #fetch ),* )
