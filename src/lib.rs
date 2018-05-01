@@ -19,7 +19,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
-//! #[derive(SystemData)]
+//! #[derive(StaticSystemData)]
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
 //!     b: Write<'a, ResB>,
@@ -73,12 +73,13 @@ mod meta;
 mod res;
 mod system;
 
+#[cfg(feature = "parallel")]
+pub use dispatch::AsyncDispatcher;
 pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
 pub use dispatch::{Par, ParSeq, Seq};
-#[cfg(feature = "parallel")]
-pub use dispatch::AsyncDispatcher;
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
-pub use system::{RunNow, RunningTime, System, SystemData};
+pub use system::{Accessor, RunNow, RunningTime, StaticAccessor, StaticSystemData, System,
+                 SystemData};

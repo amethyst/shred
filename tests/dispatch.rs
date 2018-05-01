@@ -16,12 +16,12 @@ struct Res;
 #[derive(Default)]
 struct ResB;
 
-#[derive(SystemData)]
+#[derive(StaticSystemData)]
 struct DummyData<'a> {
     _res: Read<'a, Res>,
 }
 
-#[derive(SystemData)]
+#[derive(StaticSystemData)]
 struct DummyDataMut<'a> {
     _res: Write<'a, Res>,
 }

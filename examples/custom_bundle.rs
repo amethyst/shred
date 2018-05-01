@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, Resources, StaticSystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -13,7 +13,7 @@ struct ExampleBundle<'a> {
     b: Write<'a, ResB>,
 }
 
-impl<'a> SystemData<'a> for ExampleBundle<'a> {
+impl<'a> StaticSystemData<'a> for ExampleBundle<'a> {
     fn setup(res: &mut Resources) {
         res.entry().or_insert(ResA);
         res.entry().or_insert(ResB);
@@ -21,8 +21,8 @@ impl<'a> SystemData<'a> for ExampleBundle<'a> {
 
     fn fetch(res: &'a Resources) -> Self {
         ExampleBundle {
-            a: SystemData::fetch(res),
-            b: SystemData::fetch(res),
+            a: StaticSystemData::fetch(res),
+            b: StaticSystemData::fetch(res),
         }
     }
 

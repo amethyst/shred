@@ -23,7 +23,8 @@ where
     T: System<'a>,
 {
     fn run_now(&mut self, res: &'a Resources) {
-        let data = T::SystemData::fetch(res);
+        let accessor = <T::SystemData as SystemData<'a>>::Accessor::try_new().unwrap();
+        let data = T::SystemData::fetch(&accessor, res);
         self.run(data);
     }
 
@@ -68,9 +69,81 @@ pub trait System<'a> {
         RunningTime::Average
     }
 
+    /// Return the accessor from the [`SystemData`].
+    fn accessor(&self) -> <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor {
+        <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor::try_new()
+            .expect("Missing implementation for `accessor`")
+    }
+
     /// Sets up the `Resources` using `Self::SystemData::setup`.
     fn setup(&mut self, res: &mut Resources) {
         <Self::SystemData as SystemData>::setup(res)
+    }
+}
+
+/// A struct implementing
+/// static system data adds a
+/// static accessor.
+pub trait StaticSystemData<'a> {
+    fn setup(res: &mut Resources);
+
+    fn fetch(res: &'a Resources) -> Self;
+
+    fn reads() -> Vec<ResourceId>;
+
+    fn writes() -> Vec<ResourceId>;
+}
+
+impl<'a, T> SystemData<'a> for T
+where
+    T: StaticSystemData<'a>,
+{
+    type Accessor = StaticAccessor<T>;
+
+    fn setup(res: &mut Resources) {
+        T::setup(res);
+    }
+
+    fn fetch(access: &StaticAccessor<T>, res: &'a Resources) -> Self {
+        T::fetch(res)
+    }
+}
+
+impl<'a> StaticSystemData<'a> for () {
+    fn setup(res: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ()
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        Vec::new()
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        Vec::new()
+    }
+}
+
+#[derive(Default)]
+pub struct StaticAccessor<T> {
+    marker: PhantomData<fn() -> T>,
+}
+
+impl<'a, T> Accessor for StaticAccessor<T>
+where
+    T: StaticSystemData<'a>,
+{
+    fn try_new() -> Option<Self> {
+        Some(StaticAccessor {
+            marker: PhantomData,
+        })
+    }
+    fn reads(&self) -> Vec<ResourceId> {
+        T::reads()
+    }
+    fn writes(&self) -> Vec<ResourceId> {
+        T::writes()
     }
 }
 
@@ -79,6 +152,8 @@ pub trait System<'a> {
 /// bundles some resources which are
 /// required for the execution.
 pub trait SystemData<'a> {
+    type Accessor: Accessor;
+
     /// Sets up `Resources` for fetching this system data.
     fn setup(res: &mut Resources);
 
@@ -97,7 +172,101 @@ pub trait SystemData<'a> {
     /// `setup` was not called or it didn't insert any fallback value.
     ///
     /// [`Resources`]: trait.Resources.html
-    fn fetch(res: &'a Resources) -> Self;
+    fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self;
+}
+
+impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
+    type Accessor = StaticAccessor<()>;
+
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(_: &Self::Accessor, _: &'a Resources) -> Self {
+        PhantomData
+    }
+}
+
+macro_rules! impl_data {
+    ( $($ty:ident),* ) => {
+        impl<'a, $($ty),*> StaticSystemData<'a> for ( $( $ty , )* )
+            where $( $ty : StaticSystemData<'a> ),*
+            {
+                fn setup(res: &mut Resources) {
+                    #![allow(unused_variables)]
+
+                    $(
+                        <$ty as StaticSystemData>::setup(&mut *res);
+                     )*
+                }
+
+                fn fetch(res: &'a Resources) -> Self {
+                    #![allow(unused_variables)]
+
+                    ( $( <$ty as StaticSystemData<'a>>::fetch(res), )* )
+                }
+
+                fn reads() -> Vec<ResourceId> {
+                    #![allow(unused_mut)]
+
+                    let mut r = Vec::new();
+
+                    $( {
+                        let mut reads = <$ty as StaticSystemData>::reads();
+                        r.append(&mut reads);
+                    } )*
+
+                    r
+                }
+
+                fn writes() -> Vec<ResourceId> {
+                    #![allow(unused_mut)]
+
+                    let mut r = Vec::new();
+
+                    $( {
+                        let mut writes = <$ty as StaticSystemData>::writes();
+                        r.append(&mut writes);
+                    } )*
+
+                    r
+                }
+            }
+
+        /*
+        impl<$($ty),*> StaticAccessor<$($ty),*> {
+            fn reads(&self) -> Vec<ResourceId> {
+                #![allow(unused_mut)]
+
+                let mut r = Vec::new();
+
+                $( {
+                    let mut reads = <$ty as Accessor>::reads();
+                    r.append(&mut reads);
+                } )*
+
+                r
+            }
+
+            fn writes(&self) -> Vec<ResourceId> {
+                #![allow(unused_mut)]
+
+                let mut r = Vec::new();
+
+                $( {
+                    let mut writes = <$ty as Accessor>::writes();
+                    r.append(&mut writes);
+                } )*
+
+                r
+            }
+        }
+            */
+    };
+}
+
+/// A trait for accessing read/write bundles of [`ResourceId`]s in ['SystemData']. This can be used
+/// to create dynamic systems that don't specify what they fetch at compile-time.
+pub trait Accessor: Sized {
+    fn try_new() -> Option<Self>;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs read access to in order to
@@ -114,7 +283,7 @@ pub trait SystemData<'a> {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn reads() -> Vec<ResourceId>;
+    fn reads(&self) -> Vec<ResourceId>;
 
     /// A list of [`ResourceId`]s the bundle
     /// needs write access to in order to
@@ -131,84 +300,29 @@ pub trait SystemData<'a> {
     /// (otherwise it has no effect).
     ///
     /// [`ResourceId`]: struct.ResourceId.html
-    fn writes() -> Vec<ResourceId>;
+    fn writes(&self) -> Vec<ResourceId>;
 }
 
-impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
-    fn setup(_: &mut Resources) {}
-
-    fn fetch(_: &'a Resources) -> Self {
-        PhantomData
+impl Accessor for () {
+    fn try_new() -> Option<Self> {
+        None
     }
-
-    fn reads() -> Vec<ResourceId> {
+    fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
-
-    fn writes() -> Vec<ResourceId> {
+    fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
 }
 
-macro_rules! impl_data {
-    ( $($ty:ident),* ) => {
-        impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
-            where $( $ty : SystemData<'a> ),*
-        {
-            fn setup(res: &mut Resources) {
-                #![allow(unused_variables)]
-
-                $(
-                    <$ty as SystemData>::setup(&mut *res);
-                )*
-            }
-
-            fn fetch(res: &'a Resources) -> Self {
-                #![allow(unused_variables)]
-
-                ( $( <$ty as SystemData<'a>>::fetch(res), )* )
-            }
-
-            fn reads() -> Vec<ResourceId> {
-                #![allow(unused_mut)]
-
-                let mut r = Vec::new();
-
-                $( {
-                        let mut reads = <$ty as SystemData>::reads();
-                        r.append(&mut reads);
-                    } )*
-
-                r
-            }
-
-            fn writes() -> Vec<ResourceId> {
-                #![allow(unused_mut)]
-
-                let mut r = Vec::new();
-
-                $( {
-                        let mut writes = <$ty as SystemData>::writes();
-                        r.append(&mut writes);
-                    } )*
-
-                r
-            }
-        }
-    };
-}
-
-impl<'a> SystemData<'a> for () {
-    fn setup(_: &mut Resources) {}
-
-    fn fetch(_: &'a Resources) -> Self {
-        ()
+impl<T: ?Sized> Accessor for PhantomData<T> {
+    fn try_new() -> Option<Self> {
+        None
     }
-
-    fn reads() -> Vec<ResourceId> {
+    fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
-    fn writes() -> Vec<ResourceId> {
+    fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
 }
