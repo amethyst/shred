@@ -19,7 +19,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
-//! #[derive(SystemData)]
+//! #[derive(StaticSystemData)]
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
 //!     b: Write<'a, ResB>,
