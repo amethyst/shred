@@ -75,7 +75,7 @@ mod system;
 
 pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
-pub use dispatch::{Par, ParSeq, Seq};
+pub use dispatch::{Par, ParSeq, Seq, RunWithPool};
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};

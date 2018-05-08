@@ -242,11 +242,29 @@ where
     }
 }
 
+/// Similar to `RunNow` except additionally taking in a rayon::ThreadPool
+/// for parallelism.
 pub trait RunWithPool<'a> {
+    /// Sets up `Resources` for a later call to `run`.
     fn setup(&mut self, res: &mut Resources);
+
+    /// Runs the system/group of systems. Possibly in parallel depending
+    /// on how the structure is set up.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the system tries to fetch resources
+    /// which are borrowed in an incompatible way already
+    /// (tries to read from a resource which is already written to or
+    /// tries to write to a resource which is read from).
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
 
+    /// Accumulates the necessary read/shared resources from the
+    /// systems in this group.
     fn reads(&self, reads: &mut Vec<ResourceId>);
+
+    /// Accumulates the necessary write/exclusive resources from the
+    /// systems in this group.
     fn writes(&self, writes: &mut Vec<ResourceId>);
 }
 

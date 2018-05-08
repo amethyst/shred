@@ -185,7 +185,7 @@ impl<'a> StagesBuilder<'a> {
                     let system: &SystemId = system;
 
                     let mut name = map.get(system).unwrap().to_string();
-                    name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
+                    name = name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
 
                     writeln!(f, "\t\t\t{},", name)?;
                 }
