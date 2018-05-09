@@ -96,6 +96,16 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 }
 
+impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
+    fn run_now(&mut self, res: &Resources) {
+        self.dispatch(res);
+    }
+
+    fn setup(&mut self, res: &mut Resources) {
+        self.setup(res);
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SystemId(pub usize);
 

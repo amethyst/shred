@@ -242,6 +242,20 @@ where
     }
 }
 
+impl<'a, P, T> RunNow<'a> for ParSeq<P, T>
+where
+    P: Borrow<ThreadPool>,
+    T: for<'b> RunWithPool<'b>,
+{
+    fn run_now(&mut self, res: &Resources) {
+        RunWithPool::run(&mut self.run, res, self.pool.borrow());
+    }
+
+    fn setup(&mut self, res: &mut Resources) {
+        RunWithPool::setup(&mut self.run, res);
+    }
+}
+
 /// Similar to `RunNow` except additionally taking in a rayon::ThreadPool
 /// for parallelism.
 pub trait RunWithPool<'a> {
