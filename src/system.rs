@@ -3,8 +3,10 @@ use std::ops::Deref;
 
 use {ResourceId, Resources};
 
-/// A trait for accessing read/write bundles of [`ResourceId`]s in ['SystemData']. This can be used
+/// A trait for accessing read/write multiple resources from a system. This can be used
 /// to create dynamic systems that don't specify what they fetch at compile-time.
+///
+/// For compile-time system data this will all be done for you using `StaticAccessor`.
 pub trait Accessor: Sized {
     /// Tries to create a new instance of this type. This one returns `Some` in case there is a
     /// default, otherwise the system needs to override `System::accessor`.
@@ -16,9 +18,8 @@ pub trait Accessor: Sized {
     ///
     /// # Contract
     ///
-    /// Exactly return the dependencies you're
-    /// going to `fetch`! Doing otherwise *will*
-    /// cause a data race.
+    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise *will* cause a
+    /// panic.
     ///
     /// This method is only executed once,
     /// thus the returned value may never change
@@ -33,9 +34,8 @@ pub trait Accessor: Sized {
     ///
     /// # Contract
     ///
-    /// Exactly return the dependencies you're
-    /// going to `fetch`! Doing otherwise *will*
-    /// cause a data race.
+    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise *will* cause a
+    /// panic.
     ///
     /// This method is only executed once,
     /// thus the returned value may never change
