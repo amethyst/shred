@@ -77,7 +77,7 @@ const NUM_COMPONENTS: usize = 200;
 
 // --------------
 
-#[derive(SystemData)]
+#[derive(StaticSystemData)]
 struct SpringForceData<'a> {
     pos: Read<'a, PosStorage>,
     spring: Read<'a, SpringStorage>,
@@ -109,7 +109,7 @@ impl<'a> System<'a> for SpringForce {
     }
 }
 
-#[derive(SystemData)]
+#[derive(StaticSystemData)]
 struct IntegrationData<'a> {
     force: Read<'a, ForceStorage>,
     mass: Read<'a, MassStorage>,
@@ -154,7 +154,7 @@ impl<'a> System<'a> for IntegrationSystem {
     }
 }
 
-#[derive(SystemData)]
+#[derive(StaticSystemData)]
 struct ClearForceAccumData<'a> {
     force: Write<'a, ForceStorage>,
 }

@@ -2,7 +2,7 @@
 
 extern crate shred;
 
-use shred::{ReadExpect, Resources, SystemData};
+use shred::{ReadExpect, Resources, StaticSystemData};
 
 struct MyRes;
 
@@ -11,5 +11,5 @@ struct MyRes;
 fn try_helpful_panic() {
     let res = Resources::new();
 
-    let _expect: ReadExpect<MyRes> = SystemData::fetch(&res);
+    let _expect: ReadExpect<MyRes> = StaticSystemData::fetch(&res);
 }
