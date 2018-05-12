@@ -77,7 +77,7 @@ where
 /// A resource defines a set of data
 /// which can only be accessed according
 /// to Rust's typical borrowing model (one writer xor multiple readers).
-pub trait Resource: Any + Send + Sync {}
+pub trait Resource: Any + Send + Sync + 'static {}
 
 mopafy!(Resource);
 
@@ -266,7 +266,7 @@ mod tests {
 
         let mut res = Resources::new();
         res.insert(Res);
-        Read::<Res>::fetch(&res);
+        <Read<Res> as SystemData>::fetch(&res);
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
 
         let mut res = Resources::new();
         res.insert(Res);
-        Write::<Res>::fetch(&res);
+        <Write<Res> as SystemData>::fetch(&res);
     }
 
     #[test]

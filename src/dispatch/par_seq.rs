@@ -295,14 +295,14 @@ where
     }
 
     fn reads(&self, reads: &mut Vec<ResourceId>) {
-        use system::SystemData;
+        use system::Accessor;
 
-        reads.extend(T::SystemData::reads())
+        reads.extend(self.accessor().reads())
     }
     fn writes(&self, writes: &mut Vec<ResourceId>) {
-        use system::SystemData;
+        use system::Accessor;
 
-        writes.extend(T::SystemData::writes())
+        writes.extend(self.accessor().writes())
     }
 }
 

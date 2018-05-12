@@ -126,10 +126,10 @@ impl<'a> StagesBuilder<'a> {
     where
         T: for<'b> System<'b> + Send + 'a,
     {
-        use system::SystemData;
+        use system::Accessor;
 
-        let mut reads = T::SystemData::reads();
-        let writes = T::SystemData::writes();
+        let mut reads = system.accessor().reads();
+        let writes = system.accessor().writes();
 
         reads.sort();
         reads.dedup();
