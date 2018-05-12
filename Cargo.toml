@@ -50,6 +50,9 @@ name = "custom_bundle"
 name = "derive_bundle"
 
 [[example]]
+name = "dyn_sys_data"
+
+[[example]]
 name = "fetch_opt"
 
 [[example]]

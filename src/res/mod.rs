@@ -77,7 +77,7 @@ where
 /// A resource defines a set of data
 /// which can only be accessed according
 /// to Rust's typical borrowing model (one writer xor multiple readers).
-pub trait Resource: Any + Send + Sync {}
+pub trait Resource: Any + Send + Sync + 'static {}
 
 mopafy!(Resource);
 
