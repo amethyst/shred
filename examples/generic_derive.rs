@@ -10,15 +10,15 @@ use shred::{Read, Resource, Write};
 
 trait Hrtb<'a> {}
 
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct VeryCustomDerive<'a, T: Debug + Resource + for<'b> Hrtb<'b>> {
     _b: Write<'a, T>,
 }
 
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct SomeTuple<'a, T: Debug + Resource>(Read<'a, T>);
 
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct WithWhereClause<'a, T>
 where
     T: Resource,

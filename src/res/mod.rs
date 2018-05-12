@@ -254,7 +254,7 @@ impl Resources {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {RunNow, System, StaticSystemData};
+    use {RunNow, System, SystemData};
 
     #[derive(Default)]
     struct Res;
@@ -266,7 +266,7 @@ mod tests {
 
         let mut res = Resources::new();
         res.insert(Res);
-        <Read<Res> as StaticSystemData>::fetch(&res);
+        <Read<Res> as SystemData>::fetch(&res);
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
 
         let mut res = Resources::new();
         res.insert(Res);
-        <Write<Res> as StaticSystemData>::fetch(&res);
+        <Write<Res> as SystemData>::fetch(&res);
     }
 
     #[test]

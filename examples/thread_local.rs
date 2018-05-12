@@ -10,7 +10,7 @@ struct ResA;
 #[derive(Debug, Default)]
 struct ResB;
 
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct Data<'a> {
     a: Read<'a, ResA>,
     b: Write<'a, ResB>,

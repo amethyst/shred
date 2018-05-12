@@ -19,7 +19,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
-//! #[derive(StaticSystemData)]
+//! #[derive(SystemData)]
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
 //!     b: Write<'a, ResB>,
@@ -81,5 +81,5 @@ pub use dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
-pub use system::{Accessor, AccessorCow, RunNow, RunningTime, StaticAccessor, StaticSystemData,
-                 System, SystemData};
+pub use system::{Accessor, AccessorCow, RunNow, RunningTime, StaticAccessor, SystemData,
+                 System, DynamicSystemData};

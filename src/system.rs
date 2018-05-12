@@ -98,7 +98,7 @@ where
     }
 }
 
-type AccessorTy<'a, T> = <<T as System<'a>>::SystemData as SystemData<'a>>::Accessor;
+type AccessorTy<'a, T> = <<T as System<'a>>::SystemData as DynamicSystemData<'a>>::Accessor;
 
 /// Trait for fetching data and running systems. Automatically implemented for systems.
 pub trait RunNow<'a> {
@@ -145,12 +145,13 @@ pub enum RunningTime {
 ///
 /// [`Resource`]: trait.Resource.html
 pub trait System<'a> {
-    /// The resource bundle required
-    /// to execute this system.
+    /// The resource bundle required to execute this system.
     ///
-    /// To create such a resource bundle,
-    /// simple derive `SystemData` for it.
-    type SystemData: SystemData<'a>;
+    /// You will mostly use a tuple of system data (which also implements `SystemData`).
+    /// You can also create such a resource bundle by simply deriving `SystemData` for a struct.
+    ///
+    /// Every `SystemData` is also a `DynamicSystemData`.
+    type SystemData: DynamicSystemData<'a>;
 
     /// Executes the system with the required system
     /// data.
@@ -168,26 +169,26 @@ pub trait System<'a> {
     /// Return the accessor from the [`SystemData`].
     fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
         AccessorCow::Owned(
-            <<Self as System<'a>>::SystemData as SystemData<'a>>::Accessor::try_new()
+            AccessorTy::<'a, Self>::try_new()
                 .expect("Missing implementation for `accessor`"),
         )
     }
 
     /// Sets up the `Resources` using `Self::SystemData::setup`.
     fn setup(&mut self, res: &mut Resources) {
-        <Self::SystemData as SystemData>::setup(&self.accessor(), res)
+        <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), res)
     }
 }
 
 /// A static system data that can specify its dependencies at statically (at compile-time).
-/// Most system data is a `StaticSystemData`, the `SystemData` type is only needed for very special
+/// Most system data is a `SystemData`, the `DynamicSystemData` type is only needed for very special
 /// setups.
-pub trait StaticSystemData<'a> {
+pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `Resources`.
     fn setup(res: &mut Resources);
 
     /// Fetches the system data from `Resources`. Note that this is only specified for one concrete
-    /// lifetime `'a`, you need to implement the `StaticSystemData` trait for every possible
+    /// lifetime `'a`, you need to implement the `SystemData` trait for every possible
     /// lifetime.
     fn fetch(res: &'a Resources) -> Self;
 
@@ -202,9 +203,9 @@ pub trait StaticSystemData<'a> {
     fn writes() -> Vec<ResourceId>;
 }
 
-impl<'a, T> SystemData<'a> for T
+impl<'a, T> DynamicSystemData<'a> for T
 where
-    T: StaticSystemData<'a>,
+    T: SystemData<'a>,
 {
     type Accessor = StaticAccessor<T>;
 
@@ -217,7 +218,7 @@ where
     }
 }
 
-impl<'a> StaticSystemData<'a> for () {
+impl<'a> SystemData<'a> for () {
     fn setup(_: &mut Resources) {}
 
     fn fetch(_: &'a Resources) -> Self {
@@ -233,7 +234,7 @@ impl<'a> StaticSystemData<'a> for () {
     }
 }
 
-/// The static accessor that is used for `StaticSystemData`.
+/// The static accessor that is used for `SystemData`.
 #[derive(Default)]
 pub struct StaticAccessor<T> {
     marker: PhantomData<fn() -> T>,
@@ -241,7 +242,7 @@ pub struct StaticAccessor<T> {
 
 impl<'a, T> Accessor for StaticAccessor<T>
 where
-    T: StaticSystemData<'a>,
+    T: SystemData<'a>,
 {
     fn try_new() -> Option<Self> {
         Some(StaticAccessor {
@@ -259,8 +260,8 @@ where
 /// A struct implementing system data indicates that it bundles some resources which are required
 /// for the execution.
 ///
-/// This is the more flexible, but complex variant of `StaticSystemData`.
-pub trait SystemData<'a> {
+/// This is the more flexible, but complex variant of `SystemData`.
+pub trait DynamicSystemData<'a> {
     /// The accessor of the `SystemData`, which specifies the read and write dependencies and does
     /// the fetching.
     type Accessor: Accessor;
@@ -286,7 +287,7 @@ pub trait SystemData<'a> {
     fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self;
 }
 
-impl<'a, T: ?Sized> StaticSystemData<'a> for PhantomData<T> {
+impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
     fn setup(_: &mut Resources) {}
 
     fn fetch(_: &Resources) -> Self {
@@ -304,21 +305,21 @@ impl<'a, T: ?Sized> StaticSystemData<'a> for PhantomData<T> {
 
 macro_rules! impl_data {
     ( $($ty:ident),* ) => {
-        impl<'a, $($ty),*> StaticSystemData<'a> for ( $( $ty , )* )
-            where $( $ty : StaticSystemData<'a> ),*
+        impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
+            where $( $ty : SystemData<'a> ),*
             {
                 fn setup(res: &mut Resources) {
                     #![allow(unused_variables)]
 
                     $(
-                        <$ty as StaticSystemData>::setup(&mut *res);
+                        <$ty as SystemData>::setup(&mut *res);
                      )*
                 }
 
                 fn fetch(res: &'a Resources) -> Self {
                     #![allow(unused_variables)]
 
-                    ( $( <$ty as StaticSystemData<'a>>::fetch(res), )* )
+                    ( $( <$ty as SystemData<'a>>::fetch(res), )* )
                 }
 
                 fn reads() -> Vec<ResourceId> {
@@ -327,7 +328,7 @@ macro_rules! impl_data {
                     let mut r = Vec::new();
 
                     $( {
-                        let mut reads = <$ty as StaticSystemData>::reads();
+                        let mut reads = <$ty as SystemData>::reads();
                         r.append(&mut reads);
                     } )*
 
@@ -340,7 +341,7 @@ macro_rules! impl_data {
                     let mut r = Vec::new();
 
                     $( {
-                        let mut writes = <$ty as StaticSystemData>::writes();
+                        let mut writes = <$ty as SystemData>::writes();
                         r.append(&mut writes);
                     } )*
 

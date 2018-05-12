@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Read, Resources, StaticSystemData, Write};
+use shred::{Read, Resources, SystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -10,14 +10,14 @@ struct ResA;
 #[derive(Debug, Default)]
 struct ResB;
 
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct AutoBundle<'a> {
     a: Read<'a, ResA>,
     b: Write<'a, ResB>,
 }
 
 // We can even nest system data
-#[derive(StaticSystemData)]
+#[derive(SystemData)]
 struct Nested<'a> {
     inner: AutoBundle<'a>,
 }
