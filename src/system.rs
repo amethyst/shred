@@ -359,6 +359,25 @@ mod impl_system_fn {
     impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
     impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
     impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+
+    #[cfg(test)]
+    mod tests {
+        use dispatch::DispatcherBuilder;
+        use res::*;
+
+        #[test]
+        fn test_add_to_dispatch() {
+            let dispatch = DispatcherBuilder::new()
+                .with(test_system as fn(_), "test_system", &[]);
+        }
+
+        #[derive(Default)]
+        struct Res(i32);
+
+        fn test_system(res: Write<Res>) {
+            println!("Dummy!!");
+        }
+    }
 }
 
 
