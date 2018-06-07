@@ -303,6 +303,65 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
     }
 }
 
+macro_rules! impl_system_fn {
+    ( $($ty:ident),* ) => {
+        impl<'a, $( $ty , )*> System<'a> for Box<FnMut($( $ty , )*)>
+        where $( $ty : SystemData<'a> ),*
+        {
+            type SystemData = ($( $ty , )*);
+
+            fn run(&mut self, ($( $ty , )*): Self::SystemData) {
+                (self)($( $ty , )*);
+            }
+        }
+
+        impl<'a, $( $ty , )*> System<'a> for fn($( $ty , )*)
+        where $( $ty : SystemData<'a> ),*
+        {
+            type SystemData = ($( $ty , )*);
+
+            fn run(&mut self, ($( $ty , )*): Self::SystemData) {
+                (self)($( $ty , )*);
+            }
+        }
+    }
+}
+
+mod impl_system_fn {
+    #![cfg_attr(rustfmt, rustfmt_skip)]
+    #![allow(non_snake_case)]
+
+    use super::*;
+
+    impl_system_fn!(A);
+    impl_system_fn!(A, B);
+    impl_system_fn!(A, B, C);
+    impl_system_fn!(A, B, C, D);
+    impl_system_fn!(A, B, C, D, E);
+    impl_system_fn!(A, B, C, D, E, F);
+    impl_system_fn!(A, B, C, D, E, F, G);
+    impl_system_fn!(A, B, C, D, E, F, G, H);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
+    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+}
+
+
 macro_rules! impl_data {
     ( $($ty:ident),* ) => {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
