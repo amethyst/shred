@@ -303,15 +303,40 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
     }
 }
 
+/// This macro allows for creating a system out of a function or closure that accepts
+/// `SystemData` types.
+/// 
+/// ## Examples
+/// 
+/// ```
+/// #[macro_use]
+/// extern crate shred;
+/// 
+/// use shred::{Read, Write};
+/// 
+/// #[derive(Debug)]
+/// struct Resource;
+/// struct Bar;
+/// fn main() {
+///     system_fn!(|_res: Write<'system, Resource>, _bar: Read<'system, Bar>| println!("Hi from a closure!"));
+///     system_fn!(move |res: Write<'system, Resource>, _bar: Read<'system, Bar>| println!("Resource debug print: {:?}", *res));
+///     system_fn!(named_function(res: Write<'system, Resource>, _bar: Read<'system, Bar>));
+/// }
+/// 
+/// fn named_function(_res: Write<Resource>, _bar: Read<Bar>) {
+///     println!("Hello from a named function!!");
+/// }
+/// 
+/// ```
 #[macro_export]
 macro_rules! system_fn {
     ( $f:ident($($an:ident: $at:ty),* $(,)*) ) => {
         {
             struct FnSys<F>(F);
-            impl<'system, F> ::System<'system> for FnSys<F>
+            impl<'system, F> $crate::System<'system> for FnSys<F>
                 where
                     F: FnMut($( $at , )*),
-                    $( $at : ::SystemData<'system> ),*
+                    $( $at : $crate::SystemData<'system> ),*
             {
                 type SystemData = ($( $at , )*);
 
@@ -328,10 +353,10 @@ macro_rules! system_fn {
         {
             struct FnSys<F>(F);
 
-            impl<'system, F> ::System<'system> for FnSys<F>
+            impl<'system, F> $crate::System<'system> for FnSys<F>
                 where
                     F: FnMut($( $at<'system $( , $ap )*> , )*),
-                    $( $at<'system $( , $ap )*> : ::SystemData<'system> ),*
+                    $( $at<'system $( , $ap )*> : $crate::SystemData<'system> ),*
             {
                 type SystemData = ($( $at<'system $( , $ap )*> , )*);
 
@@ -348,10 +373,10 @@ macro_rules! system_fn {
         {
             struct FnSys<F>(F);
 
-            impl<'system, F> ::System<'system> for FnSys<F>
+            impl<'system, F> $crate::System<'system> for FnSys<F>
                 where
                     F: FnMut($( $at<'system $( , $ap )*> , )*),
-                    $( $at<'system $( , $ap )*> : ::SystemData<'system> ),*
+                    $( $at<'system $( , $ap )*> : $crate::SystemData<'system> ),*
             {
                 type SystemData = ($( $at<'system $( , $ap )*> , )*);
 
@@ -366,42 +391,38 @@ macro_rules! system_fn {
 }
 
 #[cfg(test)]
-mod impl_system_fn {
+mod system_fn_tests {
     #![cfg_attr(rustfmt, rustfmt_skip)]
-    #![allow(non_snake_case)]
+    
+    use std::mem::drop;
+    use dispatch::DispatcherBuilder;
+    use res::*;
 
-    #[cfg(test)]
-    mod tests {
-        use std::mem::drop;
-        use dispatch::DispatcherBuilder;
-        use res::*;
+    #[test]
+    fn test_add_to_dispatch() {
+        let number = 2;
+        let dispatch = DispatcherBuilder::new();
 
-        #[test]
-        fn test_add_to_dispatch() {
-            let number = 2;
-            let dispatch = DispatcherBuilder::new();
+        let dispatch = {
+            let res = Res(1);
 
-            let dispatch = {
-                let res = Res(1);
+            let named_closure = |_res: Write<Res<u32>>| println!("{}", number);
 
-                let named_closure = |_res: Write<Res<u32>>| println!("{}", number);
+            dispatch
+                .with(system_fn!(test_system(res: Write<'system, Res<i32>>)), "fn", &[])
+                .with(system_fn!(|_res: Write<'system, Res<u32>>| println!("{}", number)), "closure", &[])
+                .with(system_fn!(move |_res: Write<'system, Res<u32>>| println!("{:?}", res)), "move closure", &[])
+                .with(system_fn!(named_closure(res: Write<'system, Res<u32>>)), "named closure", &[])
+        };
 
-                dispatch
-                    .with(system_fn!(test_system(res: Write<'system, Res<i32>>)), "fn", &[])
-                    .with(system_fn!(|_res: Write<'system, Res<u32>>| println!("{}", number)), "closure", &[])
-                    .with(system_fn!(move |_res: Write<'system, Res<u32>>| println!("{:?}", res)), "move closure", &[])
-                    .with(system_fn!(named_closure(res: Write<'system, Res<u32>>)), "named closure", &[])
-            };
+        drop(dispatch);
+    }
 
-            drop(dispatch);
-        }
+    #[derive(Default, Debug)]
+    struct Res<T>(T);
 
-        #[derive(Default, Debug)]
-        struct Res<T>(T);
-
-        fn test_system(_res: Write<Res<i32>>) {
-            println!("Dummy!!");
-        }
+    fn test_system(_res: Write<Res<i32>>) {
+        println!("Dummy!!");
     }
 }
 
