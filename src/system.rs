@@ -303,78 +303,103 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
     }
 }
 
-macro_rules! impl_system_fn {
-    ( $($ty:ident),* ) => {
-        impl<'a, $( $ty , )*> System<'a> for Box<FnMut($( $ty , )*)>
-        where $( $ty : SystemData<'a> ),*
+#[macro_export]
+macro_rules! system_fn {
+    ( $f:ident($($an:ident: $at:ty),* $(,)*) ) => {
         {
-            type SystemData = ($( $ty , )*);
+            struct FnSys<F>(F);
+            impl<'system, F> ::System<'system> for FnSys<F>
+                where
+                    F: FnMut($( $at , )*),
+                    $( $at : ::SystemData<'system> ),*
+            {
+                type SystemData = ($( $at , )*);
 
-            fn run(&mut self, ($( $ty , )*): Self::SystemData) {
-                (self)($( $ty , )*);
+                fn run(&mut self, ($( $an , )*): Self::SystemData) {
+                    (self.0)($( $an , )*);
+                }
             }
-        }
 
-        impl<'a, $( $ty , )*> System<'a> for fn($( $ty , )*)
-        where $( $ty : SystemData<'a> ),*
+            FnSys($f)
+        }
+    };
+
+    ( |$( $an:ident : $at:ident<'system $( , $ap:ty )*> ),* $(,)*| $body:expr) => {
         {
-            type SystemData = ($( $ty , )*);
+            struct FnSys<F>(F);
 
-            fn run(&mut self, ($( $ty , )*): Self::SystemData) {
-                (self)($( $ty , )*);
+            impl<'system, F> ::System<'system> for FnSys<F>
+                where
+                    F: FnMut($( $at<'system $( , $ap )*> , )*),
+                    $( $at<'system $( , $ap )*> : ::SystemData<'system> ),*
+            {
+                type SystemData = ($( $at<'system $( , $ap )*> , )*);
+
+                fn run(&mut self, ($( $an , )*): Self::SystemData) {
+                    (self.0)($( $an , )*)
+                }
             }
+
+            FnSys(|$( $an: $at<$($ap,)*> , ) *| $body)
         }
-    }
+    };
+
+    ( move |$( $an:ident : $at:ident<'system $( , $ap:ty )*> ),* $(,)*| $body:expr) => {
+        {
+            struct FnSys<F>(F);
+
+            impl<'system, F> ::System<'system> for FnSys<F>
+                where
+                    F: FnMut($( $at<'system $( , $ap )*> , )*),
+                    $( $at<'system $( , $ap )*> : ::SystemData<'system> ),*
+            {
+                type SystemData = ($( $at<'system $( , $ap )*> , )*);
+
+                fn run(&mut self, ($( $an , )*): Self::SystemData) {
+                    (self.0)($( $an , )*)
+                }
+            }
+
+            FnSys(move |$( $an: $at<$($ap,)*> , ) *| $body)
+        }
+    };
 }
 
+#[cfg(test)]
 mod impl_system_fn {
     #![cfg_attr(rustfmt, rustfmt_skip)]
     #![allow(non_snake_case)]
 
-    use super::*;
-
-    impl_system_fn!(A);
-    impl_system_fn!(A, B);
-    impl_system_fn!(A, B, C);
-    impl_system_fn!(A, B, C, D);
-    impl_system_fn!(A, B, C, D, E);
-    impl_system_fn!(A, B, C, D, E, F);
-    impl_system_fn!(A, B, C, D, E, F, G);
-    impl_system_fn!(A, B, C, D, E, F, G, H);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
-    impl_system_fn!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
-
     #[cfg(test)]
     mod tests {
+        use std::mem::drop;
         use dispatch::DispatcherBuilder;
         use res::*;
 
         #[test]
         fn test_add_to_dispatch() {
-            let dispatch = DispatcherBuilder::new()
-                .with(test_system as fn(_), "test_system", &[]);
+            let number = 2;
+            let dispatch = DispatcherBuilder::new();
+
+            let dispatch = {
+                let res = Res(1);
+
+                let named_closure = |_res: Write<Res<u32>>| println!("{}", number);
+
+                dispatch
+                    .with(system_fn!(test_system(res: Write<'system, Res<i32>>)), "fn", &[])
+                    .with(system_fn!(|_res: Write<'system, Res<u32>>| println!("{}", number)), "closure", &[])
+                    .with(system_fn!(move |_res: Write<'system, Res<u32>>| println!("{:?}", res)), "move closure", &[])
+                    .with(system_fn!(named_closure(res: Write<'system, Res<u32>>)), "named closure", &[])
+            };
+
+            drop(dispatch);
         }
 
-        #[derive(Default)]
-        struct Res(i32);
+        #[derive(Default, Debug)]
+        struct Res<T>(T);
 
-        fn test_system(res: Write<Res>) {
+        fn test_system(_res: Write<Res<i32>>) {
             println!("Dummy!!");
         }
     }
