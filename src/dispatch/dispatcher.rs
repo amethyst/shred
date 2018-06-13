@@ -96,9 +96,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 
     /// This method returns the largest amount of threads this dispatcher
-    /// can make use of.  Allocating anymore threads than this will use CPU
-    /// without conferring any benefit.  (Unless something is running in
-    /// the threadpool other than the dispatcher.)
+    /// can make use of. This is mainly for debugging purposes so you can see
+    /// how well your systems can make use of multi-threading.
     #[cfg(feature = "parallel")]
     pub fn max_threads(&self) -> usize {
         self.stages
