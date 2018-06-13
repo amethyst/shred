@@ -94,6 +94,18 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
             sys.run_now(res);
         }
     }
+
+    /// This method returns the largest amount of threads this dispatcher
+    /// can make use of.  Allocating anymore threads than this will use CPU
+    /// without conferring any benefit.  (Unless something is running in
+    /// the threadpool other than the dispatcher.)
+    #[cfg(feature = "parallel")]
+    pub fn max_threads(&self) -> usize {
+        self.stages
+            .iter()
+            .map(|s| s.max_threads())
+            .fold(0, |highest, value| highest.max(value))
+    }
 }
 
 impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
