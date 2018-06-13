@@ -99,7 +99,7 @@ impl<'a> Stage<'a> {
     }
 
     /// This function returns the maximum amount of threads this stage
-    /// will ever use.  Useful for downscaling threadpools if needed.
+    /// will ever use.
     #[cfg(feature = "parallel")]
     pub fn max_threads(&self) -> usize {
         self.groups.len()
