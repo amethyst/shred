@@ -49,6 +49,16 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
+impl<'a, T> Clone for Ref<'a, T> {
+    fn clone(&self) -> Self {
+        self.flag.fetch_add(1, Ordering::SeqCst);
+        Ref {
+            flag: self.flag,
+            value: self.value,
+        }
+    }
+}
+
 /// A mutable reference to data in a `TrustCell`.
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)

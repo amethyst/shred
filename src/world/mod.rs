@@ -47,6 +47,15 @@ where
     }
 }
 
+impl<'a, T> Clone for Fetch<'a, T> {
+    fn clone(&self) -> Self {
+        Fetch {
+            inner: self.inner.clone(),
+            phantom: PhantomData,
+        }
+    }
+}
+
 /// Allows to fetch a resource in a system mutably.
 ///
 /// If the resource isn't strictly required, you should use
