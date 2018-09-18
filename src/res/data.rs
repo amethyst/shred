@@ -161,7 +161,7 @@ where
     }
 }
 
-/// Allows to fetch a resource in a system mutably.
+/// Allows to fetch a resource in a system immutably.
 /// **This will panic if the resource does not exist.**
 /// Usage of `Read` or `Option<Read>` is therefore recommended.
 ///
