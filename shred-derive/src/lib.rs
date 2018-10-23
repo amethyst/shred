@@ -8,9 +8,11 @@ extern crate quote;
 extern crate syn;
 
 use proc_macro::TokenStream;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
 use syn::{
-    punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Field, Fields,
-    FieldsNamed, FieldsUnnamed, Ident, Lifetime, Type, WhereClause, WherePredicate,
+    Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Lifetime,
+    Type, WhereClause, WherePredicate,
 };
 
 /// Used to `#[derive]` the trait `SystemData`.
@@ -96,10 +98,10 @@ fn gen_identifiers(fields: &Punctuated<Field, Comma>) -> Vec<Ident> {
 
 /// Adds a `::shred::SystemData<'lt>` bound on each of the system data types.
 fn constrain_system_data_types(clause: &mut WhereClause, fetch_lt: &Lifetime, tys: &[Type]) {
-    tys.iter().for_each(|ty| {
+    for ty in tys.iter() {
         let where_predicate: WherePredicate = parse_quote!(#ty : ::shred::SystemData< #fetch_lt >);
         clause.predicates.push(where_predicate);
-    })
+    }
 }
 
 fn gen_from_body(ast: &Data, name: &Ident) -> (proc_macro2::TokenStream, Vec<Type>) {
