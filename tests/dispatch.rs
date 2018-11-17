@@ -17,19 +17,19 @@ struct Res;
 struct ResB;
 
 #[derive(SystemData)]
-struct DummyData<'a> {
-    _res: Read<'a, Res>,
+struct DummyData {
+    _res: Read<Res>,
 }
 
 #[derive(SystemData)]
-struct DummyDataMut<'a> {
-    _res: Write<'a, Res>,
+struct DummyDataMut {
+    _res: Write<Res>,
 }
 
 struct DummySys;
 
-impl<'a> System<'a> for DummySys {
-    type SystemData = DummyData<'a>;
+impl System for DummySys {
+    type SystemData = DummyData;
 
     fn run(&mut self, _data: Self::SystemData) {
         sleep_short()
@@ -38,8 +38,8 @@ impl<'a> System<'a> for DummySys {
 
 struct DummySysMut;
 
-impl<'a> System<'a> for DummySysMut {
-    type SystemData = DummyDataMut<'a>;
+impl System for DummySysMut {
+    type SystemData = DummyDataMut;
 
     fn run(&mut self, _data: Self::SystemData) {
         sleep_short()
@@ -48,7 +48,7 @@ impl<'a> System<'a> for DummySysMut {
 
 struct Whatever<'a>(&'a i32);
 
-impl<'a, 'b> System<'a> for Whatever<'b> {
+impl<'b> System for Whatever<'b> {
     type SystemData = ();
 
     fn run(&mut self, _: Self::SystemData) {
@@ -183,8 +183,8 @@ fn dispatch_stage_group() {
 
     struct ReadingFromResB;
 
-    impl<'a> System<'a> for ReadingFromResB {
-        type SystemData = Read<'a, ResB>;
+    impl System for ReadingFromResB {
+        type SystemData = Read<ResB>;
 
         fn run(&mut self, _: Self::SystemData) {
             sleep_short()
@@ -197,8 +197,8 @@ fn dispatch_stage_group() {
 
     struct WritingToResB;
 
-    impl<'a> System<'a> for WritingToResB {
-        type SystemData = Write<'a, ResB>;
+    impl System for WritingToResB {
+        type SystemData = Write<ResB>;
 
         fn run(&mut self, _: Self::SystemData) {
             sleep_short()

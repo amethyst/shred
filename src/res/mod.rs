@@ -27,18 +27,34 @@ mod setup;
 ///
 /// * `T`: The type of the resource
 pub struct Fetch<'a, T: 'a> {
-    inner: Ref<'a, Box<Resource>>,
+    value: Ref<Box<Resource>>,
     phantom: PhantomData<&'a T>,
 }
 
-impl<'a, T> Deref for Fetch<'a, T>
-where
-    T: Resource,
+impl<'r, T> Fetch<'r, T> {
+    /// Convert from an unchecked value.
+    pub fn from(value: Ref<Box<Resource>>) -> Fetch<'r, T> {
+        Fetch {
+            value: value,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Convert into an unchecked reference.
+    ///
+    /// This is unsafe since it drops the lifetime.
+    pub fn into_inner(self) -> Ref<Box<Resource>> {
+        self.value
+    }
+}
+
+impl<'r, T> Deref for Fetch<'r, T>
+    where T: Resource
 {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { self.inner.downcast_ref_unchecked() }
+        unsafe { self.value.downcast_ref_unchecked() }
     }
 }
 
@@ -50,27 +66,44 @@ where
 ///
 /// * `T`: The type of the resource
 pub struct FetchMut<'a, T: 'a> {
-    inner: RefMut<'a, Box<Resource>>,
+    value: RefMut<Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
 }
 
-impl<'a, T> Deref for FetchMut<'a, T>
-where
-    T: Resource,
+impl<'r, T> FetchMut<'r, T> {
+    /// Convert from a mutable value reference.
+    ///
+    /// This is unsafe since it invents a lifetime.
+    pub fn from(value: RefMut<Box<Resource>>) -> FetchMut<'r, T> {
+        FetchMut {
+            value,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Convert into an unchecked reference.
+    ///
+    /// This is unsafe since it drops the lifetime.
+    pub fn into_inner(self) -> RefMut<Box<Resource>> {
+        self.value
+    }
+}
+
+impl<'r, T> Deref for FetchMut<'r, T>
+    where T: Resource
 {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { self.inner.downcast_ref_unchecked() }
+        unsafe { self.value.downcast_ref_unchecked() }
     }
 }
 
-impl<'a, T> DerefMut for FetchMut<'a, T>
-where
-    T: Resource,
+impl<'r, T> DerefMut for FetchMut<'r, T>
+    where T: Resource
 {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.inner.downcast_mut_unchecked() }
+        unsafe { self.value.downcast_mut_unchecked() }
     }
 }
 
@@ -195,7 +228,7 @@ impl Resources {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| Fetch {
-            inner: r.borrow(),
+            value: r.borrow(),
             phantom: PhantomData,
         })
     }
@@ -222,11 +255,7 @@ impl Resources {
         T: Resource,
     {
         let res_id = ResourceId::new::<T>();
-
-        self.resources.get(&res_id).map(|r| FetchMut {
-            inner: r.borrow_mut(),
-            phantom: PhantomData,
-        })
+        self.resources.get(&res_id).map(|r| r.borrow_mut()).map(FetchMut::from)
     }
 
     /// Internal function for fetching resources, should only be used if you know what you're doing.
@@ -316,8 +345,8 @@ mod tests {
     fn default_works() {
         struct Sys;
 
-        impl<'a> System<'a> for Sys {
-            type SystemData = Write<'a, i32>;
+        impl System for Sys {
+            type SystemData = Write<i32>;
 
             fn run(&mut self, mut data: Self::SystemData) {
                 assert_eq!(*data, 0);

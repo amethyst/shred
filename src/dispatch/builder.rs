@@ -29,12 +29,12 @@ use system::{RunNow, System};
 /// # extern crate shred_derive;
 /// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
 /// # #[derive(Debug, Default)] struct Res;
-/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
+/// # #[derive(SystemData)] #[allow(unused)] struct Data { a: Read<Res> }
 /// # struct Dummy;
-/// # impl<'a> System<'a> for Dummy {
-/// #   type SystemData = Data<'a>;
+/// # impl System for Dummy {
+/// #   type SystemData = Data;
 /// #
-/// #   fn run(&mut self, _: Data<'a>) {}
+/// #   fn run(&mut self, _: Data) {}
 /// # }
 /// #
 /// # fn main() {
@@ -63,12 +63,12 @@ use system::{RunNow, System};
 /// # extern crate shred_derive;
 /// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
 /// # #[derive(Debug, Default)] struct Res;
-/// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
+/// # #[derive(SystemData)] #[allow(unused)] struct Data { a: Read<Res> }
 /// # struct Dummy;
-/// # impl<'a> System<'a> for Dummy {
-/// #   type SystemData = Data<'a>;
+/// # impl System for Dummy {
+/// #   type SystemData = Data;
 /// #
-/// #   fn run(&mut self, _: Data<'a>) {}
+/// #   fn run(&mut self, _: Data) {}
 /// # }
 /// #
 /// # fn main() {
@@ -123,7 +123,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// * if a system with the same name was already registered.
     pub fn with<T>(mut self, system: T, name: &str, dep: &[&str]) -> Self
     where
-        T: for<'c> System<'c> + Send + 'a,
+        T: System + Send + 'a,
     {
         self.add(system, name, dep);
 
@@ -144,7 +144,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// * if a system with the same name was already registered.
     pub fn add<T>(&mut self, system: T, name: &str, dep: &[&str])
     where
-        T: for<'c> System<'c> + Send + 'a,
+        T: System + Send + 'a,
     {
         use std::collections::hash_map::Entry;
 
@@ -183,7 +183,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// but returns `self` to enable method chaining.
     pub fn with_thread_local<T>(mut self, system: T) -> Self
     where
-        T: for<'c> RunNow<'c> + 'b,
+        T: RunNow + 'b,
     {
         self.add_thread_local(system);
 
@@ -197,7 +197,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Thread-local systems are dispatched in-order.
     pub fn add_thread_local<T>(&mut self, system: T)
     where
-        T: for<'c> RunNow<'c> + 'b,
+        T: RunNow + 'b,
     {
         self.thread_local.push(Box::new(system));
     }

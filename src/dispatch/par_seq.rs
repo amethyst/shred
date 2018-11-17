@@ -20,9 +20,9 @@ pub struct Nil;
 /// extern crate shred;
 ///
 /// # use shred::System;
-/// # struct SysA; impl<'a> System<'a> for SysA { type SystemData = (); fn run(&mut self, _: ()){}}
-/// # struct SysB; impl<'a> System<'a> for SysB { type SystemData = (); fn run(&mut self, _: ()){}}
-/// # struct SysC; impl<'a> System<'a> for SysC { type SystemData = (); fn run(&mut self, _: ()){}}
+/// # struct SysA; impl System for SysA { type SystemData = (); fn run(&mut self, _: ()){}}
+/// # struct SysB; impl System for SysB { type SystemData = (); fn run(&mut self, _: ()){}}
+/// # struct SysC; impl System for SysC { type SystemData = (); fn run(&mut self, _: ()){}}
 /// # fn main() {
 /// par![
 ///     SysA,
@@ -71,7 +71,7 @@ macro_rules! seq {
     };
 }
 
-impl<'a> System<'a> for Nil {
+impl System for Nil {
     type SystemData = ();
 
     fn run(&mut self, _: Self::SystemData) {}
@@ -95,8 +95,8 @@ impl<H> Par<H, Nil> {
     /// with the previous struct as head and a no-op tail.
     pub fn with<T>(self, sys: T) -> Par<Par<H, T>, Nil>
     where
-        H: for<'a> RunWithPool<'a>,
-        T: for<'a> RunWithPool<'a>,
+        H: RunWithPool,
+        T: RunWithPool,
     {
         debug_assert!(
             {
@@ -159,7 +159,7 @@ impl<H> Par<H, Nil> {
 /// # macro_rules! impl_sys {
 /// #     ($( $id:ident )*) => {
 /// #         $(
-/// #             impl<'a> ::shred::System<'a> for $id {
+/// #             impl ::shred::System for $id {
 /// #                 type SystemData = ();
 /// #                 fn run(&mut self, _: Self::SystemData) {}
 /// #             }
@@ -176,7 +176,7 @@ impl<H> Par<H, Nil> {
 /// #
 /// # impl_sys!(SysA SysB SysC SysD SysLocal);
 /// #
-/// # impl<'a, 'b> System<'a> for SysWithLifetime<'b> {
+/// # impl<'b> System for SysWithLifetime<'b> {
 /// #     type SystemData = ();
 /// #
 /// #     fn run(&mut self, _: Self::SystemData) {}
@@ -217,7 +217,7 @@ pub struct ParSeq<P, T> {
 impl<P, T> ParSeq<P, T>
 where
     P: Borrow<ThreadPool>,
-    T: for<'a> RunWithPool<'a>,
+    T: RunWithPool,
 {
     /// Creates a new `ParSeq` dispatcher.
     /// `run` is usually created by using the `par!` / `seq!`
@@ -242,10 +242,10 @@ where
     }
 }
 
-impl<'a, P, T> RunNow<'a> for ParSeq<P, T>
+impl<P, T> RunNow for ParSeq<P, T>
 where
     P: Borrow<ThreadPool>,
-    T: for<'b> RunWithPool<'b>,
+    T: RunWithPool,
 {
     fn run_now(&mut self, res: &Resources) {
         RunWithPool::run(&mut self.run, res, self.pool.borrow());
@@ -258,7 +258,7 @@ where
 
 /// Similar to `RunNow` except additionally taking in a rayon::ThreadPool
 /// for parallelism.
-pub trait RunWithPool<'a> {
+pub trait RunWithPool {
     /// Sets up `Resources` for a later call to `run`.
     fn setup(&mut self, res: &mut Resources);
 
@@ -271,7 +271,7 @@ pub trait RunWithPool<'a> {
     /// which are borrowed in an incompatible way already
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
+    fn run(&mut self, res: &Resources, pool: &ThreadPool);
 
     /// Accumulates the necessary read/shared resources from the
     /// systems in this group.
@@ -282,15 +282,15 @@ pub trait RunWithPool<'a> {
     fn writes(&self, writes: &mut Vec<ResourceId>);
 }
 
-impl<'a, T> RunWithPool<'a> for T
+impl<T> RunWithPool for T
 where
-    T: System<'a>,
+    T: System,
 {
     fn setup(&mut self, res: &mut Resources) {
         T::setup(self, res);
     }
 
-    fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
+    fn run(&mut self, res: &Resources, _: &ThreadPool) {
         RunNow::run_now(self, res);
     }
 
@@ -306,17 +306,17 @@ where
     }
 }
 
-impl<'a, H, T> RunWithPool<'a> for Par<H, T>
+impl<H, T> RunWithPool for Par<H, T>
 where
-    H: RunWithPool<'a> + Send,
-    T: RunWithPool<'a> + Send,
+    H: RunWithPool + Send,
+    T: RunWithPool + Send,
 {
     fn setup(&mut self, res: &mut Resources) {
         self.head.setup(res);
         self.tail.setup(res);
     }
 
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
+    fn run(&mut self, res: &Resources, pool: &ThreadPool) {
         let head = &mut self.head;
         let tail = &mut self.tail;
 
@@ -367,17 +367,17 @@ impl<H> Seq<H, Nil> {
     }
 }
 
-impl<'a, H, T> RunWithPool<'a> for Seq<H, T>
+impl<H, T> RunWithPool for Seq<H, T>
 where
-    H: RunWithPool<'a>,
-    T: RunWithPool<'a>,
+    H: RunWithPool,
+    T: RunWithPool,
 {
     fn setup(&mut self, res: &mut Resources) {
         self.head.setup(res);
         self.tail.setup(res);
     }
 
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
+    fn run(&mut self, res: &Resources, pool: &ThreadPool) {
         self.head.run(res, pool);
         self.tail.run(res, pool);
     }
@@ -418,7 +418,7 @@ mod tests {
 
         struct A(Arc<AtomicUsize>);
 
-        impl<'a> System<'a> for A {
+        impl System for A {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {
@@ -446,7 +446,7 @@ mod tests {
 
         struct A(Arc<AtomicUsize>);
 
-        impl<'a> System<'a> for A {
+        impl System for A {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {

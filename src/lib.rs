@@ -20,17 +20,17 @@
 //! struct ResB;
 //!
 //! #[derive(SystemData)]
-//! struct Data<'a> {
-//!     a: Read<'a, ResA>,
-//!     b: Write<'a, ResB>,
+//! struct Data {
+//!     a: Read<ResA>,
+//!     b: Write<ResB>,
 //! }
 //!
 //! struct EmptySystem;
 //!
-//! impl<'a> System<'a> for EmptySystem {
-//!     type SystemData = Data<'a>;
+//! impl System for EmptySystem {
+//!     type SystemData = Data;
 //!
-//!     fn run(&mut self, bundle: Data<'a>) {
+//!     fn run(&mut self, bundle: Data) {
 //!         println!("{:?}", &*bundle.a);
 //!         println!("{:?}", &*bundle.b);
 //!     }
@@ -82,4 +82,4 @@ pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
               ResourceId, Resources, SetupHandler, Write, WriteExpect};
 pub use system::{Accessor, AccessorCow, RunNow, RunningTime, StaticAccessor, SystemData,
-                 System, DynamicSystemData};
+                 System, DynamicSystemData, SystemFetch};

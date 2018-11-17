@@ -11,17 +11,17 @@ struct ResA;
 struct ResB;
 
 #[derive(SystemData)]
-struct Data<'a> {
-    a: Read<'a, ResA>,
-    b: Write<'a, ResB>,
+struct Data {
+    a: Read<ResA>,
+    b: Write<ResB>,
 }
 
 struct EmptySystem(*mut i8); // System is not thread-safe
 
-impl<'a> System<'a> for EmptySystem {
-    type SystemData = Data<'a>;
+impl System for EmptySystem {
+    type SystemData = Data;
 
-    fn run(&mut self, bundle: Data<'a>) {
+    fn run(&mut self, bundle: Data) {
         println!("thread local: {:?}", &*bundle.a);
         println!("thread local: {:?}", &*bundle.b);
     }
@@ -29,8 +29,8 @@ impl<'a> System<'a> for EmptySystem {
 
 struct PrintSystem;
 
-impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Read<'a, ResA>, Write<'a, ResB>);
+impl System for PrintSystem {
+    type SystemData = (Read<ResA>, Write<ResB>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;

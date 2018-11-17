@@ -11,17 +11,17 @@ struct ResA;
 struct ResB;
 
 #[derive(SystemData)]
-struct Data<'a> {
-    a: Read<'a, ResA>,
-    b: Write<'a, ResB>,
+struct Data {
+    a: Read<ResA>,
+    b: Write<ResB>,
 }
 
 struct EmptySystem;
 
-impl<'a> System<'a> for EmptySystem {
-    type SystemData = Data<'a>;
+impl System for EmptySystem {
+    type SystemData = Data;
 
-    fn run(&mut self, bundle: Data<'a>) {
+    fn run(&mut self, bundle: Data) {
         println!("{:?}", &*bundle.a);
         println!("{:?}", &*bundle.b);
     }

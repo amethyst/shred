@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resources,
-     SetupHandler, SystemData};
+use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resources, SetupHandler,
+     SystemData};
+use cell::{Ref, RefMut};
+use system::SystemFetch;
 
 /// Allows to fetch a resource in a system immutably.
 ///
@@ -12,32 +14,34 @@ use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resou
 ///
 /// * `T`: The type of the resource
 /// * `F`: The setup handler (default: `DefaultProvider`)
-pub struct Read<'a, T: 'a, F = DefaultProvider> {
-    inner: Fetch<'a, T>,
-    phantom: PhantomData<F>,
+pub struct Read<T, F = DefaultProvider> {
+    inner: Ref<Box<Resource>>,
+    p1: PhantomData<T>,
+    p2: PhantomData<F>,
 }
 
-impl<'a, T, F> Deref for Read<'a, T, F>
+impl<T, F> Deref for Read<T, F>
 where
     T: Resource,
 {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &*self.inner
+        unsafe { self.inner.downcast_ref_unchecked() }
     }
 }
 
-impl<'a, T, F> From<Fetch<'a, T>> for Read<'a, T, F> {
+impl<'a, T, F> From<Fetch<'a, T>> for Read<T, F> {
     fn from(inner: Fetch<'a, T>) -> Self {
         Read {
-            inner,
-            phantom: PhantomData,
+            inner: inner.into_inner(),
+            p1: PhantomData,
+            p2: PhantomData,
         }
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Read<'a, T, F>
+impl<T, F> SystemData for Read<T, F>
 where
     T: Resource,
     F: SetupHandler<T>,
@@ -46,8 +50,8 @@ where
         F::setup(res)
     }
 
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch::<T>().into()
+    fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(Read::from(res.fetch::<T>()))
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -66,41 +70,43 @@ where
 ///
 /// * `T`: The type of the resource
 /// * `F`: The setup handler (default: `DefaultProvider`)
-pub struct Write<'a, T: 'a, F = DefaultProvider> {
-    inner: FetchMut<'a, T>,
-    phantom: PhantomData<F>,
+pub struct Write<T, F = DefaultProvider> {
+    inner: RefMut<Box<Resource>>,
+    p1: PhantomData<T>,
+    p2: PhantomData<F>,
 }
 
-impl<'a, T, F> Deref for Write<'a, T, F>
+impl<T, F> Deref for Write<T, F>
 where
     T: Resource,
 {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &*self.inner
+        unsafe { &*self.inner.downcast_ref_unchecked() }
     }
 }
 
-impl<'a, T, F> DerefMut for Write<'a, T, F>
+impl<T, F> DerefMut for Write<T, F>
 where
     T: Resource,
 {
     fn deref_mut(&mut self) -> &mut T {
-        &mut *self.inner
+        unsafe { &mut *self.inner.downcast_mut_unchecked() }
     }
 }
 
-impl<'a, T, F> From<FetchMut<'a, T>> for Write<'a, T, F> {
+impl<'a, T, F> From<FetchMut<'a, T>> for Write<T, F> {
     fn from(inner: FetchMut<'a, T>) -> Self {
         Write {
-            inner,
-            phantom: PhantomData,
+            inner: inner.into_inner(),
+            p1: PhantomData,
+            p2: PhantomData,
         }
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Write<'a, T, F>
+impl<T, F> SystemData for Write<T, F>
 where
     T: Resource,
     F: SetupHandler<T>,
@@ -109,8 +115,8 @@ where
         F::setup(res)
     }
 
-    fn fetch(res: &'a Resources) -> Self {
-        res.fetch_mut::<T>().into()
+    fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(Write::from(res.fetch_mut::<T>()))
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -124,14 +130,14 @@ where
 
 // ------------------
 
-impl<'a, T, F> SystemData<'a> for Option<Read<'a, T, F>>
+impl<T, F> SystemData for Option<Read<T, F>>
 where
     T: Resource,
 {
     fn setup(_: &mut Resources) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        res.try_fetch().map(Into::into)
+    fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(res.try_fetch().map(Read::from))
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -143,14 +149,14 @@ where
     }
 }
 
-impl<'a, T, F> SystemData<'a> for Option<Write<'a, T, F>>
+impl<T, F> SystemData for Option<Write<T, F>>
 where
     T: Resource,
 {
     fn setup(_: &mut Resources) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        res.try_fetch_mut().map(Into::into)
+    fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(res.try_fetch_mut().map(Write::from))
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -167,7 +173,7 @@ where
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
-pub type ReadExpect<'a, T> = Read<'a, T, PanicHandler>;
+pub type ReadExpect<T> = Read<T, PanicHandler>;
 
 /// Allows to fetch a resource in a system mutably.
 /// **This will panic if the resource does not exist.**
@@ -175,4 +181,4 @@ pub type ReadExpect<'a, T> = Read<'a, T, PanicHandler>;
 ///
 /// If the `nightly` feature of `shred` is enabled, this will print
 /// the type of the resource in case of a panic. That can help for debugging.
-pub type WriteExpect<'a, T> = Write<'a, T, PanicHandler>;
+pub type WriteExpect<T> = Write<T, PanicHandler>;

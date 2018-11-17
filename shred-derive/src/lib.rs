@@ -11,8 +11,8 @@ use proc_macro::TokenStream;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 use syn::{
-    Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Lifetime,
-    Type, WhereClause, WherePredicate,
+    Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Type,
+    WhereClause, WherePredicate,
 };
 
 /// Used to `#[derive]` the trait `SystemData`.
@@ -31,17 +31,10 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
 
     let (fetch_return, tys) = gen_from_body(&ast.data, name);
     let tys = &tys;
-    // Assumes that the first lifetime is the fetch lt
-    let def_fetch_lt = ast
-        .generics
-        .lifetimes()
-        .next()
-        .expect("There has to be at least one lifetime");
-    let ref impl_fetch_lt = def_fetch_lt.lifetime;
 
     {
         let where_clause = generics.make_where_clause();
-        constrain_system_data_types(where_clause, impl_fetch_lt, tys);
+        constrain_system_data_types(where_clause, tys);
     }
     // Reads and writes are taken from the same types,
     // but need to be cloned before.
@@ -50,7 +43,7 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
 
     quote! {
         impl #impl_generics
-            ::shred::SystemData< #impl_fetch_lt >
+            ::shred::SystemData
             for #name #ty_generics #where_clause
         {
             fn setup(res: &mut ::shred::Resources) {
@@ -59,8 +52,8 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
                 )*
             }
 
-            fn fetch(res: & #impl_fetch_lt ::shred::Resources) -> Self {
-                #fetch_return
+            fn fetch<'r>(res: & 'r ::shred::Resources) -> ::shred::SystemFetch<'r, Self> {
+                ::shred::SystemFetch::from(#fetch_return)
             }
 
             fn reads() -> Vec<::shred::ResourceId> {
@@ -97,9 +90,9 @@ fn gen_identifiers(fields: &Punctuated<Field, Comma>) -> Vec<Ident> {
 }
 
 /// Adds a `::shred::SystemData<'lt>` bound on each of the system data types.
-fn constrain_system_data_types(clause: &mut WhereClause, fetch_lt: &Lifetime, tys: &[Type]) {
+fn constrain_system_data_types(clause: &mut WhereClause, tys: &[Type]) {
     for ty in tys.iter() {
-        let where_predicate: WherePredicate = parse_quote!(#ty : ::shred::SystemData< #fetch_lt >);
+        let where_predicate: WherePredicate = parse_quote!(#ty : ::shred::SystemData);
         clause.predicates.push(where_predicate);
     }
 }
@@ -130,13 +123,13 @@ fn gen_from_body(ast: &Data, name: &Ident) -> (proc_macro2::TokenStream, Vec<Typ
 
             quote! {
                 #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
+                    #( #identifiers: ::shred::SystemData::fetch(res).into_inner() ),*
                 }
             }
         }
         DataType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
+            let fetch = vec![quote! { ::shred::SystemData::fetch(res).into_inner() }; count];
 
             quote! {
                 #name ( #( #fetch ),* )

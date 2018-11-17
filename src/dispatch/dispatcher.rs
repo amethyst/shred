@@ -107,7 +107,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 }
 
-impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
+impl<'b, 'c> RunNow for Dispatcher<'b, 'c> {
     fn run_now(&mut self, res: &Resources) {
         self.dispatch(res);
     }
@@ -120,8 +120,8 @@ impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SystemId(pub usize);
 
-pub type SystemExecSend<'b> = Box<for<'a> RunNow<'a> + Send + 'b>;
-pub type ThreadLocal<'a> = SmallVec<[Box<for<'b> RunNow<'b> + 'a>; 4]>;
+pub type SystemExecSend<'b> = Box<RunNow + Send + 'b>;
+pub type ThreadLocal<'a> = SmallVec<[Box<RunNow + 'a>; 4]>;
 
 #[cfg(feature = "parallel")]
 pub fn new_dispatcher<'a, 'b>(
@@ -158,8 +158,8 @@ mod tests {
 
     struct Dummy(i32);
 
-    impl<'a> System<'a> for Dummy {
-        type SystemData = Write<'a, Res>;
+    impl System for Dummy {
+        type SystemData = Write<Res>;
 
         fn run(&mut self, mut data: Self::SystemData) {
             if self.0 == 4 {
@@ -178,7 +178,7 @@ mod tests {
 
     struct Panic;
 
-    impl<'a> System<'a> for Panic {
+    impl System for Panic {
         type SystemData = ();
 
         fn run(&mut self, _: Self::SystemData) {

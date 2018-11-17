@@ -12,8 +12,8 @@ struct ResB;
 
 struct PrintSystem;
 
-impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Read<'a, ResA>, Write<'a, ResB>);
+impl System for PrintSystem {
+    type SystemData = (Read<ResA>, Write<ResB>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (a, mut b) = data;

@@ -6,6 +6,7 @@ use std::fmt::{Display, Error as FormatError, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::usize;
+use std::ptr;
 
 /// Marker struct for an invalid borrow error
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -28,22 +29,22 @@ impl Error for InvalidBorrow {
 ///
 /// Access the value via `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
-pub struct Ref<'a, T: 'a> {
-    flag: &'a AtomicUsize,
-    value: &'a T,
+pub struct Ref<T> {
+    flag: *const AtomicUsize,
+    value: *const T,
 }
 
-impl<'a, T> Deref for Ref<'a, T> {
+impl<T> Deref for Ref<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        self.value
+        unsafe { &*self.value }
     }
 }
 
-impl<'a, T> Drop for Ref<'a, T> {
+impl<T> Drop for Ref<T> {
     fn drop(&mut self) {
-        self.flag.fetch_sub(1, Ordering::Release);
+        unsafe { (*self.flag).fetch_sub(1, Ordering::Release) };
     }
 }
 
@@ -51,28 +52,28 @@ impl<'a, T> Drop for Ref<'a, T> {
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
-pub struct RefMut<'a, T: 'a> {
-    flag: &'a AtomicUsize,
-    value: &'a mut T,
+pub struct RefMut<T> {
+    flag: *const AtomicUsize,
+    value: ptr::NonNull<T>,
 }
 
-impl<'a, T> Deref for RefMut<'a, T> {
+impl<T> Deref for RefMut<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        self.value
+        unsafe { &*self.value.as_ptr() }
     }
 }
 
-impl<'a, T> DerefMut for RefMut<'a, T> {
+impl<T> DerefMut for RefMut<T> {
     fn deref_mut(&mut self) -> &mut T {
-        self.value
+        unsafe { &mut *self.value.as_ptr() }
     }
 }
 
-impl<'a, T> Drop for RefMut<'a, T> {
+impl<T> Drop for RefMut<T> {
     fn drop(&mut self) {
-        self.flag.store(0, Ordering::Release)
+        unsafe { (*self.flag).store(0, Ordering::Release) };
     }
 }
 
@@ -133,7 +134,7 @@ impl<T> TrustCell<T> {
 
         RefMut {
             flag: &self.flag,
-            value: unsafe { &mut *self.inner.get() },
+            value: ptr::NonNull::new(self.inner.get()).expect("inner reference was null"),
         }
     }
 
@@ -145,7 +146,7 @@ impl<T> TrustCell<T> {
 
         Ok(RefMut {
             flag: &self.flag,
-            value: unsafe { &mut *self.inner.get() },
+            value: ptr::NonNull::new(self.inner.get()).expect("inner reference was null"),
         })
     }
 

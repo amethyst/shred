@@ -78,17 +78,17 @@ const NUM_COMPONENTS: usize = 200;
 // --------------
 
 #[derive(SystemData)]
-struct SpringForceData<'a> {
-    pos: Read<'a, PosStorage>,
-    spring: Read<'a, SpringStorage>,
+struct SpringForceData {
+    pos: Read<PosStorage>,
+    spring: Read<SpringStorage>,
 
-    force: Write<'a, ForceStorage>,
+    force: Write<ForceStorage>,
 }
 
 struct SpringForce;
 
-impl<'a> System<'a> for SpringForce {
-    type SystemData = SpringForceData<'a>;
+impl System for SpringForce {
+    type SystemData = SpringForceData;
 
     fn run(&mut self, mut data: SpringForceData) {
         for elem in 0..NUM_COMPONENTS {
@@ -110,19 +110,19 @@ impl<'a> System<'a> for SpringForce {
 }
 
 #[derive(SystemData)]
-struct IntegrationData<'a> {
-    force: Read<'a, ForceStorage>,
-    mass: Read<'a, MassStorage>,
-    pos: Write<'a, PosStorage>,
-    vel: Write<'a, VelStorage>,
+struct IntegrationData {
+    force: Read<ForceStorage>,
+    mass: Read<MassStorage>,
+    pos: Write<PosStorage>,
+    vel: Write<VelStorage>,
 
-    time: Option<Read<'a, DeltaTime>>,
+    time: Option<Read<DeltaTime>>,
 }
 
 struct IntegrationSystem;
 
-impl<'a> System<'a> for IntegrationSystem {
-    type SystemData = IntegrationData<'a>;
+impl System for IntegrationSystem {
+    type SystemData = IntegrationData;
 
     fn run(&mut self, mut data: IntegrationData) {
         let delta = match data.time {
@@ -155,14 +155,14 @@ impl<'a> System<'a> for IntegrationSystem {
 }
 
 #[derive(SystemData)]
-struct ClearForceAccumData<'a> {
-    force: Write<'a, ForceStorage>,
+struct ClearForceAccumData {
+    force: Write<ForceStorage>,
 }
 
 struct ClearForceAccum;
 
-impl<'a> System<'a> for ClearForceAccum {
-    type SystemData = ClearForceAccumData<'a>;
+impl System for ClearForceAccum {
+    type SystemData = ClearForceAccumData;
 
     fn run(&mut self, mut data: ClearForceAccumData) {
         for elem in 0..NUM_COMPONENTS {

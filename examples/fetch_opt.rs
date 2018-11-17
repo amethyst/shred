@@ -15,15 +15,15 @@ struct ResWithoutSensibleDefault {
 
 struct PrintSystem;
 
-impl<'a> System<'a> for PrintSystem {
+impl System for PrintSystem {
     // We can simply use `Option<Read>` or `Option<Write>` if a resource
     // isn't strictly required or can't be created (by a `Default` implementation).
     type SystemData = (
-        Read<'a, ResA>,
-        Option<Write<'a, ResB>>,
+        Read<ResA>,
+        Option<Write<ResB>>,
         // WARNING: using `ReadExpect` might lead to a panic!
         // If `ResWithoutSensibleDefault` does not exist, fetching will `panic!`.
-        ReadExpect<'a, ResWithoutSensibleDefault>,
+        ReadExpect<ResWithoutSensibleDefault>,
     );
 
     fn run(&mut self, data: Self::SystemData) {

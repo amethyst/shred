@@ -44,12 +44,7 @@ where
     {
         let value = self.inner
             .or_insert_with(move || TrustCell::new(Box::new(f())));
-        let inner = value.borrow_mut();
-
-        FetchMut {
-            inner,
-            phantom: PhantomData,
-        }
+        FetchMut::from(value.borrow_mut())
     }
 }
 

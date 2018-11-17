@@ -11,19 +11,19 @@ use shred::{Read, Resource, Write};
 trait Hrtb<'a> {}
 
 #[derive(SystemData)]
-struct VeryCustomDerive<'a, T: Debug + Resource + for<'b> Hrtb<'b>> {
-    _b: Write<'a, T>,
+struct VeryCustomDerive<T: Debug + Resource + for<'b> Hrtb<'b>> {
+    _b: Write<T>,
 }
 
 #[derive(SystemData)]
-struct SomeTuple<'a, T: Debug + Resource>(Read<'a, T>);
+struct SomeTuple<T: Debug + Resource>(Read<T>);
 
 #[derive(SystemData)]
-struct WithWhereClause<'a, T>
+struct WithWhereClause<T>
 where
     T: Resource,
 {
-    k: Read<'a, T>,
+    k: Read<T>,
 }
 
 fn main() {}

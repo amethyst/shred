@@ -9,7 +9,7 @@ use shred::{ParSeq, Read, Resources, System};
 macro_rules! impl_sys {
     ($( $id:ident )*) => {
         $(
-            impl<'a> ::shred::System<'a> for $id {
+            impl ::shred::System for $id {
                 type SystemData = ();
                 fn run(&mut self, _: Self::SystemData) {
                     println!(stringify!($id));
@@ -28,10 +28,10 @@ struct SysLocal(*const u8);
 
 impl_sys!(SysA SysB SysC SysD SysLocal);
 
-impl<'a, 'b> System<'a> for SysWithLifetime<'b> {
-    type SystemData = Read<'a, u64>;
+impl<'b> System for SysWithLifetime<'b> {
+    type SystemData = Read<u64>;
 
-    fn run(&mut self, nr: Read<'a, u64>) {
+    fn run(&mut self, nr: Read<u64>) {
         println!("SysWithLifetime, {}", *nr);
     }
 }

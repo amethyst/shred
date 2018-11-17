@@ -131,7 +131,7 @@ impl<'a> StagesBuilder<'a> {
 
     pub fn insert<T>(&mut self, mut dep: SmallVec<[SystemId; 4]>, id: SystemId, system: T)
     where
-        T: for<'b> System<'b> + Send + 'a,
+        T: System + Send + 'a,
     {
         use system::Accessor;
 
@@ -468,16 +468,16 @@ mod tests {
 
         struct SysA;
 
-        impl<'a> System<'a> for SysA {
-            type SystemData = Read<'a, ResA>;
+        impl System for SysA {
+            type SystemData = Read<ResA>;
 
             fn run(&mut self, _: Self::SystemData) {}
         }
 
         struct SysB;
 
-        impl<'a> System<'a> for SysB {
-            type SystemData = Write<'a, ResB>;
+        impl System for SysB {
+            type SystemData = Write<ResB>;
 
             fn run(&mut self, _: Self::SystemData) {}
 
@@ -488,8 +488,8 @@ mod tests {
 
         struct SysC;
 
-        impl<'a> System<'a> for SysC {
-            type SystemData = Read<'a, ResB>;
+        impl System for SysC {
+            type SystemData = Read<ResB>;
 
             fn run(&mut self, _: Self::SystemData) {}
 
@@ -521,7 +521,7 @@ mod tests {
 
         struct Sys;
 
-        impl<'a> System<'a> for Sys {
+        impl System for Sys {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {}

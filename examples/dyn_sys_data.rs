@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use shred::{Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read, Resource,
             ResourceId, Resources,
-            System, SystemData};
+            System, SystemData, SystemFetch};
 use shred::cell::{Ref, RefMut};
 
 struct Dependencies {
@@ -44,8 +44,8 @@ struct DynamicSystem {
     script: fn(ScriptInput),
 }
 
-impl<'a> System<'a> for DynamicSystem {
-    type SystemData = ScriptSystemData<'a>;
+impl System for DynamicSystem {
+    type SystemData = ScriptSystemData;
 
     fn run(&mut self, mut data: Self::SystemData) {
         let meta = data.meta_table;
@@ -80,7 +80,7 @@ impl<'a> System<'a> for DynamicSystem {
         (self.script)(input);
     }
 
-    fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
+    fn accessor<'b>(&'b self) -> AccessorCow<'b, Self> {
         AccessorCow::Ref(&self.dependencies)
     }
 
@@ -137,18 +137,18 @@ struct ScriptInput<'a> {
     writes: Vec<&'a mut Reflection>,
 }
 
-struct ScriptSystemData<'a> {
-    meta_table: Read<'a, ReflectionTable>,
-    reads: Vec<Ref<'a, Box<Resource + 'static>>>,
-    writes: Vec<RefMut<'a, Box<Resource + 'static>>>,
+struct ScriptSystemData {
+    meta_table: Read<ReflectionTable>,
+    reads: Vec<Ref<Box<Resource>>>,
+    writes: Vec<RefMut<Box<Resource>>>,
 }
 
-impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
+impl DynamicSystemData for ScriptSystemData {
     type Accessor = Dependencies;
 
     fn setup(_accessor: &Dependencies, _res: &mut Resources) {}
 
-    fn fetch(access: &Dependencies, res: &'a Resources) -> Self {
+    fn fetch<'r>(access: &Dependencies, res: &'r Resources) -> SystemFetch<'r, Self> {
         let reads = access
             .reads
             .iter()
@@ -170,11 +170,11 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
             )
             .collect();
 
-        ScriptSystemData {
-            meta_table: SystemData::fetch(res),
+        SystemFetch::from(ScriptSystemData {
+            meta_table: SystemData::fetch(res).into_inner(),
             reads,
             writes,
-        }
+        })
     }
 }
 
@@ -234,8 +234,8 @@ fn main() {
 
     struct NormalSys;
 
-    impl<'a> System<'a> for NormalSys {
-        type SystemData = (Read<'a, Foo>, Read<'a, Bar>);
+    impl System for NormalSys {
+        type SystemData = (Read<Foo>, Read<Bar>);
 
         fn run(&mut self, (foo, bar): Self::SystemData) {
             println!("Fetched foo: {:?}", &foo as &Foo);

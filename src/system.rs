@@ -70,27 +70,25 @@ impl<T: ?Sized> Accessor for PhantomData<T> {
 }
 
 /// Either an `Accessor` of the system `T` or a reference to it.
-pub enum AccessorCow<'a, 'b, T>
+pub enum AccessorCow<'b, T>
 where
-    AccessorTy<'a, T>: 'b,
-    T: System<'a> + ?Sized,
-    'a: 'b,
+    AccessorTy<T>: 'b,
+    T: System + ?Sized,
 {
     /// A reference to an accessor.
-    Ref(&'b AccessorTy<'a, T>),
+    Ref(&'b AccessorTy<T>),
     /// An owned accessor.
-    Owned(AccessorTy<'a, T>),
+    Owned(AccessorTy<T>),
 }
 
-impl<'a, 'b, T> Deref for AccessorCow<'a, 'b, T>
+impl<'b, T> Deref for AccessorCow<'b, T>
 where
-    AccessorTy<'a, T>: 'b,
-    T: System<'a> + ?Sized + 'b,
-    'a: 'b,
+    AccessorTy<T>: 'b,
+    T: System + ?Sized + 'b,
 {
-    type Target = AccessorTy<'a, T>;
+    type Target = AccessorTy<T>;
 
-    fn deref(&self) -> &AccessorTy<'a, T> {
+    fn deref(&self) -> &AccessorTy<T> {
         match *self {
             AccessorCow::Ref(r) => &*r,
             AccessorCow::Owned(ref o) => o,
@@ -98,10 +96,10 @@ where
     }
 }
 
-type AccessorTy<'a, T> = <<T as System<'a>>::SystemData as DynamicSystemData<'a>>::Accessor;
+type AccessorTy<T> = <<T as System>::SystemData as DynamicSystemData>::Accessor;
 
 /// Trait for fetching data and running systems. Automatically implemented for systems.
-pub trait RunNow<'a> {
+pub trait RunNow {
     /// Runs the system now.
     ///
     /// # Panics
@@ -110,19 +108,19 @@ pub trait RunNow<'a> {
     /// which are borrowed in an incompatible way already
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
-    fn run_now(&mut self, res: &'a Resources);
+    fn run_now(&mut self, res: &Resources);
 
     /// Sets up `Resources` for a later call to `run_now`.
     fn setup(&mut self, res: &mut Resources);
 }
 
-impl<'a, T> RunNow<'a> for T
+impl<T> RunNow for T
 where
-    T: System<'a>,
+    T: System,
 {
-    fn run_now(&mut self, res: &'a Resources) {
+    fn run_now(&mut self, res: &Resources) {
         let data = T::SystemData::fetch(&self.accessor(), res);
-        self.run(data);
+        self.run(data.into_inner());
     }
 
     fn setup(&mut self, res: &mut Resources) {
@@ -144,14 +142,14 @@ pub enum RunningTime {
 /// A `System`, executed with a set of required [`Resource`]s.
 ///
 /// [`Resource`]: trait.Resource.html
-pub trait System<'a> {
+pub trait System {
     /// The resource bundle required to execute this system.
     ///
     /// You will mostly use a tuple of system data (which also implements `SystemData`).
     /// You can also create such a resource bundle by simply deriving `SystemData` for a struct.
     ///
     /// Every `SystemData` is also a `DynamicSystemData`.
-    type SystemData: DynamicSystemData<'a>;
+    type SystemData: DynamicSystemData;
 
     /// Executes the system with the required system
     /// data.
@@ -167,9 +165,9 @@ pub trait System<'a> {
     }
 
     /// Return the accessor from the [`SystemData`].
-    fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
+    fn accessor<'b>(&'b self) -> AccessorCow<'b, Self> {
         AccessorCow::Owned(
-            AccessorTy::<'a, Self>::try_new()
+            AccessorTy::<Self>::try_new()
                 .expect("Missing implementation for `accessor`"),
         )
     }
@@ -180,17 +178,41 @@ pub trait System<'a> {
     }
 }
 
+/// A fetch that tracks a lifetime.
+pub struct SystemFetch<'r, T> {
+    value: T,
+    marker: PhantomData<& 'r ()>,
+}
+
+impl<'r, T> SystemFetch<'r, T> {
+    /// Construct a system fetch from a value.
+    pub fn from(value: T) -> SystemFetch<'r, T> {
+        SystemFetch {
+            value,
+            marker: PhantomData,
+        }
+    }
+
+    /// Convert into inner value.
+    ///
+    /// Unsafe because it discards the marker lifetime.
+    pub fn into_inner(self) -> T {
+        self.value
+    }
+}
+
 /// A static system data that can specify its dependencies at statically (at compile-time).
 /// Most system data is a `SystemData`, the `DynamicSystemData` type is only needed for very special
 /// setups.
-pub trait SystemData<'a> {
+pub trait SystemData {
     /// Sets up the system data for fetching it from the `Resources`.
     fn setup(res: &mut Resources);
 
     /// Fetches the system data from `Resources`. Note that this is only specified for one concrete
     /// lifetime `'a`, you need to implement the `SystemData` trait for every possible
     /// lifetime.
-    fn fetch(res: &'a Resources) -> Self;
+    fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self>
+        where Self: Sized;
 
     /// Returns all read dependencies as fetched from `Self::fetch`.
     ///
@@ -203,9 +225,9 @@ pub trait SystemData<'a> {
     fn writes() -> Vec<ResourceId>;
 }
 
-impl<'a, T> DynamicSystemData<'a> for T
+impl<T> DynamicSystemData for T
 where
-    T: SystemData<'a>,
+    T: SystemData,
 {
     type Accessor = StaticAccessor<T>;
 
@@ -213,16 +235,16 @@ where
         T::setup(res);
     }
 
-    fn fetch(_: &StaticAccessor<T>, res: &'a Resources) -> Self {
+    fn fetch<'r>(_: &StaticAccessor<T>, res: &'r Resources) -> SystemFetch<'r, Self> {
         T::fetch(res)
     }
 }
 
-impl<'a> SystemData<'a> for () {
+impl SystemData for () {
     fn setup(_: &mut Resources) {}
 
-    fn fetch(_: &'a Resources) -> Self {
-        ()
+    fn fetch<'r>(_: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(())
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -240,9 +262,9 @@ pub struct StaticAccessor<T> {
     marker: PhantomData<fn() -> T>,
 }
 
-impl<'a, T> Accessor for StaticAccessor<T>
+impl<T> Accessor for StaticAccessor<T>
 where
-    T: SystemData<'a>,
+    T: SystemData,
 {
     fn try_new() -> Option<Self> {
         Some(StaticAccessor {
@@ -261,7 +283,7 @@ where
 /// for the execution.
 ///
 /// This is the more flexible, but complex variant of `SystemData`.
-pub trait DynamicSystemData<'a> {
+pub trait DynamicSystemData {
     /// The accessor of the `SystemData`, which specifies the read and write dependencies and does
     /// the fetching.
     type Accessor: Accessor;
@@ -284,14 +306,15 @@ pub trait DynamicSystemData<'a> {
     /// `setup` was not called or it didn't insert any fallback value.
     ///
     /// [`Resources`]: trait.Resources.html
-    fn fetch(access: &Self::Accessor, res: &'a Resources) -> Self;
+    fn fetch<'r>(access: &Self::Accessor, res: &'r Resources) -> SystemFetch<'r, Self>
+        where Self: Sized;
 }
 
-impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
+impl<T: ?Sized> SystemData for PhantomData<T> {
     fn setup(_: &mut Resources) {}
 
-    fn fetch(_: &Resources) -> Self {
-        PhantomData
+    fn fetch<'r>(_: &'r Resources) -> SystemFetch<'r, Self> {
+        SystemFetch::from(PhantomData)
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -305,8 +328,8 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
 
 macro_rules! impl_data {
     ( $($ty:ident),* ) => {
-        impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
-            where $( $ty : SystemData<'a> ),*
+        impl<$($ty),*> SystemData for ( $( $ty , )* )
+            where $( $ty : SystemData ),*
             {
                 fn setup(res: &mut Resources) {
                     #![allow(unused_variables)]
@@ -316,10 +339,12 @@ macro_rules! impl_data {
                      )*
                 }
 
-                fn fetch(res: &'a Resources) -> Self {
+                fn fetch<'r>(res: &'r Resources) -> SystemFetch<'r, Self> {
                     #![allow(unused_variables)]
 
-                    ( $( <$ty as SystemData<'a>>::fetch(res), )* )
+                    SystemFetch::from(
+                        ( $( <$ty as SystemData>::fetch(res).into_inner(), )* )
+                    )
                 }
 
                 fn reads() -> Vec<ResourceId> {

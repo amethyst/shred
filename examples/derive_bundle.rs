@@ -11,15 +11,15 @@ struct ResA;
 struct ResB;
 
 #[derive(SystemData)]
-struct AutoBundle<'a> {
-    a: Read<'a, ResA>,
-    b: Write<'a, ResB>,
+struct AutoBundle {
+    a: Read<ResA>,
+    b: Write<ResB>,
 }
 
 // We can even nest system data
 #[derive(SystemData)]
-struct Nested<'a> {
-    inner: AutoBundle<'a>,
+struct Nested {
+    inner: AutoBundle,
 }
 
 fn main() {
@@ -28,7 +28,7 @@ fn main() {
     res.insert(ResB);
 
     {
-        let mut bundle = AutoBundle::fetch(&res);
+        let mut bundle = AutoBundle::fetch(&res).into_inner();
 
         *bundle.b = ResB;
 
@@ -37,7 +37,7 @@ fn main() {
     }
 
     {
-        let nested = Nested::fetch(&res);
+        let nested = Nested::fetch(&res).into_inner();
 
         println!("a: {:?}", *nested.inner.a);
     }
