@@ -50,35 +50,35 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
 
     quote! {
         impl #impl_generics
-            ::shred::SystemData< #impl_fetch_lt >
+            shred::SystemData< #impl_fetch_lt >
             for #name #ty_generics #where_clause
         {
-            fn setup(res: &mut ::shred::Resources) {
+            fn setup(res: &mut shred::Resources) {
                 #(
-                    <#tys as ::shred::SystemData> :: setup(res);
+                    <#tys as shred::SystemData> :: setup(res);
                 )*
             }
 
-            fn fetch(res: & #impl_fetch_lt ::shred::Resources) -> Self {
+            fn fetch(res: & #impl_fetch_lt shred::Resources) -> Self {
                 #fetch_return
             }
 
-            fn reads() -> Vec<::shred::ResourceId> {
+            fn reads() -> Vec<shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut reads = <#tys as ::shred::SystemData> :: reads();
+                        let mut reads = <#tys as shred::SystemData> :: reads();
                         r.append(&mut reads);
                     } )*
 
                 r
             }
 
-            fn writes() -> Vec<::shred::ResourceId> {
+            fn writes() -> Vec<shred::ResourceId> {
                 let mut r = Vec::new();
 
                 #( {
-                        let mut writes = <#tys as ::shred::SystemData> :: writes();
+                        let mut writes = <#tys as shred::SystemData> :: writes();
                         r.append(&mut writes);
                     } )*
 
@@ -96,10 +96,10 @@ fn gen_identifiers(fields: &Punctuated<Field, Comma>) -> Vec<Ident> {
     fields.iter().map(|x| x.ident.clone().unwrap()).collect()
 }
 
-/// Adds a `::shred::SystemData<'lt>` bound on each of the system data types.
+/// Adds a `shred::SystemData<'lt>` bound on each of the system data types.
 fn constrain_system_data_types(clause: &mut WhereClause, fetch_lt: &Lifetime, tys: &[Type]) {
     for ty in tys.iter() {
-        let where_predicate: WherePredicate = parse_quote!(#ty : ::shred::SystemData< #fetch_lt >);
+        let where_predicate: WherePredicate = parse_quote!(#ty : shred::SystemData< #fetch_lt >);
         clause.predicates.push(where_predicate);
     }
 }
@@ -130,13 +130,13 @@ fn gen_from_body(ast: &Data, name: &Ident) -> (proc_macro2::TokenStream, Vec<Typ
 
             quote! {
                 #name {
-                    #( #identifiers: ::shred::SystemData::fetch(res) ),*
+                    #( #identifiers: shred::SystemData::fetch(res) ),*
                 }
             }
         }
         DataType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { ::shred::SystemData::fetch(res) }; count];
+            let fetch = vec![quote! { shred::SystemData::fetch(res) }; count];
 
             quote! {
                 #name ( #( #fetch ),* )
