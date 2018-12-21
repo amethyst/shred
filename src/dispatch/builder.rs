@@ -1,6 +1,6 @@
 use std::fmt;
 
-use fxhash::FxHashMap;
+use hashbrown::HashMap;
 
 use dispatch::dispatcher::{SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
@@ -89,7 +89,7 @@ use system::{RunNow, System};
 #[derive(Default)]
 pub struct DispatcherBuilder<'a, 'b> {
     current_id: usize,
-    map: FxHashMap<String, SystemId>,
+    map: HashMap<String, SystemId>,
     stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
@@ -146,7 +146,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     where
         T: for<'c> System<'c> + Send + 'a,
     {
-        use std::collections::hash_map::Entry;
+        use hashbrown::hash_map::Entry;
 
         let id = self.next_id();
 
