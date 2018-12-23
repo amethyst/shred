@@ -11,7 +11,9 @@
 //! #[macro_use]
 //! extern crate shred_derive;
 //!
-//! use shred::{DispatcherBuilder, Read, Resource, Resources, System, Write};
+//! use shred::{
+//!     DispatcherBuilder, Read, Resource, ResourceId, Resources, System, SystemData, Write
+//! };
 //!
 //! #[derive(Debug, Default)]
 //! struct ResA;
@@ -79,7 +81,11 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
 pub use dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
-pub use res::{DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
-              ResourceId, Resources, SetupHandler, Write, WriteExpect};
-pub use system::{Accessor, AccessorCow, RunNow, RunningTime, StaticAccessor, SystemData,
-                 System, DynamicSystemData};
+pub use res::{
+    DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
+    Resources, SetupHandler, Write, WriteExpect,
+};
+pub use system::{
+    Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
+    SystemData,
+};
