@@ -29,7 +29,7 @@ members = ["shred-derive"]
 
 [dev-dependencies]
 cgmath = "0.16"
-shred-derive = { path = "shred-derive", version = "0.5.0" }
+shred-derive = { path = "shred-derive", version = "0.6.0" }
 
 [features]
 default = ["parallel"]
