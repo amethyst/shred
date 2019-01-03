@@ -2,9 +2,9 @@ use std::fmt;
 
 use fxhash::FxHashMap;
 
-use dispatch::Dispatcher;
 use dispatch::dispatcher::{SystemId, ThreadLocal};
 use dispatch::stage::StagesBuilder;
+use dispatch::Dispatcher;
 use system::{RunNow, System};
 
 /// Builder for the [`Dispatcher`].
@@ -27,7 +27,7 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, System, SystemData};
 /// # #[derive(Debug, Default)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
@@ -61,7 +61,7 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Read, System};
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, System, SystemData};
 /// # #[derive(Debug, Default)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
@@ -150,9 +150,11 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
 
         let id = self.next_id();
 
-        let dependencies = dep.iter()
+        let dependencies = dep
+            .iter()
             .map(|x| {
-                *self.map
+                *self
+                    .map
                     .get(*x)
                     .expect(&format!("No such system registered (\"{}\")", *x))
             })

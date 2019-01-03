@@ -2,7 +2,10 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Dispatcher, DispatcherBuilder, Read, Resources, RunningTime, System, Write};
+use shred::{
+    Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, RunningTime, System, SystemData,
+    Write,
+};
 
 fn sleep_short() {
     use std::thread::sleep;

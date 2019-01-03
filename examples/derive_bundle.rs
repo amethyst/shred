@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Read, Resources, SystemData, Write};
+use shred::{Read, ResourceId, Resources, SystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
