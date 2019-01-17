@@ -28,11 +28,10 @@ impl<'a> System<'a> for EmptySystem {
 }
 
 fn main() {
-    let mut resources = Resources::new();
+    let resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
         .with(EmptySystem, "empty", &[])
         .build();
-    dispatcher.setup(&mut resources);
 
     dispatcher.dispatch_seq(&resources);
 }

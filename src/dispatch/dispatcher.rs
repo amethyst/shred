@@ -14,18 +14,6 @@ pub struct Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
-    /// Sets up all the systems which means they are gonna add default values for the resources
-    /// they need.
-    pub fn setup(&mut self, res: &mut Resources) {
-        for stage in &mut self.stages {
-            stage.setup(res);
-        }
-
-        for sys in &mut self.thread_local {
-            sys.setup(res);
-        }
-    }
-
     /// Dispatch all the systems with given resources and context
     /// and then run thread local systems.
     ///
@@ -110,10 +98,6 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
 impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
     fn run_now(&mut self, res: &Resources) {
         self.dispatch(res);
-    }
-
-    fn setup(&mut self, res: &mut Resources) {
-        self.setup(res);
     }
 }
 

@@ -254,7 +254,7 @@ impl Resources {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {RunNow, System, SystemData};
+    use {SystemData};
 
     #[derive(Default)]
     struct Res;
@@ -310,31 +310,5 @@ mod tests {
 
         let write: FetchMut<Res> = res.fetch_mut();
         let read: Fetch<Res> = res.fetch();
-    }
-
-    #[test]
-    fn default_works() {
-        struct Sys;
-
-        impl<'a> System<'a> for Sys {
-            type SystemData = Write<'a, i32>;
-
-            fn run(&mut self, mut data: Self::SystemData) {
-                assert_eq!(*data, 0);
-
-                *data = 33;
-            }
-        }
-
-        let mut res = Resources::new();
-        assert!(res.try_fetch::<i32>().is_none());
-
-        let mut sys = Sys;
-        RunNow::setup(&mut sys, &mut res);
-
-        sys.run_now(&res);
-
-        assert!(res.try_fetch::<i32>().is_some());
-        assert_eq!(*res.fetch::<i32>(), 33);
     }
 }

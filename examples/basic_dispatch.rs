@@ -27,11 +27,10 @@ impl<'a> System<'a> for PrintSystem {
 }
 
 fn main() {
-    let mut resources = Resources::new();
+    let resources = Resources::new();
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    dispatcher.setup(&mut resources);
 
     // Dispatch as often as you want to
     dispatcher.dispatch(&resources);

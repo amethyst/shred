@@ -79,14 +79,6 @@ impl<'a> Stage<'a> {
         Default::default()
     }
 
-    pub fn setup(&mut self, res: &mut Resources) {
-        for group in &mut self.groups {
-            for sys in group {
-                sys.setup(res);
-            }
-        }
-    }
-
     #[cfg(feature = "parallel")]
     pub fn execute(&mut self, res: &Resources) {
         use rayon::prelude::*;

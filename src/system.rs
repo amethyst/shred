@@ -111,9 +111,6 @@ pub trait RunNow<'a> {
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
     fn run_now(&mut self, res: &'a Resources);
-
-    /// Sets up `Resources` for a later call to `run_now`.
-    fn setup(&mut self, res: &mut Resources);
 }
 
 impl<'a, T> RunNow<'a> for T
@@ -123,10 +120,6 @@ where
     fn run_now(&mut self, res: &'a Resources) {
         let data = T::SystemData::fetch(&self.accessor(), res);
         self.run(data);
-    }
-
-    fn setup(&mut self, res: &mut Resources) {
-        T::setup(self, res);
     }
 }
 
@@ -172,11 +165,6 @@ pub trait System<'a> {
             AccessorTy::<'a, Self>::try_new()
                 .expect("Missing implementation for `accessor`"),
         )
-    }
-
-    /// Sets up the `Resources` using `Self::SystemData::setup`.
-    fn setup(&mut self, res: &mut Resources) {
-        <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), res)
     }
 }
 

@@ -51,7 +51,6 @@ fn main() {
         .build();
 
     // Will automatically insert `ResB` (the only one that has a default provider).
-    dispatcher.setup(&mut resources);
     resources.insert(ResWithoutSensibleDefault {
         magic_number_that_we_cant_compute: 42,
     });

@@ -83,10 +83,6 @@ impl<'a> System<'a> for DynamicSystem {
     fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
         AccessorCow::Ref(&self.dependencies)
     }
-
-    fn setup(&mut self, _res: &mut Resources) {
-        // this could call a setup function of the script
-    }
 }
 
 /// Some trait that all of your dynamic resources should implement.
@@ -259,14 +255,12 @@ fn main() {
     }
 
     let mut dispatcher = DispatcherBuilder::new().with(NormalSys, "normal", &[]).build();
-    dispatcher.setup(&mut res);
 
     let script0 = create_script_sys(&res);
 
     // it is recommended you create a second dispatcher dedicated to scripts,
     // that'll allow you to rebuild if necessary
     let mut scripts = DispatcherBuilder::new().with(script0, "script0", &[]).build();
-    scripts.setup(&mut res);
 
     // Game loop
     loop {

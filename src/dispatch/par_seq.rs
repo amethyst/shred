@@ -226,12 +226,6 @@ where
         ParSeq { run, pool }
     }
 
-    /// Sets up `res` for `dispatch`ing.
-    /// This will add default values for required resources by calling `System::setup`.
-    pub fn setup(&mut self, res: &mut Resources) {
-        self.run.setup(res);
-    }
-
     /// Dispatches the systems using `res`.
     /// This doesn't call any virtual functions.
     ///
@@ -250,18 +244,11 @@ where
     fn run_now(&mut self, res: &Resources) {
         RunWithPool::run(&mut self.run, res, self.pool.borrow());
     }
-
-    fn setup(&mut self, res: &mut Resources) {
-        RunWithPool::setup(&mut self.run, res);
-    }
 }
 
 /// Similar to `RunNow` except additionally taking in a rayon::ThreadPool
 /// for parallelism.
 pub trait RunWithPool<'a> {
-    /// Sets up `Resources` for a later call to `run`.
-    fn setup(&mut self, res: &mut Resources);
-
     /// Runs the system/group of systems. Possibly in parallel depending
     /// on how the structure is set up.
     ///
@@ -286,10 +273,6 @@ impl<'a, T> RunWithPool<'a> for T
 where
     T: System<'a>,
 {
-    fn setup(&mut self, res: &mut Resources) {
-        T::setup(self, res);
-    }
-
     fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
         RunNow::run_now(self, res);
     }
@@ -311,11 +294,6 @@ where
     H: RunWithPool<'a> + Send,
     T: RunWithPool<'a> + Send,
 {
-    fn setup(&mut self, res: &mut Resources) {
-        self.head.setup(res);
-        self.tail.setup(res);
-    }
-
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
         let head = &mut self.head;
         let tail = &mut self.tail;
@@ -372,11 +350,6 @@ where
     H: RunWithPool<'a>,
     T: RunWithPool<'a>,
 {
-    fn setup(&mut self, res: &mut Resources) {
-        self.head.setup(res);
-        self.tail.setup(res);
-    }
-
     fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
         self.head.run(res, pool);
         self.tail.run(res, pool);

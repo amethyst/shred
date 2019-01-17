@@ -60,7 +60,6 @@ fn main() {
         &pool,
     );
 
-    dispatcher.setup(&mut res);
     dispatcher.dispatch(&mut res);
 
     // If we want to generate this graph from a `DispatcherBuilder`,
