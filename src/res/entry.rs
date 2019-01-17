@@ -4,18 +4,18 @@ use std::marker::PhantomData;
 use cell::TrustCell;
 use res::{FetchMut, Resource, ResourceId};
 
-/// An entry to a resource of the `Resources` struct.
+/// An entry to a resource of the `World` struct.
 /// This is similar to the Entry API found in the standard library.
 ///
 /// ## Examples
 ///
 /// ```
-/// use shred::Resources;
+/// use shred::World;
 ///
 /// #[derive(Debug)]
 /// struct Res(i32);
 ///
-/// let mut res = Resources::new();
+/// let mut res = World::new();
 ///
 /// let value = res.entry().or_insert(Res(4));
 /// println!("{:?}", value.0 * 2);
@@ -62,13 +62,13 @@ pub fn create_entry<'a, T>(e: StdEntry<'a, ResourceId, TrustCell<Box<Resource>>>
 
 #[cfg(test)]
 mod tests {
-    use res::Resources;
+    use res::World;
 
     #[test]
     fn test_entry() {
         struct Res;
 
-        let mut res = Resources::new();
+        let mut res = World::new();
         res.entry().or_insert(Res);
 
         assert!(res.has_value::<Res>());

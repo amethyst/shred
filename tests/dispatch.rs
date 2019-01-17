@@ -3,7 +3,7 @@ extern crate shred;
 extern crate shred_derive;
 
 use shred::{
-    Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, RunningTime, System, SystemData,
+    Dispatcher, DispatcherBuilder, Read, ResourceId, World, RunningTime, System, SystemData,
     Write,
 };
 
@@ -79,7 +79,7 @@ fn dispatch_builder_invalid() {
 
 #[test]
 fn dispatch_basic() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let number = 5;
@@ -95,7 +95,7 @@ fn dispatch_basic() {
 
 #[test]
 fn dispatch_ww_block() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -108,7 +108,7 @@ fn dispatch_ww_block() {
 
 #[test]
 fn dispatch_rw_block() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -121,7 +121,7 @@ fn dispatch_rw_block() {
 
 #[test]
 fn dispatch_rw_block_rev() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -134,7 +134,7 @@ fn dispatch_rw_block_rev() {
 
 #[test]
 fn dispatch_sequential() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -148,7 +148,7 @@ fn dispatch_sequential() {
 #[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
@@ -164,7 +164,7 @@ fn dispatch_async() {
 #[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async_res() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
@@ -180,7 +180,7 @@ fn dispatch_async_res() {
 
 #[test]
 fn dispatch_stage_group() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(Res);
     res.insert(ResB);
 

@@ -184,7 +184,7 @@ fn basic(b: &mut Bencher) {
                                                                // the integration
         .build();
 
-    let mut res = Resources::new();
+    let mut res = World::new();
     let mass = VecStorage::new(Mass(10.0));
     let mut pos = VecStorage::new(Pos(Vec3::new(0.0, 0.0, 0.0)));
     let vel = VecStorage::new(Vel(Vec3::new(0.0, 0.0, 0.0)));

@@ -12,7 +12,7 @@
 //! extern crate shred_derive;
 //!
 //! use shred::{
-//!     DispatcherBuilder, Read, Resource, ResourceId, Resources, System, SystemData, Write
+//!     DispatcherBuilder, Read, Resource, ResourceId, World, System, SystemData, Write
 //! };
 //!
 //! #[derive(Debug, Default)]
@@ -40,7 +40,7 @@
 //!
 //!
 //! fn main() {
-//!     let mut resources = Resources::new();
+//!     let mut resources = World::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .with(EmptySystem, "empty", &[])
 //!         .build();
@@ -83,7 +83,7 @@ pub use dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
 pub use res::{
     DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
-    Resources, SetupHandler, Write, WriteExpect,
+    World, SetupHandler, Write, WriteExpect,
 };
 pub use system::{
     Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,

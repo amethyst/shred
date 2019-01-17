@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, Resources,
+use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, World,
      SetupHandler, SystemData};
 
 /// Allows to fetch a resource in a system immutably.
@@ -42,11 +42,11 @@ where
     T: Resource,
     F: SetupHandler<T>,
 {
-    fn setup(res: &mut Resources) {
+    fn setup(res: &mut World) {
         F::setup(res)
     }
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         res.fetch::<T>().into()
     }
 
@@ -105,11 +105,11 @@ where
     T: Resource,
     F: SetupHandler<T>,
 {
-    fn setup(res: &mut Resources) {
+    fn setup(res: &mut World) {
         F::setup(res)
     }
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         res.fetch_mut::<T>().into()
     }
 
@@ -128,9 +128,9 @@ impl<'a, T, F> SystemData<'a> for Option<Read<'a, T, F>>
 where
     T: Resource,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         res.try_fetch().map(Into::into)
     }
 
@@ -147,9 +147,9 @@ impl<'a, T, F> SystemData<'a> for Option<Write<'a, T, F>>
 where
     T: Resource,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         res.try_fetch_mut().map(Into::into)
     }
 

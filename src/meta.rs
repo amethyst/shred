@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use fxhash::FxHashMap;
 use mopa::Any;
 
-use {Resource, Resources};
+use {Resource, World};
 
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the
@@ -61,7 +61,7 @@ pub trait CastFrom<T> {
 pub struct MetaIter<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a Resources,
+    res: &'a World,
     tys: &'a [TypeId],
     // `MetaIter` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
@@ -124,7 +124,7 @@ impl Fat {
 pub struct MetaIterMut<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a Resources,
+    res: &'a World,
     tys: &'a [TypeId],
     // `MetaIterMut` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
@@ -166,7 +166,7 @@ where
 /// # Examples
 ///
 /// ```
-/// use shred::{CastFrom, MetaTable, Resources};
+/// use shred::{CastFrom, MetaTable, World};
 ///
 /// trait Object {
 ///     fn method1(&self) -> i32;
@@ -211,7 +211,7 @@ where
 ///     }
 /// }
 ///
-/// let mut res = Resources::new();
+/// let mut res = World::new();
 ///
 /// res.insert(ImplementorA(3));
 /// res.insert(ImplementorB(1));
@@ -296,7 +296,7 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Iterates all resources that implement `T` and were registered.
-    pub fn iter<'a>(&'a self, res: &'a Resources) -> MetaIter<'a, T> {
+    pub fn iter<'a>(&'a self, res: &'a World) -> MetaIter<'a, T> {
         MetaIter {
             fat: &self.fat,
             index: 0,
@@ -307,7 +307,7 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Iterates all resources that implement `T` and were registered mutably.
-    pub fn iter_mut<'a>(&'a self, res: &'a Resources) -> MetaIterMut<'a, T> {
+    pub fn iter_mut<'a>(&'a self, res: &'a World) -> MetaIterMut<'a, T> {
         MetaIterMut {
             fat: &self.fat,
             index: 0,
@@ -341,7 +341,7 @@ fn assert_unsized<T: ?Sized>() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Resources;
+    use World;
 
     trait Object {
         fn method1(&self) -> i32;
@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_iter_all() {
-        let mut res = Resources::new();
+        let mut res = World::new();
 
         res.insert(ImplementorA(3));
         res.insert(ImplementorB(1));
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     fn get() {
-        let mut res = Resources::new();
+        let mut res = World::new();
 
         res.insert(ImplementorC);
         res.insert(ImplementorD);

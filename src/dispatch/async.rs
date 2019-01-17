@@ -5,7 +5,7 @@ use rayon::ThreadPool;
 
 use dispatch::dispatcher::ThreadLocal;
 use dispatch::stage::Stage;
-use res::Resources;
+use res::World;
 
 pub fn new_async<'a, R>(
     res: R,
@@ -29,7 +29,7 @@ pub struct AsyncDispatcher<'a, R> {
 
 impl<'a, R> AsyncDispatcher<'a, R>
 where
-    R: Borrow<Resources> + Send + Sync + 'static,
+    R: Borrow<World> + Send + Sync + 'static,
 {
     /// Dispatches the systems asynchronously.
     /// Does not execute thread local systems.
@@ -41,7 +41,7 @@ where
 
         self.thread_pool.spawn(move || {
             {
-                let res: &Resources = inner.res.borrow();
+                let res: &World = inner.res.borrow();
 
                 for stage in &mut inner.stages {
                     stage.execute(res);

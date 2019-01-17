@@ -38,7 +38,7 @@ use smallvec::SmallVec;
 
 use dispatch::dispatcher::{SystemExecSend, SystemId};
 use dispatch::util::check_intersection;
-use res::{ResourceId, Resources};
+use res::{ResourceId, World};
 use system::{RunningTime, System};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
@@ -79,7 +79,7 @@ impl<'a> Stage<'a> {
         Default::default()
     }
 
-    pub fn setup(&mut self, res: &mut Resources) {
+    pub fn setup(&mut self, res: &mut World) {
         for group in &mut self.groups {
             for sys in group {
                 sys.setup(res);
@@ -88,7 +88,7 @@ impl<'a> Stage<'a> {
     }
 
     #[cfg(feature = "parallel")]
-    pub fn execute(&mut self, res: &Resources) {
+    pub fn execute(&mut self, res: &World) {
         use rayon::prelude::*;
 
         self.groups.par_iter_mut().for_each(|group| {
@@ -105,7 +105,7 @@ impl<'a> Stage<'a> {
         self.groups.len()
     }
 
-    pub fn execute_seq(&mut self, res: &Resources) {
+    pub fn execute_seq(&mut self, res: &World) {
         for group in &mut self.groups {
             for system in group {
                 system.run_now(res);

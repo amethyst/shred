@@ -27,7 +27,7 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, System, SystemData};
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, World, System, SystemData};
 /// # #[derive(Debug, Default)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
@@ -61,7 +61,7 @@ use system::{RunNow, System};
 /// # extern crate shred;
 /// # #[macro_use]
 /// # extern crate shred_derive;
-/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, Resources, System, SystemData};
+/// # use shred::{Dispatcher, DispatcherBuilder, Read, ResourceId, World, System, SystemData};
 /// # #[derive(Debug, Default)] struct Res;
 /// # #[derive(SystemData)] #[allow(unused)] struct Data<'a> { a: Read<'a, Res> }
 /// # struct Dummy;
@@ -308,8 +308,8 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
 impl<'b> DispatcherBuilder<'static, 'b> {
     /// Builds an async dispatcher.
     ///
-    /// It does not allow non-static types and accepts a `Resources` struct or a value that
-    /// can be borrowed as `Resources`.
+    /// It does not allow non-static types and accepts a `World` struct or a value that
+    /// can be borrowed as `World`.
     pub fn build_async<R>(self, res: R) -> ::dispatch::async::AsyncDispatcher<'b, R> {
         use dispatch::async::new_async;
 

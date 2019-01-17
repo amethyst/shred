@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, World, SystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -23,7 +23,7 @@ struct Nested<'a> {
 }
 
 fn main() {
-    let mut res = Resources::new();
+    let mut res = World::new();
     res.insert(ResA);
     res.insert(ResB);
 

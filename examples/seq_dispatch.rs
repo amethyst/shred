@@ -2,7 +2,7 @@ extern crate shred;
 #[macro_use]
 extern crate shred_derive;
 
-use shred::{DispatcherBuilder, Read, ResourceId, Resources, System, SystemData, Write};
+use shred::{DispatcherBuilder, Read, ResourceId, World, System, SystemData, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -28,7 +28,7 @@ impl<'a> System<'a> for EmptySystem {
 }
 
 fn main() {
-    let mut resources = Resources::new();
+    let mut resources = World::new();
     let mut dispatcher = DispatcherBuilder::new()
         .with(EmptySystem, "empty", &[])
         .build();
