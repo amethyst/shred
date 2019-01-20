@@ -109,7 +109,7 @@ impl ResourceId {
 ///
 /// # Resource Ids
 ///
-/// World are identified by `ResourceId`s, which consist of a `TypeId`.
+/// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct World {
     resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
