@@ -18,8 +18,8 @@ script:
     cargo test --verbose --all-features;
     cargo bench --verbose --no-run --all-features;
   else
-    cargo build --verbose --all-features;
-    cargo test --verbose --all-features;
+    cargo build --verbose;
+    cargo test --verbose;
     cargo build --verbose --no-default-features;
     cargo test --verbose --no-default-features;
   fi
