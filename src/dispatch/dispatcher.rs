@@ -1,7 +1,7 @@
 use smallvec::SmallVec;
 
 use dispatch::stage::Stage;
-use res::Resources;
+use res::World;
 use system::RunNow;
 
 /// The dispatcher struct, allowing
@@ -16,7 +16,7 @@ pub struct Dispatcher<'a, 'b> {
 impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Sets up all the systems which means they are gonna add default values for the resources
     /// they need.
-    pub fn setup(&mut self, res: &mut Resources) {
+    pub fn setup(&mut self, res: &mut World) {
         for stage in &mut self.stages {
             stage.setup(res);
         }
@@ -41,7 +41,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
-    pub fn dispatch(&mut self, res: &Resources) {
+    pub fn dispatch(&mut self, res: &World) {
         #[cfg(feature = "parallel")]
         self.dispatch_par(res);
 
@@ -62,7 +62,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     #[cfg(feature = "parallel")]
-    pub fn dispatch_par(&mut self, res: &Resources) {
+    pub fn dispatch_par(&mut self, res: &World) {
         let stages = &mut self.stages;
 
         self.thread_pool.install(move || {
@@ -79,7 +79,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch_seq(&mut self, res: &Resources) {
+    pub fn dispatch_seq(&mut self, res: &World) {
         for stage in &mut self.stages {
             stage.execute_seq(res);
         }
@@ -89,7 +89,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch_thread_local(&mut self, res: &Resources) {
+    pub fn dispatch_thread_local(&mut self, res: &World) {
         for sys in &mut self.thread_local {
             sys.run_now(res);
         }
@@ -108,11 +108,11 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
-    fn run_now(&mut self, res: &Resources) {
+    fn run_now(&mut self, res: &World) {
         self.dispatch(res);
     }
 
-    fn setup(&mut self, res: &mut Resources) {
+    fn setup(&mut self, res: &mut World) {
         self.setup(res);
     }
 }
@@ -197,8 +197,8 @@ mod tests {
             .with(Dummy(5), "5", &["4"])
     }
 
-    fn new_resources() -> Resources {
-        let mut res = Resources::new();
+    fn new_resources() -> World {
+        let mut res = World::new();
         res.insert(Res(0));
 
         res

@@ -1,4 +1,4 @@
-use {Resource, Resources};
+use {Resource, World};
 
 #[cfg(feature = "nightly")]
 macro_rules! fetch_panic {
@@ -30,15 +30,15 @@ impl<T> SetupHandler<T> for DefaultProvider
 where
     T: Default + Resource,
 {
-    fn setup(res: &mut Resources) {
+    fn setup(res: &mut World) {
         res.entry().or_insert_with(T::default);
     }
 }
 
 /// A setup handler performing the fetching of `T`.
 pub trait SetupHandler<T>: Sized {
-    /// Sets up `Resources` for fetching `T`.
-    fn setup(res: &mut Resources);
+    /// Sets up `World` for fetching `T`.
+    fn setup(res: &mut World);
 }
 
 /// A setup handler that simply does nothing and thus will cause a panic on fetching.
@@ -51,5 +51,5 @@ impl<T> SetupHandler<T> for PanicHandler
 where
     T: Resource,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 }

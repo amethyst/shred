@@ -4,7 +4,7 @@ extern crate shred;
 
 use rayon::ThreadPoolBuilder;
 
-use shred::{ParSeq, Read, Resources, System};
+use shred::{ParSeq, Read, World, System};
 
 macro_rules! impl_sys {
     ($( $id:ident )*) => {
@@ -41,7 +41,7 @@ fn main() {
 
     let pool = ThreadPoolBuilder::new().build().expect("OS error");
 
-    let mut res = Resources::new();
+    let mut res = World::new();
     let x = 5u8;
 
     let mut dispatcher = ParSeq::new(

@@ -10,7 +10,7 @@ extern crate shred;
 use std::collections::HashMap;
 
 use shred::{Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read, Resource,
-            ResourceId, Resources,
+            ResourceId, World,
             System, SystemData};
 use shred::cell::{Ref, RefMut};
 
@@ -84,7 +84,7 @@ impl<'a> System<'a> for DynamicSystem {
         AccessorCow::Ref(&self.dependencies)
     }
 
-    fn setup(&mut self, _res: &mut Resources) {
+    fn setup(&mut self, _res: &mut World) {
         // this could call a setup function of the script
     }
 }
@@ -146,9 +146,9 @@ struct ScriptSystemData<'a> {
 impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
     type Accessor = Dependencies;
 
-    fn setup(_accessor: &Dependencies, _res: &mut Resources) {}
+    fn setup(_accessor: &Dependencies, _res: &mut World) {}
 
-    fn fetch(access: &Dependencies, res: &'a Resources) -> Self {
+    fn fetch(access: &Dependencies, res: &'a World) -> Self {
         let reads = access
             .reads
             .iter()
@@ -178,7 +178,7 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
     }
 }
 
-fn create_script_sys(res: &Resources) -> DynamicSystem {
+fn create_script_sys(res: &World) -> DynamicSystem {
     // -- what we get from the script --
     fn script(input: ScriptInput) {
         input.reads[0].call_method("bar");
@@ -243,7 +243,7 @@ fn main() {
         }
     }
 
-    let mut res = Resources::new();
+    let mut res = World::new();
 
     {
         let mut table = res.entry().or_insert_with(|| ReflectionTable::new());

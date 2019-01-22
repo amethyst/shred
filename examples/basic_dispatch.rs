@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{DispatcherBuilder, Read, Resources, System, Write};
+use shred::{DispatcherBuilder, Read, World, System, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -27,7 +27,7 @@ impl<'a> System<'a> for PrintSystem {
 }
 
 fn main() {
-    let mut resources = Resources::new();
+    let mut resources = World::new();
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();

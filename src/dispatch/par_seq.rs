@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
 use dispatch::util::check_intersection;
-use res::{ResourceId, Resources};
+use res::{ResourceId, World};
 use system::RunNow;
 use system::System;
 
@@ -154,7 +154,7 @@ impl<H> Par<H, Nil> {
 ///
 /// # use rayon::ThreadPool;
 /// #
-/// # use shred::{ParSeq, Resources, System};
+/// # use shred::{ParSeq, World, System};
 /// #
 /// # macro_rules! impl_sys {
 /// #     ($( $id:ident )*) => {
@@ -187,7 +187,7 @@ impl<H> Par<H, Nil> {
 /// #
 /// # let pool = ThreadPool::new(Default::default()).unwrap();
 /// #
-/// # let mut res = Resources::new();
+/// # let mut res = World::new();
 /// let x = 5u8;
 ///
 /// let mut dispatcher = ParSeq::new(
@@ -228,7 +228,7 @@ where
 
     /// Sets up `res` for `dispatch`ing.
     /// This will add default values for required resources by calling `System::setup`.
-    pub fn setup(&mut self, res: &mut Resources) {
+    pub fn setup(&mut self, res: &mut World) {
         self.run.setup(res);
     }
 
@@ -237,7 +237,7 @@ where
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch(&mut self, res: &Resources) {
+    pub fn dispatch(&mut self, res: &World) {
         self.run.run(res, self.pool.borrow());
     }
 }
@@ -247,11 +247,11 @@ where
     P: Borrow<ThreadPool>,
     T: for<'b> RunWithPool<'b>,
 {
-    fn run_now(&mut self, res: &Resources) {
+    fn run_now(&mut self, res: &World) {
         RunWithPool::run(&mut self.run, res, self.pool.borrow());
     }
 
-    fn setup(&mut self, res: &mut Resources) {
+    fn setup(&mut self, res: &mut World) {
         RunWithPool::setup(&mut self.run, res);
     }
 }
@@ -259,8 +259,8 @@ where
 /// Similar to `RunNow` except additionally taking in a rayon::ThreadPool
 /// for parallelism.
 pub trait RunWithPool<'a> {
-    /// Sets up `Resources` for a later call to `run`.
-    fn setup(&mut self, res: &mut Resources);
+    /// Sets up `World` for a later call to `run`.
+    fn setup(&mut self, res: &mut World);
 
     /// Runs the system/group of systems. Possibly in parallel depending
     /// on how the structure is set up.
@@ -271,7 +271,7 @@ pub trait RunWithPool<'a> {
     /// which are borrowed in an incompatible way already
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool);
+    fn run(&mut self, res: &'a World, pool: &ThreadPool);
 
     /// Accumulates the necessary read/shared resources from the
     /// systems in this group.
@@ -286,11 +286,11 @@ impl<'a, T> RunWithPool<'a> for T
 where
     T: System<'a>,
 {
-    fn setup(&mut self, res: &mut Resources) {
+    fn setup(&mut self, res: &mut World) {
         T::setup(self, res);
     }
 
-    fn run(&mut self, res: &'a Resources, _: &ThreadPool) {
+    fn run(&mut self, res: &'a World, _: &ThreadPool) {
         RunNow::run_now(self, res);
     }
 
@@ -311,12 +311,12 @@ where
     H: RunWithPool<'a> + Send,
     T: RunWithPool<'a> + Send,
 {
-    fn setup(&mut self, res: &mut Resources) {
+    fn setup(&mut self, res: &mut World) {
         self.head.setup(res);
         self.tail.setup(res);
     }
 
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
+    fn run(&mut self, res: &'a World, pool: &ThreadPool) {
         let head = &mut self.head;
         let tail = &mut self.tail;
 
@@ -372,12 +372,12 @@ where
     H: RunWithPool<'a>,
     T: RunWithPool<'a>,
 {
-    fn setup(&mut self, res: &mut Resources) {
+    fn setup(&mut self, res: &mut World) {
         self.head.setup(res);
         self.tail.setup(res);
     }
 
-    fn run(&mut self, res: &'a Resources, pool: &ThreadPool) {
+    fn run(&mut self, res: &'a World, pool: &ThreadPool) {
         self.head.run(res, pool);
         self.tail.run(res, pool);
     }
@@ -431,11 +431,11 @@ mod tests {
         Par::new(A(nr.clone()))
             .with(A(nr.clone()))
             .with(A(nr.clone()))
-            .run(&Resources::new(), &pool);
+            .run(&World::new(), &pool);
 
         assert_eq!(nr.load(Ordering::Acquire), 3);
 
-        par![A(nr.clone()), A(nr.clone()),].run(&Resources::new(), &pool);
+        par![A(nr.clone()), A(nr.clone()),].run(&World::new(), &pool);
 
         assert_eq!(nr.load(Ordering::Acquire), 5);
     }
@@ -459,7 +459,7 @@ mod tests {
         Seq::new(A(nr.clone()))
             .with(A(nr.clone()))
             .with(A(nr.clone()))
-            .run(&Resources::new(), &pool);
+            .run(&World::new(), &pool);
 
         assert_eq!(nr.load(Ordering::Acquire), 3);
     }
