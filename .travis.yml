@@ -4,6 +4,8 @@ cache: cargo
 
 rust:
 - nightly
+- beta
+- stable
 - 1.30.0
 
 branches:

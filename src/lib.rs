@@ -61,7 +61,7 @@
 #![warn(missing_docs)]
 
 extern crate arrayvec;
-extern crate fxhash;
+extern crate hashbrown;
 #[macro_use]
 extern crate mopa;
 #[cfg(feature = "parallel")]

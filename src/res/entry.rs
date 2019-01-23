@@ -1,8 +1,9 @@
-use std::collections::hash_map::Entry as StdEntry;
 use std::marker::PhantomData;
 
 use cell::TrustCell;
 use res::{FetchMut, Resource, ResourceId};
+
+type StdEntry<'a, K, V> = hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;
 
 /// An entry to a resource of the `World` struct.
 /// This is similar to the Entry API found in the standard library.

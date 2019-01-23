@@ -33,7 +33,7 @@
 use std::fmt;
 
 use arrayvec::ArrayVec;
-use fxhash::FxHashMap;
+use hashbrown::HashMap;
 use smallvec::SmallVec;
 
 use dispatch::dispatcher::{SystemExecSend, SystemId};
@@ -177,9 +177,9 @@ impl<'a> StagesBuilder<'a> {
     pub fn write_par_seq(
         &self,
         f: &mut fmt::Formatter,
-        map: &FxHashMap<String, SystemId>,
+        map: &HashMap<String, SystemId>,
     ) -> fmt::Result {
-        let map: FxHashMap<_, _> = map.iter()
+        let map: HashMap<_, _> = map.iter()
             .map(|(key, value)| (*value, key as &str))
             .collect();
 

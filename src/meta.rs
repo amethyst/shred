@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use std::marker::PhantomData;
 
-use fxhash::FxHashMap;
+use hashbrown::HashMap;
 use mopa::Any;
 
 use {Resource, World};
@@ -228,7 +228,7 @@ where
 /// ```
 pub struct MetaTable<T: ?Sized> {
     fat: Vec<Fat>,
-    indices: FxHashMap<TypeId, usize>,
+    indices: HashMap<TypeId, usize>,
     tys: Vec<TypeId>,
     // `MetaTable` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
@@ -250,7 +250,7 @@ impl<T: ?Sized> MetaTable<T> {
         R: Resource,
         T: CastFrom<R> + 'static,
     {
-        use std::collections::hash_map::Entry;
+        use hashbrown::hash_map::Entry;
 
         let fat = unsafe { Fat::from_ptr(<T as CastFrom<R>>::cast(r)) };
 

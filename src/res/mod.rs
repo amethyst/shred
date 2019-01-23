@@ -8,7 +8,7 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use fxhash::FxHashMap;
+use hashbrown::HashMap;
 use mopa::Any;
 
 use self::entry::create_entry;
@@ -112,7 +112,7 @@ impl ResourceId {
 /// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct World {
-    resources: FxHashMap<ResourceId, TrustCell<Box<Resource>>>,
+    resources: HashMap<ResourceId, TrustCell<Box<Resource>>>,
 }
 
 impl World {
