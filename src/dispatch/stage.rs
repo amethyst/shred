@@ -85,21 +85,21 @@ impl<'a> Stage<'a> {
         Default::default()
     }
 
-    pub fn setup(&mut self, res: &mut World) {
+    pub fn setup(&mut self, world: &mut World) {
         for group in &mut self.groups {
             for sys in group {
-                sys.setup(res);
+                sys.setup(world);
             }
         }
     }
 
     #[cfg(feature = "parallel")]
-    pub fn execute(&mut self, res: &World) {
+    pub fn execute(&mut self, world: &World) {
         use rayon::prelude::*;
 
         self.groups.par_iter_mut().for_each(|group| {
             for system in group {
-                system.run_now(res);
+                system.run_now(world);
             }
         });
     }
@@ -111,10 +111,10 @@ impl<'a> Stage<'a> {
         self.groups.len()
     }
 
-    pub fn execute_seq(&mut self, res: &World) {
+    pub fn execute_seq(&mut self, world: &World) {
         for group in &mut self.groups {
             for system in group {
-                system.run_now(res);
+                system.run_now(world);
             }
         }
     }

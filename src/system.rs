@@ -117,23 +117,23 @@ pub trait RunNow<'a> {
     /// which are borrowed in an incompatible way already
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
-    fn run_now(&mut self, res: &'a World);
+    fn run_now(&mut self, world: &'a World);
 
     /// Sets up `World` for a later call to `run_now`.
-    fn setup(&mut self, res: &mut World);
+    fn setup(&mut self, world: &mut World);
 }
 
 impl<'a, T> RunNow<'a> for T
 where
     T: System<'a>,
 {
-    fn run_now(&mut self, res: &'a World) {
-        let data = T::SystemData::fetch(&self.accessor(), res);
+    fn run_now(&mut self, world: &'a World) {
+        let data = T::SystemData::fetch(&self.accessor(), world);
         self.run(data);
     }
 
-    fn setup(&mut self, res: &mut World) {
-        T::setup(self, res);
+    fn setup(&mut self, world: &mut World) {
+        T::setup(self, world);
     }
 }
 
@@ -182,8 +182,8 @@ pub trait System<'a> {
     }
 
     /// Sets up the `World` using `Self::SystemData::setup`.
-    fn setup(&mut self, res: &mut World) {
-        <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), res)
+    fn setup(&mut self, world: &mut World) {
+        <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), world)
     }
 }
 
@@ -192,12 +192,12 @@ pub trait System<'a> {
 /// type is only needed for very special setups.
 pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `World`.
-    fn setup(res: &mut World);
+    fn setup(world: &mut World);
 
     /// Fetches the system data from `World`. Note that this is only specified
     /// for one concrete lifetime `'a`, you need to implement the
     /// `SystemData` trait for every possible lifetime.
-    fn fetch(res: &'a World) -> Self;
+    fn fetch(world: &'a World) -> Self;
 
     /// Returns all read dependencies as fetched from `Self::fetch`.
     ///
@@ -216,12 +216,12 @@ where
 {
     type Accessor = StaticAccessor<T>;
 
-    fn setup(_: &StaticAccessor<T>, res: &mut World) {
-        T::setup(res);
+    fn setup(_: &StaticAccessor<T>, world: &mut World) {
+        T::setup(world);
     }
 
-    fn fetch(_: &StaticAccessor<T>, res: &'a World) -> Self {
-        T::fetch(res)
+    fn fetch(_: &StaticAccessor<T>, world: &'a World) -> Self {
+        T::fetch(world)
     }
 }
 
@@ -276,7 +276,7 @@ pub trait DynamicSystemData<'a> {
     type Accessor: Accessor;
 
     /// Sets up `World` for fetching this system data.
-    fn setup(accessor: &Self::Accessor, res: &mut World);
+    fn setup(accessor: &Self::Accessor, world: &mut World);
 
     /// Creates a new resource bundle
     /// by fetching the required resources
@@ -294,7 +294,7 @@ pub trait DynamicSystemData<'a> {
     /// fallback value.
     ///
     /// [`World`]: trait.World.html
-    fn fetch(access: &Self::Accessor, res: &'a World) -> Self;
+    fn fetch(access: &Self::Accessor, world: &'a World) -> Self;
 }
 
 impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
@@ -318,18 +318,18 @@ macro_rules! impl_data {
         impl<'a, $($ty),*> SystemData<'a> for ( $( $ty , )* )
             where $( $ty : SystemData<'a> ),*
             {
-                fn setup(res: &mut World) {
+                fn setup(world: &mut World) {
                     #![allow(unused_variables)]
 
                     $(
-                        <$ty as SystemData>::setup(&mut *res);
+                        <$ty as SystemData>::setup(&mut *world);
                      )*
                 }
 
-                fn fetch(res: &'a World) -> Self {
+                fn fetch(world: &'a World) -> Self {
                     #![allow(unused_variables)]
 
-                    ( $( <$ty as SystemData<'a>>::fetch(res), )* )
+                    ( $( <$ty as SystemData<'a>>::fetch(world), )* )
                 }
 
                 fn reads() -> Vec<ResourceId> {

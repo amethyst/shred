@@ -223,11 +223,10 @@ where
         ParSeq { run, pool }
     }
 
-    /// Sets up `world` for `dispatch`ing.
-    /// This will add default values for required resources by calling
-    /// `System::setup`.
-    pub fn setup(&mut self, res: &mut World) {
-        self.run.setup(res);
+    /// Sets up `world` for `dispatch`ing. This will add default values for
+    /// required resources by calling `System::setup`.
+    pub fn setup(&mut self, world: &mut World) {
+        self.run.setup(world);
     }
 
     /// Dispatches the systems using `world`.
@@ -235,8 +234,8 @@ where
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch(&mut self, res: &World) {
-        self.run.run(res, self.pool.borrow());
+    pub fn dispatch(&mut self, world: &World) {
+        self.run.run(world, self.pool.borrow());
     }
 }
 
@@ -245,12 +244,12 @@ where
     P: Borrow<ThreadPool>,
     T: for<'b> RunWithPool<'b>,
 {
-    fn run_now(&mut self, res: &World) {
-        RunWithPool::run(&mut self.run, res, self.pool.borrow());
+    fn run_now(&mut self, world: &World) {
+        RunWithPool::run(&mut self.run, world, self.pool.borrow());
     }
 
-    fn setup(&mut self, res: &mut World) {
-        RunWithPool::setup(&mut self.run, res);
+    fn setup(&mut self, world: &mut World) {
+        RunWithPool::setup(&mut self.run, world);
     }
 }
 
@@ -258,7 +257,7 @@ where
 /// for parallelism.
 pub trait RunWithPool<'a> {
     /// Sets up `World` for a later call to `run`.
-    fn setup(&mut self, res: &mut World);
+    fn setup(&mut self, world: &mut World);
 
     /// Runs the system/group of systems. Possibly in parallel depending
     /// on how the structure is set up.
@@ -269,7 +268,7 @@ pub trait RunWithPool<'a> {
     /// which are borrowed in an incompatible way already
     /// (tries to read from a resource which is already written to or
     /// tries to write to a resource which is read from).
-    fn run(&mut self, res: &'a World, pool: &ThreadPool);
+    fn run(&mut self, world: &'a World, pool: &ThreadPool);
 
     /// Accumulates the necessary read/shared resources from the
     /// systems in this group.
@@ -284,12 +283,12 @@ impl<'a, T> RunWithPool<'a> for T
 where
     T: System<'a>,
 {
-    fn setup(&mut self, res: &mut World) {
-        T::setup(self, res);
+    fn setup(&mut self, world: &mut World) {
+        T::setup(self, world);
     }
 
-    fn run(&mut self, res: &'a World, _: &ThreadPool) {
-        RunNow::run_now(self, res);
+    fn run(&mut self, world: &'a World, _: &ThreadPool) {
+        RunNow::run_now(self, world);
     }
 
     fn reads(&self, reads: &mut Vec<ResourceId>) {
@@ -310,17 +309,17 @@ where
     H: RunWithPool<'a> + Send,
     T: RunWithPool<'a> + Send,
 {
-    fn setup(&mut self, res: &mut World) {
-        self.head.setup(res);
-        self.tail.setup(res);
+    fn setup(&mut self, world: &mut World) {
+        self.head.setup(world);
+        self.tail.setup(world);
     }
 
-    fn run(&mut self, res: &'a World, pool: &ThreadPool) {
+    fn run(&mut self, world: &'a World, pool: &ThreadPool) {
         let head = &mut self.head;
         let tail = &mut self.tail;
 
-        let head = move || head.run(res, pool);
-        let tail = move || tail.run(res, pool);
+        let head = move || head.run(world, pool);
+        let tail = move || tail.run(world, pool);
 
         if pool.current_thread_index().is_none() {
             pool.join(head, tail);
@@ -372,14 +371,14 @@ where
     H: RunWithPool<'a>,
     T: RunWithPool<'a>,
 {
-    fn setup(&mut self, res: &mut World) {
-        self.head.setup(res);
-        self.tail.setup(res);
+    fn setup(&mut self, world: &mut World) {
+        self.head.setup(world);
+        self.tail.setup(world);
     }
 
-    fn run(&mut self, res: &'a World, pool: &ThreadPool) {
-        self.head.run(res, pool);
-        self.tail.run(res, pool);
+    fn run(&mut self, world: &'a World, pool: &ThreadPool) {
+        self.head.run(world, pool);
+        self.tail.run(world, pool);
     }
 
     fn reads(&self, reads: &mut Vec<ResourceId>) {

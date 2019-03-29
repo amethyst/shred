@@ -74,9 +74,9 @@ mod tests {
     fn test_entry() {
         struct Res;
 
-        let mut res = World::new();
-        res.entry().or_insert(Res);
+        let mut world = World::new();
+        world.entry().or_insert(Res);
 
-        assert!(res.has_value::<Res>());
+        assert!(world.has_value::<Res>());
     }
 }

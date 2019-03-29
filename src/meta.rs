@@ -58,10 +58,10 @@ pub unsafe trait CastFrom<T> {
 pub struct MetaIter<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a World,
     tys: &'a [TypeId],
     // `MetaIter` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
+    world: &'a World,
 }
 
 impl<'a, T> Iterator for MetaIter<'a, T>
@@ -76,7 +76,7 @@ where
 
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
-            self.res
+            self.world
                 .try_fetch_internal(match self.tys.get(index) {
                     Some(&x) => x,
                     None => return None,
@@ -122,10 +122,10 @@ impl Fat {
 pub struct MetaIterMut<'a, T: ?Sized + 'a> {
     fat: &'a [Fat],
     index: usize,
-    res: &'a World,
     tys: &'a [TypeId],
     // `MetaIterMut` is invariant over `T`
     marker: PhantomData<Invariant<T>>,
+    world: &'a World,
 }
 
 impl<'a, T> Iterator for MetaIterMut<'a, T>
@@ -140,7 +140,7 @@ where
 
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
-            self.res
+            self.world
                 .try_fetch_internal(match self.tys.get(index) {
                     Some(&x) => x,
                     None => return None,
@@ -258,7 +258,10 @@ impl<T: ?Sized> MetaTable<T> {
         let casted_ptr = <T as CastFrom<R>>::cast(r);
         let thin_casted_ptr = casted_ptr as *const T as *const () as usize;
 
-        assert_eq!(thin_ptr, thin_casted_ptr, "Bug: `CastFrom` did not cast `self`");
+        assert_eq!(
+            thin_ptr, thin_casted_ptr,
+            "Bug: `CastFrom` did not cast `self`"
+        );
 
         let fat = unsafe { Fat::from_ptr(casted_ptr) };
 
@@ -308,7 +311,7 @@ impl<T: ?Sized> MetaTable<T> {
         MetaIter {
             fat: &self.fat,
             index: 0,
-            res,
+            world: res,
             tys: &self.tys,
             marker: PhantomData,
         }
@@ -319,7 +322,7 @@ impl<T: ?Sized> MetaTable<T> {
         MetaIterMut {
             fat: &self.fat,
             index: 0,
-            res,
+            world: res,
             tys: &self.tys,
             marker: PhantomData,
         }
@@ -396,23 +399,23 @@ mod tests {
 
     #[test]
     fn test_iter_all() {
-        let mut res = World::new();
+        let mut world = World::new();
 
-        res.insert(ImplementorA(3));
-        res.insert(ImplementorB(1));
+        world.insert(ImplementorA(3));
+        world.insert(ImplementorB(1));
 
         let mut table = MetaTable::<Object>::new();
         table.register(&ImplementorA(125));
         table.register(&ImplementorB(111111));
 
         {
-            let mut iter = table.iter(&mut res);
+            let mut iter = table.iter(&mut world);
             assert_eq!(iter.next().unwrap().method1(), 3);
             assert_eq!(iter.next().unwrap().method1(), 1);
         }
 
         {
-            let mut iter_mut = table.iter_mut(&mut res);
+            let mut iter_mut = table.iter_mut(&mut world);
             let obj = iter_mut.next().unwrap();
             obj.method2(3);
             assert_eq!(obj.method1(), 6);
@@ -448,25 +451,31 @@ mod tests {
 
     #[test]
     fn get() {
-        let mut res = World::new();
+        let mut world = World::new();
 
-        res.insert(ImplementorC);
-        res.insert(ImplementorD);
+        world.insert(ImplementorC);
+        world.insert(ImplementorD);
 
         let mut table = MetaTable::<Object>::new();
         table.register(&ImplementorC);
         table.register(&ImplementorD);
 
         assert_eq!(
-            table.get(&*res.fetch::<ImplementorC>()).unwrap().method1(),
+            table
+                .get(&*world.fetch::<ImplementorC>())
+                .unwrap()
+                .method1(),
             33
         );
         assert_eq!(
-            table.get(&*res.fetch::<ImplementorD>()).unwrap().method1(),
+            table
+                .get(&*world.fetch::<ImplementorD>())
+                .unwrap()
+                .method1(),
             42
         );
 
         // Make sure it fulfills `Resource` requirements
-        res.insert(table);
+        world.insert(table);
     }
 }
