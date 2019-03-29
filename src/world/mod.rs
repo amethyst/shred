@@ -80,20 +80,16 @@ where
     }
 }
 
-/// A resource defines a set of data
-/// which can only be accessed according
-/// to Rust's typical borrowing model (one writer xor multiple readers).
+/// A resource is a data slot which lives in the `World` can only be accessed
+/// according to Rust's typical borrowing model (one writer xor multiple
+/// readers).
 pub trait Resource: Any + Send + Sync + 'static {}
 
 mopafy!(Resource);
 
 impl<T> Resource for T where T: Any + Send + Sync {}
 
-/// The id of a [`Resource`],
-/// which is a tuple struct with a type
-/// id and an additional resource id (represented with a `usize`).
-///
-/// The default resource id is `0`.
+/// The id of a [`Resource`], which simply wraps a type id.
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
