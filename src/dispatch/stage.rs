@@ -93,6 +93,14 @@ impl<'a> Stage<'a> {
         }
     }
 
+    pub fn dispose(&mut self, world: &mut World) {
+        for group in &mut self.groups {
+            for sys in group {
+                sys.dispose(world);
+            }
+        }
+    }
+
     #[cfg(feature = "parallel")]
     pub fn execute(&mut self, world: &World) {
         use rayon::prelude::*;

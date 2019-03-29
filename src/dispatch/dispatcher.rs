@@ -5,6 +5,7 @@ use crate::{dispatch::stage::Stage, system::RunNow, world::World};
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
 pub struct Dispatcher<'a, 'b> {
+    disposed: bool,
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
@@ -15,12 +16,32 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
     pub fn setup(&mut self, world: &mut World) {
+        self.assert_not_disposed();
+
         for stage in &mut self.stages {
             stage.setup(world);
         }
 
         for sys in &mut self.thread_local {
             sys.setup(world);
+        }
+    }
+
+    /// Calls the `dispose` method of all systems and allows them to release
+    /// external resources. It is common this method removes components and
+    /// / or resources from the `World` which are associated with external
+    /// resources.
+    ///
+    /// Calling any method after `dispose` (including `dispose` itself) will panic.
+    pub fn dispose(&mut self, world: &mut World) {
+        assert!(!self.diposed, "Tried to call `world.dispose()` twice");
+
+        for stage in &mut self.stages {
+            stage.dispose(world);
+        }
+
+        for sys in &mut self.thread_local {
+            sys.dispose(world);
         }
     }
 
@@ -40,6 +61,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
     pub fn dispatch(&mut self, world: &World) {
+        self.assert_not_disposed();
+
         #[cfg(feature = "parallel")]
         self.dispatch_par(world);
 
@@ -61,6 +84,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// is currently borrowed. If that's the case, it panics.
     #[cfg(feature = "parallel")]
     pub fn dispatch_par(&mut self, world: &World) {
+        self.assert_not_disposed();
+
         let stages = &mut self.stages;
 
         self.thread_pool.install(move || {
@@ -78,6 +103,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     pub fn dispatch_seq(&mut self, world: &World) {
+        self.assert_not_disposed();
+
         for stage in &mut self.stages {
             stage.execute_seq(world);
         }
@@ -88,6 +115,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     pub fn dispatch_thread_local(&mut self, world: &World) {
+        self.assert_not_disposed();
+
         for sys in &mut self.thread_local {
             sys.run_now(world);
         }
@@ -103,6 +132,10 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
             .map(|s| s.max_threads())
             .fold(0, |highest, value| highest.max(value))
     }
+
+    fn assert_not_disposed(&self) {
+        assert!(!self.diposed, "Cannot call a method after `world.dispose()`");
+    }
 }
 
 impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
@@ -112,6 +145,10 @@ impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
 
     fn setup(&mut self, world: &mut World) {
         self.setup(world);
+    }
+
+    fn dispose(&mut self, world: &mut World) {
+        self.dispose(world);
     }
 }
 
@@ -128,6 +165,7 @@ pub fn new_dispatcher<'a, 'b>(
     thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
 ) -> Dispatcher<'a, 'b> {
     Dispatcher {
+        disposed: false,
         stages,
         thread_local,
         thread_pool,
@@ -140,6 +178,7 @@ pub fn new_dispatcher<'a, 'b>(
     thread_local: ThreadLocal<'b>,
 ) -> Dispatcher<'a, 'b> {
     Dispatcher {
+        disposed: false,
         stages,
         thread_local,
     }
