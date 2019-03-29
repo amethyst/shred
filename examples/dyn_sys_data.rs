@@ -104,7 +104,7 @@ trait Reflection {
 }
 
 // necessary for `MetaTable`
-impl<T> CastFrom<T> for Reflection
+unsafe impl<T> CastFrom<T> for Reflection
 where
     T: Reflection + 'static,
 {
