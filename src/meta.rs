@@ -18,6 +18,11 @@ unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 /// This trait is required to be implemented for a trait to be compatible with
 /// the meta table.
 ///
+/// # Memory safety
+///
+/// Not casting `self` but e.g. a field to the trait object can result in severe
+/// memory safety issues.
+///
 /// # Examples
 ///
 /// ```
@@ -28,7 +33,7 @@ unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 ///     fn foo2(&mut self, x: i32) -> i32;
 /// }
 ///
-/// impl<T> CastFrom<T> for Foo
+/// unsafe impl<T> CastFrom<T> for Foo
 /// where
 ///     T: Foo + 'static,
 /// {
@@ -41,7 +46,7 @@ unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 ///     }
 /// }
 /// ```
-pub trait CastFrom<T> {
+pub unsafe trait CastFrom<T> {
     /// Casts an immutable `T` reference to a trait object.
     fn cast(t: &T) -> &Self;
 
@@ -171,7 +176,7 @@ where
 ///     fn method2(&mut self, x: i32);
 /// }
 ///
-/// impl<T> CastFrom<T> for Object
+/// unsafe impl<T> CastFrom<T> for Object
 /// where
 ///     T: Object + 'static,
 /// {
@@ -249,7 +254,13 @@ impl<T: ?Sized> MetaTable<T> {
     {
         use hashbrown::hash_map::Entry;
 
-        let fat = unsafe { Fat::from_ptr(<T as CastFrom<R>>::cast(r)) };
+        let thin_ptr = r as *const R as usize;
+        let casted_ptr = <T as CastFrom<R>>::cast(r);
+        let thin_casted_ptr = casted_ptr as *const T as *const () as usize;
+
+        assert_eq!(thin_ptr, thin_casted_ptr, "Bug: `CastFrom` did not cast `self`");
+
+        let fat = unsafe { Fat::from_ptr(casted_ptr) };
 
         let ty_id = TypeId::of::<R>();
 
@@ -346,7 +357,7 @@ mod tests {
         fn method2(&mut self, x: i32);
     }
 
-    impl<T> CastFrom<T> for Object
+    unsafe impl<T> CastFrom<T> for Object
     where
         T: Object + 'static,
     {
