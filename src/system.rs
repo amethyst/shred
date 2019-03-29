@@ -125,7 +125,9 @@ pub trait RunNow<'a> {
     /// Performs clean up that requires resources from the `World`.
     /// This commonly removes components from `world` which depend on external
     /// resources.
-    fn dispose(&mut self, world: &mut World) {}
+    fn dispose(&mut self, world: &mut World) {
+        let _ = world;
+    }
 }
 
 impl<'a, T> RunNow<'a> for T

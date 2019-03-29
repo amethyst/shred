@@ -34,7 +34,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Calling any method after `dispose` (including `dispose` itself) will panic.
     pub fn dispose(&mut self, world: &mut World) {
-        assert!(!self.diposed, "Tried to call `world.dispose()` twice");
+        assert!(!self.disposed, "Tried to call `world.dispose()` twice");
 
         for stage in &mut self.stages {
             stage.dispose(world);
@@ -134,7 +134,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 
     fn assert_not_disposed(&self) {
-        assert!(!self.diposed, "Cannot call a method after `world.dispose()`");
+        assert!(!self.disposed, "Cannot call a method after `world.dispose()`");
     }
 }
 
