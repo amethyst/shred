@@ -14,13 +14,13 @@ pub struct Dispatcher<'a, 'b> {
 impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
-    pub fn setup(&mut self, res: &mut World) {
+    pub fn setup(&mut self, world: &mut World) {
         for stage in &mut self.stages {
-            stage.setup(res);
+            stage.setup(world);
         }
 
         for sys in &mut self.thread_local {
-            sys.setup(res);
+            sys.setup(world);
         }
     }
 
@@ -39,14 +39,14 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
     /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
-    pub fn dispatch(&mut self, res: &World) {
+    pub fn dispatch(&mut self, world: &World) {
         #[cfg(feature = "parallel")]
-        self.dispatch_par(res);
+        self.dispatch_par(world);
 
         #[cfg(not(feature = "parallel"))]
-        self.dispatch_seq(res);
+        self.dispatch_seq(world);
 
-        self.dispatch_thread_local(res);
+        self.dispatch_thread_local(world);
     }
 
     /// Dispatches the systems (except thread local systems)
@@ -60,12 +60,12 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     #[cfg(feature = "parallel")]
-    pub fn dispatch_par(&mut self, res: &World) {
+    pub fn dispatch_par(&mut self, world: &World) {
         let stages = &mut self.stages;
 
         self.thread_pool.install(move || {
             for stage in stages {
-                stage.execute(res);
+                stage.execute(world);
             }
         });
     }
@@ -77,9 +77,9 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch_seq(&mut self, res: &World) {
+    pub fn dispatch_seq(&mut self, world: &World) {
         for stage in &mut self.stages {
-            stage.execute_seq(res);
+            stage.execute_seq(world);
         }
     }
 
@@ -87,9 +87,9 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    pub fn dispatch_thread_local(&mut self, res: &World) {
+    pub fn dispatch_thread_local(&mut self, world: &World) {
         for sys in &mut self.thread_local {
-            sys.run_now(res);
+            sys.run_now(world);
         }
     }
 
@@ -106,12 +106,12 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
-    fn run_now(&mut self, res: &World) {
-        self.dispatch(res);
+    fn run_now(&mut self, world: &World) {
+        self.dispatch(world);
     }
 
-    fn setup(&mut self, res: &mut World) {
-        self.setup(res);
+    fn setup(&mut self, world: &mut World) {
+        self.setup(world);
     }
 }
 
@@ -193,11 +193,11 @@ mod tests {
             .with(Dummy(5), "5", &["4"])
     }
 
-    fn new_resources() -> World {
-        let mut res = World::new();
-        res.insert(Res(0));
+    fn new_world() -> World {
+        let mut world = World::new();
+        world.insert(Res(0));
 
-        res
+        world
     }
 
     #[test]
@@ -206,20 +206,20 @@ mod tests {
         DispatcherBuilder::new()
             .with(Panic, "p", &[])
             .build()
-            .dispatch(&mut new_resources())
+            .dispatch(&mut new_world())
     }
 
     #[test]
     fn stages() {
         let mut d = new_builder().build();
 
-        d.dispatch(&mut new_resources());
+        d.dispatch(&mut new_world());
     }
 
     #[test]
     #[cfg(feature = "parallel")]
     fn stages_async() {
-        let mut d = new_builder().build_async(new_resources());
+        let mut d = new_builder().build_async(new_world());
 
         d.dispatch();
     }

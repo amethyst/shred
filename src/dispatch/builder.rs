@@ -315,12 +315,12 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     /// value that can be borrowed as `World`.
     pub fn build_async<R>(
         self,
-        res: R,
+        world: R,
     ) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
         use crate::dispatch::async_dispatcher::new_async;
 
         new_async(
-            res,
+            world,
             self.stages_builder.build(),
             self.thread_local,
             self.thread_pool.unwrap_or_else(Self::create_thread_pool),

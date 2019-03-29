@@ -172,7 +172,7 @@ fn dispatch_async_res() {
 
     d.dispatch();
 
-    let res = d.mut_res();
+    let res = d.world_mut();
     res.insert(ResB);
 }
 

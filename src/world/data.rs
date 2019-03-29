@@ -46,12 +46,12 @@ where
     T: Resource,
     F: SetupHandler<T>,
 {
-    fn setup(res: &mut World) {
-        F::setup(res)
+    fn setup(world: &mut World) {
+        F::setup(world)
     }
 
-    fn fetch(res: &'a World) -> Self {
-        res.fetch::<T>().into()
+    fn fetch(world: &'a World) -> Self {
+        world.fetch::<T>().into()
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -110,12 +110,12 @@ where
     T: Resource,
     F: SetupHandler<T>,
 {
-    fn setup(res: &mut World) {
-        F::setup(res)
+    fn setup(world: &mut World) {
+        F::setup(world)
     }
 
-    fn fetch(res: &'a World) -> Self {
-        res.fetch_mut::<T>().into()
+    fn fetch(world: &'a World) -> Self {
+        world.fetch_mut::<T>().into()
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -135,8 +135,8 @@ where
 {
     fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a World) -> Self {
-        res.try_fetch().map(Into::into)
+    fn fetch(world: &'a World) -> Self {
+        world.try_fetch().map(Into::into)
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -154,8 +154,8 @@ where
 {
     fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a World) -> Self {
-        res.try_fetch_mut().map(Into::into)
+    fn fetch(world: &'a World) -> Self {
+        world.try_fetch_mut().map(Into::into)
     }
 
     fn reads() -> Vec<ResourceId> {

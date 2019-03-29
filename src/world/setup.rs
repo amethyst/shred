@@ -30,15 +30,15 @@ impl<T> SetupHandler<T> for DefaultProvider
 where
     T: Default + Resource,
 {
-    fn setup(res: &mut World) {
-        res.entry().or_insert_with(T::default);
+    fn setup(world: &mut World) {
+        world.entry().or_insert_with(T::default);
     }
 }
 
 /// A setup handler performing the fetching of `T`.
 pub trait SetupHandler<T>: Sized {
     /// Sets up `World` for fetching `T`.
-    fn setup(res: &mut World);
+    fn setup(world: &mut World);
 }
 
 /// A setup handler that simply does nothing and thus will cause a panic on

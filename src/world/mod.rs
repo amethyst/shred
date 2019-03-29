@@ -273,9 +273,9 @@ mod tests {
         assert_eq!(Read::<Res>::reads(), vec![ResourceId::new::<Res>()]);
         assert_eq!(Read::<Res>::writes(), vec![]);
 
-        let mut res = World::new();
-        res.insert(Res);
-        <Read<Res> as SystemData>::fetch(&res);
+        let mut world = World::new();
+        world.insert(Res);
+        <Read<Res> as SystemData>::fetch(&world);
     }
 
     #[test]
@@ -283,42 +283,42 @@ mod tests {
         assert_eq!(Write::<Res>::reads(), vec![]);
         assert_eq!(Write::<Res>::writes(), vec![ResourceId::new::<Res>()]);
 
-        let mut res = World::new();
-        res.insert(Res);
-        <Write<Res> as SystemData>::fetch(&res);
+        let mut world = World::new();
+        world.insert(Res);
+        <Write<Res> as SystemData>::fetch(&world);
     }
 
     #[test]
     fn add() {
         struct Foo;
 
-        let mut res = World::new();
-        res.insert(Res);
+        let mut world = World::new();
+        world.insert(Res);
 
-        assert!(res.has_value::<Res>());
-        assert!(!res.has_value::<Foo>());
+        assert!(world.has_value::<Res>());
+        assert!(!world.has_value::<Foo>());
     }
 
     #[allow(unused)]
     #[test]
     #[should_panic(expected = "Already borrowed")]
     fn read_write_fails() {
-        let mut res = World::new();
-        res.insert(Res);
+        let mut world = World::new();
+        world.insert(Res);
 
-        let read: Fetch<Res> = res.fetch();
-        let write: FetchMut<Res> = res.fetch_mut();
+        let read: Fetch<Res> = world.fetch();
+        let write: FetchMut<Res> = world.fetch_mut();
     }
 
     #[allow(unused)]
     #[test]
     #[should_panic(expected = "Already borrowed mutably")]
     fn write_read_fails() {
-        let mut res = World::new();
-        res.insert(Res);
+        let mut world = World::new();
+        world.insert(Res);
 
-        let write: FetchMut<Res> = res.fetch_mut();
-        let read: Fetch<Res> = res.fetch();
+        let write: FetchMut<Res> = world.fetch_mut();
+        let read: Fetch<Res> = world.fetch();
     }
 
     #[test]
@@ -335,15 +335,15 @@ mod tests {
             }
         }
 
-        let mut res = World::new();
-        assert!(res.try_fetch::<i32>().is_none());
+        let mut world = World::new();
+        assert!(world.try_fetch::<i32>().is_none());
 
         let mut sys = Sys;
-        RunNow::setup(&mut sys, &mut res);
+        RunNow::setup(&mut sys, &mut world);
 
-        sys.run_now(&res);
+        sys.run_now(&world);
 
-        assert!(res.try_fetch::<i32>().is_some());
-        assert_eq!(*res.fetch::<i32>(), 33);
+        assert!(world.try_fetch::<i32>().is_some());
+        assert_eq!(*world.fetch::<i32>(), 33);
     }
 }
