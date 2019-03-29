@@ -37,14 +37,14 @@
 //! }
 //!
 //! fn main() {
-//!     let mut resources = World::new();
+//!     let mut world = World::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .with(EmptySystem, "empty", &[])
 //!         .build();
-//!     resources.insert(ResA);
-//!     resources.insert(ResB);
+//!     world.insert(ResA);
+//!     world.insert(ResB);
 //!
-//!     dispatcher.dispatch(&mut resources);
+//!     dispatcher.dispatch(&mut world);
 //! }
 //! ```
 //!
