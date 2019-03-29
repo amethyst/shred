@@ -11,9 +11,7 @@
 //! #[macro_use]
 //! extern crate shred_derive;
 //!
-//! use shred::{
-//!     DispatcherBuilder, Read, Resource, ResourceId, World, System, SystemData, Write
-//! };
+//! use shred::{DispatcherBuilder, Read, Resource, ResourceId, System, SystemData, World, Write};
 //!
 //! #[derive(Debug, Default)]
 //! struct ResA;
@@ -38,23 +36,22 @@
 //!     }
 //! }
 //!
-//!
 //! fn main() {
-//!     let mut resources = World::new();
+//!     let mut world = World::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .with(EmptySystem, "empty", &[])
 //!         .build();
-//!     resources.insert(ResA);
-//!     resources.insert(ResB);
+//!     world.insert(ResA);
+//!     world.insert(ResB);
 //!
-//!     dispatcher.dispatch(&mut resources);
+//!     dispatcher.dispatch(&mut world);
 //! }
 //! ```
 //!
 //! Once you are more familiar with how system data and parallelization works,
-//! you can take look at a more flexible and performant way to dispatch: `ParSeq`.
-//! Using it is bit trickier, but it allows dispatching without any virtual function calls.
-//!
+//! you can take look at a more flexible and performant way to dispatch:
+//! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
+//! virtual function calls.
 
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![deny(unused_must_use)]
@@ -76,16 +73,23 @@ mod system;
 mod world;
 
 #[cfg(feature = "parallel")]
-pub use dispatch::AsyncDispatcher;
-pub use dispatch::{Dispatcher, DispatcherBuilder};
+pub use crate::dispatch::AsyncDispatcher;
 #[cfg(feature = "parallel")]
-pub use dispatch::{Par, ParSeq, RunWithPool, Seq};
-pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
-pub use system::{
-    Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
-    SystemData,
+pub use crate::dispatch::{Par, ParSeq, RunWithPool, Seq};
+pub use crate::{
+    dispatch::{Dispatcher, DispatcherBuilder},
+    meta::{CastFrom, MetaIter, MetaIterMut, MetaTable},
+    system::{
+        Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
+        SystemData,
+    },
+    world::{
+        DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
+        ResourceId, SetupHandler, World, Write, WriteExpect,
+    },
 };
-pub use world::{
-    DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
-    World, SetupHandler, Write, WriteExpect,
-};
+
+/// Alias for `World` for easier migration to the new version. Will be removed
+/// in the future.
+#[deprecated(since = "0.8.0", note = "renamed to `World`")]
+pub type Resources = World;

@@ -4,7 +4,7 @@ extern crate shred;
 
 use rayon::ThreadPoolBuilder;
 
-use shred::{ParSeq, Read, World, System};
+use shred::{ParSeq, Read, System, World};
 
 macro_rules! impl_sys {
     ($( $id:ident )*) => {

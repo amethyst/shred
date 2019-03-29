@@ -6,7 +6,7 @@ extern crate shred_derive;
 
 use std::fmt::Debug;
 
-use shred::{Read, Resource, ResourceId, World, SystemData, Write};
+use shred::{Read, Resource, ResourceId, SystemData, World, Write};
 
 trait Hrtb<'a> {}
 

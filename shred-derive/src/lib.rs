@@ -8,11 +8,9 @@ extern crate quote;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use syn::punctuated::Punctuated;
-use syn::token::Comma;
 use syn::{
-    Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Lifetime,
-    Type, WhereClause, WherePredicate,
+    punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Field, Fields,
+    FieldsNamed, FieldsUnnamed, Ident, Lifetime, Type, WhereClause, WherePredicate,
 };
 
 /// Used to `#[derive]` the trait `SystemData`.

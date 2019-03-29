@@ -1,8 +1,6 @@
 use smallvec::SmallVec;
 
-use dispatch::stage::Stage;
-use system::RunNow;
-use world::World;
+use crate::{dispatch::stage::Stage, system::RunNow, world::World};
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
@@ -14,8 +12,8 @@ pub struct Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
-    /// Sets up all the systems which means they are gonna add default values for the resources
-    /// they need.
+    /// Sets up all the systems which means they are gonna add default values
+    /// for the resources they need.
     pub fn setup(&mut self, res: &mut World) {
         for stage in &mut self.stages {
             stage.setup(res);
@@ -149,9 +147,7 @@ pub fn new_dispatcher<'a, 'b>(
 
 #[cfg(test)]
 mod tests {
-    use dispatch::builder::DispatcherBuilder;
-    use system::*;
-    use world::*;
+    use crate::{dispatch::builder::DispatcherBuilder, system::*, world::*};
 
     #[derive(Default)]
     struct Res(i32);

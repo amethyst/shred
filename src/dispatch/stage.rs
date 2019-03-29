@@ -1,11 +1,12 @@
-//! Stages module. To explain the rough functionality, here some information in words:
+//! Stages module. To explain the rough functionality, here some information in
+//! words:
 //!
-//! 1) A *stage* is a part of the dispatching which contains work that can be done
-//!    in parallel
+//! 1) A *stage* is a part of the dispatching which contains work that can be
+//! done    in parallel
 //!
-//! 2) In each stage, there's a *group*. A group is a list of systems, which are executed
-//!    in order. Thus, systems of a group may conflict with each other, but groups of
-//!    a stage may not.
+//! 2) In each stage, there's a *group*. A group is a list of systems, which are
+//! executed    in order. Thus, systems of a group may conflict with each other,
+//! but groups of    a stage may not.
 //!
 //! So the actual dispatching works like this (pseudo code):
 //!
@@ -16,18 +17,19 @@
 //! }
 //!
 //! As you can see, we execute stages sequentially, fork the stage to execute
-//! multiple groups at once, but execute the systems of each group sequentially again.
-//! Here's why:
+//! multiple groups at once, but execute the systems of each group sequentially
+//! again. Here's why:
 //!
 //! Imagine we have like a really heavy system, like a collision detection.
-//! And we also have a really light system. Now, given both systems don't have any
-//! conflicts, thus can run in parallel, all the other systems had to wait until
-//! the collision detection finished. That's not what we want. Instead, we say:
+//! And we also have a really light system. Now, given both systems don't have
+//! any conflicts, thus can run in parallel, all the other systems had to wait
+//! until the collision detection finished. That's not what we want. Instead, we
+//! say:
 //!
-//! > If a system only conflicts with one group of a stage, it gets executed after
-//!   all the other systems of this group, but only if by doing this, the running
-//!   times of the groups of this stage get closer to each other (called balanced
-//!   in code).
+//! > If a system only conflicts with one group of a stage, it gets executed
+//! after   all the other systems of this group, but only if by doing this, the
+//! running   times of the groups of this stage get closer to each other (called
+//! balanced   in code).
 //!
 
 use std::fmt;
@@ -36,10 +38,14 @@ use arrayvec::ArrayVec;
 use hashbrown::HashMap;
 use smallvec::SmallVec;
 
-use dispatch::dispatcher::{SystemExecSend, SystemId};
-use dispatch::util::check_intersection;
-use system::{RunningTime, System};
-use world::{ResourceId, World};
+use crate::{
+    dispatch::{
+        dispatcher::{SystemExecSend, SystemId},
+        util::check_intersection,
+    },
+    system::{RunningTime, System},
+    world::{ResourceId, World},
+};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
 
@@ -133,7 +139,7 @@ impl<'a> StagesBuilder<'a> {
     where
         T: for<'b> System<'b> + Send + 'a,
     {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         let mut reads = system.accessor().reads();
         let writes = system.accessor().writes();
@@ -179,7 +185,8 @@ impl<'a> StagesBuilder<'a> {
         f: &mut fmt::Formatter,
         map: &HashMap<String, SystemId>,
     ) -> fmt::Result {
-        let map: HashMap<_, _> = map.iter()
+        let map: HashMap<_, _> = map
+            .iter()
             .map(|(key, value)| (*value, key as &str))
             .collect();
 
@@ -407,9 +414,7 @@ mod tests {
     #[test]
     fn conflict_rw() {
         let ids = create_ids(&[&[&[0], &[1]]]);
-        let reads = create_reads(&[
-            &[&[ResourceId::new::<ResA>()], &[ResourceId::new::<ResB>()]],
-        ]);
+        let reads = create_reads(&[&[&[ResourceId::new::<ResA>()], &[ResourceId::new::<ResB>()]]]);
         let writes = create_writes(&[&[&[], &[]]]);
 
         let conflict = StagesBuilder::find_conflict(
@@ -445,9 +450,8 @@ mod tests {
     #[test]
     fn conflict_ww_multi() {
         let ids = create_ids(&[&[&[0], &[1]]]);
-        let reads = create_reads(&[
-            &[&[ResourceId::new::<ResA>(), ResourceId::new::<ResC>()], &[]],
-        ]);
+        let reads =
+            create_reads(&[&[&[ResourceId::new::<ResA>(), ResourceId::new::<ResC>()], &[]]]);
         let writes = create_writes(&[&[&[], &[ResourceId::new::<ResB>()]]]);
 
         let conflict = StagesBuilder::find_conflict(
@@ -464,7 +468,7 @@ mod tests {
 
     #[test]
     fn uses_group() {
-        use {Read, Write};
+        use crate::{Read, Write};
 
         struct SysA;
 

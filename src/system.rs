@@ -1,15 +1,17 @@
-use std::marker::PhantomData;
-use std::ops::Deref;
+use std::{marker::PhantomData, ops::Deref};
 
-use {ResourceId, World};
+use crate::{ResourceId, World};
 
-/// A trait for accessing read/write multiple resources from a system. This can be used
-/// to create dynamic systems that don't specify what they fetch at compile-time.
+/// A trait for accessing read/write multiple resources from a system. This can
+/// be used to create dynamic systems that don't specify what they fetch at
+/// compile-time.
 ///
-/// For compile-time system data this will all be done for you using `StaticAccessor`.
+/// For compile-time system data this will all be done for you using
+/// `StaticAccessor`.
 pub trait Accessor: Sized {
-    /// Tries to create a new instance of this type. This one returns `Some` in case there is a
-    /// default, otherwise the system needs to override `System::accessor`.
+    /// Tries to create a new instance of this type. This one returns `Some` in
+    /// case there is a default, otherwise the system needs to override
+    /// `System::accessor`.
     fn try_new() -> Option<Self>;
 
     /// A list of [`ResourceId`]s the bundle
@@ -18,8 +20,8 @@ pub trait Accessor: Sized {
     ///
     /// # Contract
     ///
-    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise *will* cause a
-    /// panic.
+    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise
+    /// *will* cause a panic.
     ///
     /// This method is only executed once,
     /// thus the returned value may never change
@@ -34,8 +36,8 @@ pub trait Accessor: Sized {
     ///
     /// # Contract
     ///
-    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise *will* cause a
-    /// panic.
+    /// Exactly return the dependencies you're going to `fetch`! Doing otherwise
+    /// *will* cause a panic.
     ///
     /// This method is only executed once,
     /// thus the returned value may never change
@@ -49,9 +51,11 @@ impl Accessor for () {
     fn try_new() -> Option<Self> {
         None
     }
+
     fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
+
     fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
@@ -61,9 +65,11 @@ impl<T: ?Sized> Accessor for PhantomData<T> {
     fn try_new() -> Option<Self> {
         None
     }
+
     fn reads(&self) -> Vec<ResourceId> {
         Vec::new()
     }
+
     fn writes(&self) -> Vec<ResourceId> {
         Vec::new()
     }
@@ -100,7 +106,8 @@ where
 
 type AccessorTy<'a, T> = <<T as System<'a>>::SystemData as DynamicSystemData<'a>>::Accessor;
 
-/// Trait for fetching data and running systems. Automatically implemented for systems.
+/// Trait for fetching data and running systems. Automatically implemented for
+/// systems.
 pub trait RunNow<'a> {
     /// Runs the system now.
     ///
@@ -147,8 +154,9 @@ pub enum RunningTime {
 pub trait System<'a> {
     /// The resource bundle required to execute this system.
     ///
-    /// You will mostly use a tuple of system data (which also implements `SystemData`).
-    /// You can also create such a resource bundle by simply deriving `SystemData` for a struct.
+    /// You will mostly use a tuple of system data (which also implements
+    /// `SystemData`). You can also create such a resource bundle by simply
+    /// deriving `SystemData` for a struct.
     ///
     /// Every `SystemData` is also a `DynamicSystemData`.
     type SystemData: DynamicSystemData<'a>;
@@ -169,8 +177,7 @@ pub trait System<'a> {
     /// Return the accessor from the [`SystemData`].
     fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
         AccessorCow::Owned(
-            AccessorTy::<'a, Self>::try_new()
-                .expect("Missing implementation for `accessor`"),
+            AccessorTy::<'a, Self>::try_new().expect("Missing implementation for `accessor`"),
         )
     }
 
@@ -180,16 +187,16 @@ pub trait System<'a> {
     }
 }
 
-/// A static system data that can specify its dependencies at statically (at compile-time).
-/// Most system data is a `SystemData`, the `DynamicSystemData` type is only needed for very special
-/// setups.
+/// A static system data that can specify its dependencies at statically (at
+/// compile-time). Most system data is a `SystemData`, the `DynamicSystemData`
+/// type is only needed for very special setups.
 pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `World`.
     fn setup(res: &mut World);
 
-    /// Fetches the system data from `World`. Note that this is only specified for one concrete
-    /// lifetime `'a`, you need to implement the `SystemData` trait for every possible
-    /// lifetime.
+    /// Fetches the system data from `World`. Note that this is only specified
+    /// for one concrete lifetime `'a`, you need to implement the
+    /// `SystemData` trait for every possible lifetime.
     fn fetch(res: &'a World) -> Self;
 
     /// Returns all read dependencies as fetched from `Self::fetch`.
@@ -249,21 +256,23 @@ where
             marker: PhantomData,
         })
     }
+
     fn reads(&self) -> Vec<ResourceId> {
         T::reads()
     }
+
     fn writes(&self) -> Vec<ResourceId> {
         T::writes()
     }
 }
 
-/// A struct implementing system data indicates that it bundles some resources which are required
-/// for the execution.
+/// A struct implementing system data indicates that it bundles some resources
+/// which are required for the execution.
 ///
 /// This is the more flexible, but complex variant of `SystemData`.
 pub trait DynamicSystemData<'a> {
-    /// The accessor of the `SystemData`, which specifies the read and write dependencies and does
-    /// the fetching.
+    /// The accessor of the `SystemData`, which specifies the read and write
+    /// dependencies and does the fetching.
     type Accessor: Accessor;
 
     /// Sets up `World` for fetching this system data.
@@ -280,8 +289,9 @@ pub trait DynamicSystemData<'a> {
     /// # Panics
     ///
     /// This function may panic if the above contract is violated.
-    /// This function may panic if the resource doesn't exist. This is only the case if either
-    /// `setup` was not called or it didn't insert any fallback value.
+    /// This function may panic if the resource doesn't exist. This is only the
+    /// case if either `setup` was not called or it didn't insert any
+    /// fallback value.
     ///
     /// [`World`]: trait.World.html
     fn fetch(access: &Self::Accessor, res: &'a World) -> Self;

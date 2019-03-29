@@ -1,4 +1,4 @@
-use {Resource, World};
+use crate::{Resource, World};
 
 #[cfg(feature = "nightly")]
 macro_rules! fetch_panic {
@@ -41,10 +41,12 @@ pub trait SetupHandler<T>: Sized {
     fn setup(res: &mut World);
 }
 
-/// A setup handler that simply does nothing and thus will cause a panic on fetching.
-/// The panic will provide the type name if the `nightly` feature of shred is enabled.
+/// A setup handler that simply does nothing and thus will cause a panic on
+/// fetching. The panic will provide the type name if the `nightly` feature of
+/// shred is enabled.
 ///
-/// A typedef called `ReadExpect` exists, so you usually don't use this type directly.
+/// A typedef called `ReadExpect` exists, so you usually don't use this type
+/// directly.
 pub struct PanicHandler;
 
 impl<T> SetupHandler<T> for PanicHandler

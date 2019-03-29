@@ -1,11 +1,13 @@
 //! Helper module for some internals, most users don't need to interact with it.
 
-use std::cell::UnsafeCell;
-use std::error::Error;
-use std::fmt::{Display, Error as FormatError, Formatter};
-use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::usize;
+use std::{
+    cell::UnsafeCell,
+    error::Error,
+    fmt::{Display, Error as FormatError, Formatter},
+    ops::{Deref, DerefMut},
+    sync::atomic::{AtomicUsize, Ordering},
+    usize,
+};
 
 /// Marker struct for an invalid borrow error
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -98,7 +100,8 @@ impl<T> TrustCell<T> {
     ///
     /// # Panics
     ///
-    /// This function will panic if there is a mutable reference to the data already in use.
+    /// This function will panic if there is a mutable reference to the data
+    /// already in use.
     pub fn borrow(&self) -> Ref<T> {
         self.check_flag_read().expect("Already borrowed mutably");
 
@@ -110,8 +113,8 @@ impl<T> TrustCell<T> {
 
     /// Get an immutable reference to the inner data.
     ///
-    /// Absence of write accesses is checked at run-time. If access is not possible, an error is
-    /// returned.
+    /// Absence of write accesses is checked at run-time. If access is not
+    /// possible, an error is returned.
     pub fn try_borrow(&self) -> Result<Ref<T>, InvalidBorrow> {
         self.check_flag_read()?;
 
@@ -127,7 +130,8 @@ impl<T> TrustCell<T> {
     ///
     /// # Panics
     ///
-    /// This function will panic if there are any references to the data already in use.
+    /// This function will panic if there are any references to the data already
+    /// in use.
     pub fn borrow_mut(&self) -> RefMut<T> {
         self.check_flag_write().expect("Already borrowed");
 
@@ -139,7 +143,8 @@ impl<T> TrustCell<T> {
 
     /// Get a mutable reference to the inner data.
     ///
-    /// Exclusive access is checked at run-time. If access is not possible, an error is returned.
+    /// Exclusive access is checked at run-time. If access is not possible, an
+    /// error is returned.
     pub fn try_borrow_mut(&self) -> Result<RefMut<T>, InvalidBorrow> {
         self.check_flag_write()?;
 
@@ -157,10 +162,11 @@ impl<T> TrustCell<T> {
         unsafe { &mut *self.inner.get() }
     }
 
-    /// Make sure we are allowed to aquire a read lock, and increment the read count by 1
+    /// Make sure we are allowed to aquire a read lock, and increment the read
+    /// count by 1
     fn check_flag_read(&self) -> Result<(), InvalidBorrow> {
-        // Check that no write reference is out, then try to increment the read count and return
-        // once successful.
+        // Check that no write reference is out, then try to increment the read count
+        // and return once successful.
         loop {
             let val = self.flag.load(Ordering::Acquire);
 
@@ -174,7 +180,8 @@ impl<T> TrustCell<T> {
         }
     }
 
-    /// Make sure we are allowed to aquire a write lock, and then set the write lock flag.
+    /// Make sure we are allowed to aquire a write lock, and then set the write
+    /// lock flag.
     fn check_flag_write(&self) -> Result<(), InvalidBorrow> {
         // Check we have 0 references out, and then set the ref count to usize::MAX to
         // indicate a write lock.
@@ -185,11 +192,7 @@ impl<T> TrustCell<T> {
     }
 }
 
-unsafe impl<T> Sync for TrustCell<T>
-where
-    T: Sync,
-{
-}
+unsafe impl<T> Sync for TrustCell<T> where T: Sync {}
 
 impl<T> Default for TrustCell<T>
 where

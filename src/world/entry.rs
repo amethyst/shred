@@ -1,9 +1,12 @@
 use std::marker::PhantomData;
 
-use cell::TrustCell;
-use world::{FetchMut, Resource, ResourceId};
+use crate::{
+    cell::TrustCell,
+    world::{FetchMut, Resource, ResourceId},
+};
 
-type StdEntry<'a, K, V> = hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;
+type StdEntry<'a, K, V> =
+    hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;
 
 /// An entry to a resource of the `World` struct.
 /// This is similar to the Entry API found in the standard library.
@@ -32,18 +35,20 @@ where
 {
     /// Returns this entry's value, inserts and returns `v` otherwise.
     ///
-    /// Please note that you should use `or_insert_with` in case the creation of the
-    /// value is expensive.
+    /// Please note that you should use `or_insert_with` in case the creation of
+    /// the value is expensive.
     pub fn or_insert(self, v: T) -> FetchMut<'a, T> {
         self.or_insert_with(move || v)
     }
 
-    /// Returns this entry's value, inserts and returns the return value of `f` otherwise.
+    /// Returns this entry's value, inserts and returns the return value of `f`
+    /// otherwise.
     pub fn or_insert_with<F>(self, f: F) -> FetchMut<'a, T>
     where
         F: FnOnce() -> T,
     {
-        let value = self.inner
+        let value = self
+            .inner
             .or_insert_with(move || TrustCell::new(Box::new(f())));
         let inner = value.borrow_mut();
 
@@ -63,7 +68,7 @@ pub fn create_entry<'a, T>(e: StdEntry<'a, ResourceId, TrustCell<Box<Resource>>>
 
 #[cfg(test)]
 mod tests {
-    use world::World;
+    use crate::world::World;
 
     #[test]
     fn test_entry() {

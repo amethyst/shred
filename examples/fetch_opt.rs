@@ -1,6 +1,6 @@
 extern crate shred;
 
-use shred::{DispatcherBuilder, Read, ReadExpect, World, System, Write};
+use shred::{DispatcherBuilder, Read, ReadExpect, System, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;

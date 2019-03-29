@@ -1,11 +1,12 @@
 use std::borrow::Borrow;
 
-use dispatch::util::check_intersection;
-use system::RunNow;
-use system::System;
-use world::{ResourceId, World};
-
 use rayon::{join, ThreadPool};
+
+use crate::{
+    dispatch::util::check_intersection,
+    system::{RunNow, System},
+    world::{ResourceId, World},
+};
 
 /// The "leave node" for the `Par` / `Seq` list.
 pub struct Nil;
@@ -54,11 +55,7 @@ macro_rules! par {
 /// # struct SysB;
 /// # struct SysC;
 /// # fn main() {
-/// seq![
-///     SysA,
-///     SysB,
-///     SysC,
-/// ]
+/// seq![SysA, SysB, SysC,]
 /// # ;}
 /// ```
 #[macro_export]
@@ -227,7 +224,8 @@ where
     }
 
     /// Sets up `world` for `dispatch`ing.
-    /// This will add default values for required resources by calling `System::setup`.
+    /// This will add default values for required resources by calling
+    /// `System::setup`.
     pub fn setup(&mut self, res: &mut World) {
         self.run.setup(res);
     }
@@ -295,12 +293,13 @@ where
     }
 
     fn reads(&self, reads: &mut Vec<ResourceId>) {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         reads.extend(self.accessor().reads())
     }
+
     fn writes(&self, writes: &mut Vec<ResourceId>) {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         writes.extend(self.accessor().writes())
     }
@@ -334,6 +333,7 @@ where
         self.head.reads(reads);
         self.tail.reads(reads);
     }
+
     fn writes(&self, writes: &mut Vec<ResourceId>) {
         self.head.writes(writes);
         self.tail.writes(writes);
@@ -396,8 +396,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-    use std::sync::atomic::*;
+    use std::sync::{atomic::*, Arc};
 
     fn new_tp() -> ThreadPool {
         use rayon::ThreadPoolBuilder;

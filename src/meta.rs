@@ -1,30 +1,22 @@
-use std::any::TypeId;
-use std::marker::PhantomData;
+use std::{any::TypeId, marker::PhantomData};
 
 use hashbrown::HashMap;
 use mopa::Any;
 
-use {Resource, World};
+use crate::{Resource, World};
 
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the
 /// resources are already guaranteed to fulfill it).
 struct Invariant<T: ?Sized>(*mut T);
 
-unsafe impl<T> Send for Invariant<T>
-where
-    T: ?Sized,
-{
-}
+unsafe impl<T> Send for Invariant<T> where T: ?Sized {}
 
-unsafe impl<T> Sync for Invariant<T>
-where
-    T: ?Sized,
-{
-}
+unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 
 /// Helper trait for the `MetaTable`.
-/// This trait is required to be implemented for a trait to be compatible with the meta table.
+/// This trait is required to be implemented for a trait to be compatible with
+/// the meta table.
 ///
 /// # Examples
 ///
@@ -84,9 +76,10 @@ where
                     Some(&x) => x,
                     None => return None,
                 })
-                .map(|res| self.fat[index].create_ptr::<T>(Box::as_ref(&res.borrow())
-                    as *const Resource as *const ())
-                )
+                .map(|res| {
+                    self.fat[index]
+                        .create_ptr::<T>(Box::as_ref(&res.borrow()) as *const Resource as *const ())
+                })
                 // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &*ptr)
                 .or_else(|| self.next())
@@ -147,9 +140,11 @@ where
                     Some(&x) => x,
                     None => return None,
                 })
-                .map(|res| self.fat[index].create_ptr::<T>(
-                    Box::as_mut(&mut res.borrow_mut()) as *mut Resource as *const ()) as *mut T
-                )
+                .map(|res| {
+                    self.fat[index].create_ptr::<T>(Box::as_mut(&mut res.borrow_mut())
+                        as *mut Resource
+                        as *const ()) as *mut T
+                })
                 // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &mut *ptr)
                 .or_else(|| self.next())
@@ -157,11 +152,13 @@ where
     }
 }
 
-/// The `MetaTable` which allows to store object-safe trait implementations for resources.
+/// The `MetaTable` which allows to store object-safe trait implementations for
+/// resources.
 ///
-/// For example, you have a trait `Foo` that is implemented by several resources.
-/// You can register all the implementors using `MetaTable::register`. Later on, you
-/// can iterate over all resources that implement `Foo` without knowing their specific type.
+/// For example, you have a trait `Foo` that is implemented by several
+/// resources. You can register all the implementors using
+/// `MetaTable::register`. Later on, you can iterate over all resources that
+/// implement `Foo` without knowing their specific type.
 ///
 /// # Examples
 ///
@@ -274,8 +271,8 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Tries to convert `world` to a trait object of type `&T`.
-    /// If `world` doesn't have an implementation for `T` (or it wasn't registered),
-    /// this will return `None`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't
+    /// registered), this will return `None`.
     pub fn get<'a>(&self, res: &'a Resource) -> Option<&'a T> {
         unsafe {
             self.indices
@@ -285,8 +282,8 @@ impl<T: ?Sized> MetaTable<T> {
     }
 
     /// Tries to convert `world` to a trait object of type `&mut T`.
-    /// If `world` doesn't have an implementation for `T` (or it wasn't registered),
-    /// this will return `None`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't
+    /// registered), this will return `None`.
     pub fn get_mut<'a>(&self, res: &'a Resource) -> Option<&'a mut T> {
         unsafe {
             self.indices.get(&Any::get_type_id(res)).map(move |&ind| {
