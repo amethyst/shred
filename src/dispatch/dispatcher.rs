@@ -14,8 +14,8 @@ pub struct Dispatcher<'a, 'b> {
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
-    /// Sets up all the systems which means they are gonna add default values for the resources
-    /// they need.
+    /// Sets up all the systems which means they are gonna add default values
+    /// for the resources they need.
     pub fn setup(&mut self, res: &mut World) {
         for stage in &mut self.stages {
             stage.setup(res);

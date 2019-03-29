@@ -2,7 +2,7 @@
 
 extern crate shred;
 
-use shred::{ReadExpect, World, SystemData};
+use shred::{ReadExpect, SystemData, World};
 
 struct MyRes;
 

@@ -11,9 +11,7 @@
 //! #[macro_use]
 //! extern crate shred_derive;
 //!
-//! use shred::{
-//!     DispatcherBuilder, Read, Resource, ResourceId, World, System, SystemData, Write
-//! };
+//! use shred::{DispatcherBuilder, Read, Resource, ResourceId, System, SystemData, World, Write};
 //!
 //! #[derive(Debug, Default)]
 //! struct ResA;
@@ -38,7 +36,6 @@
 //!     }
 //! }
 //!
-//!
 //! fn main() {
 //!     let mut resources = World::new();
 //!     let mut dispatcher = DispatcherBuilder::new()
@@ -52,9 +49,9 @@
 //! ```
 //!
 //! Once you are more familiar with how system data and parallelization works,
-//! you can take look at a more flexible and performant way to dispatch: `ParSeq`.
-//! Using it is bit trickier, but it allows dispatching without any virtual function calls.
-//!
+//! you can take look at a more flexible and performant way to dispatch:
+//! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
+//! virtual function calls.
 
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![deny(unused_must_use)]
@@ -87,5 +84,5 @@ pub use system::{
 };
 pub use world::{
     DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
-    World, SetupHandler, Write, WriteExpect,
+    SetupHandler, World, Write, WriteExpect,
 };

@@ -3,13 +3,11 @@ extern crate shred;
 extern crate shred_derive;
 
 use shred::{
-    Dispatcher, DispatcherBuilder, Read, ResourceId, World, RunningTime, System, SystemData,
-    Write,
+    Dispatcher, DispatcherBuilder, Read, ResourceId, RunningTime, System, SystemData, World, Write,
 };
 
 fn sleep_short() {
-    use std::thread::sleep;
-    use std::time::Duration;
+    use std::{thread::sleep, time::Duration};
 
     sleep(Duration::new(0, 1_000));
 }

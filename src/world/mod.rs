@@ -1,12 +1,16 @@
 //! Module for resource related types
 
-pub use self::data::{Read, ReadExpect, Write, WriteExpect};
-pub use self::entry::Entry;
-pub use self::setup::{DefaultProvider, PanicHandler, SetupHandler};
+pub use self::{
+    data::{Read, ReadExpect, Write, WriteExpect},
+    entry::Entry,
+    setup::{DefaultProvider, PanicHandler, SetupHandler},
+};
 
-use std::any::TypeId;
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::{
+    any::TypeId,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 use hashbrown::HashMap;
 use mopa::Any;
@@ -44,7 +48,8 @@ where
 
 /// Allows to fetch a resource in a system mutably.
 ///
-/// If the resource isn't strictly required, you should use `Option<FetchMut<T>>`.
+/// If the resource isn't strictly required, you should use
+/// `Option<FetchMut<T>>`.
 ///
 /// # Type parameters
 ///
@@ -81,11 +86,7 @@ pub trait Resource: Any + Send + Sync + 'static {}
 
 mopafy!(Resource);
 
-impl<T> Resource for T
-where
-    T: Any + Send + Sync,
-{
-}
+impl<T> Resource for T where T: Any + Send + Sync {}
 
 /// The id of a [`Resource`],
 /// which is a tuple struct with a type
@@ -121,13 +122,13 @@ impl World {
         Default::default()
     }
 
-    /// Inserts a resource into this container. If the resource existed before, it will be
-    /// overwritten.
+    /// Inserts a resource into this container. If the resource existed before,
+    /// it will be overwritten.
     ///
     /// # Examples
     ///
-    /// Every type satisfying `Any + Debug + Send + Sync` automatically implements `Resource`,
-    /// thus can be added:
+    /// Every type satisfying `Any + Debug + Send + Sync` automatically
+    /// implements `Resource`, thus can be added:
     ///
     /// ```rust
     /// # #![allow(dead_code)]
@@ -173,7 +174,8 @@ impl World {
         create_entry(self.resources.entry(ResourceId::new::<R>()))
     }
 
-    /// Fetches the resource with the specified type `T` or panics if it doesn't exist.
+    /// Fetches the resource with the specified type `T` or panics if it doesn't
+    /// exist.
     ///
     /// # Panics
     ///
@@ -186,8 +188,8 @@ impl World {
         self.try_fetch().unwrap_or_else(|| fetch_panic!())
     }
 
-    /// Like `fetch`, but returns an `Option` instead of inserting a default value
-    /// in case the resource does not exist.
+    /// Like `fetch`, but returns an `Option` instead of inserting a default
+    /// value in case the resource does not exist.
     pub fn try_fetch<T>(&self) -> Option<Fetch<T>>
     where
         T: Resource,
@@ -215,8 +217,8 @@ impl World {
         self.try_fetch_mut().unwrap_or_else(|| fetch_panic!())
     }
 
-    /// Like `fetch_mut`, but returns an `Option` instead of inserting a default value
-    /// in case the resource does not exist.
+    /// Like `fetch_mut`, but returns an `Option` instead of inserting a default
+    /// value in case the resource does not exist.
     pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<T>>
     where
         T: Resource,
@@ -229,20 +231,21 @@ impl World {
         })
     }
 
-    /// Internal function for fetching resources, should only be used if you know what you're doing.
+    /// Internal function for fetching resources, should only be used if you
+    /// know what you're doing.
     pub fn try_fetch_internal(&self, id: TypeId) -> Option<&TrustCell<Box<Resource>>> {
         self.resources.get(&ResourceId(id))
     }
 
-    /// Retrieves a resource without fetching, which is cheaper, but only available with
-    /// `&mut self`.
+    /// Retrieves a resource without fetching, which is cheaper, but only
+    /// available with `&mut self`.
     pub fn get_mut<T: Resource>(&mut self) -> Option<&mut T> {
         self.get_mut_raw(TypeId::of::<T>())
             .map(|res| unsafe { res.downcast_mut_unchecked() })
     }
 
-    /// Retrieves a resource without fetching, which is cheaper, but only available with
-    /// `&mut self`.
+    /// Retrieves a resource without fetching, which is cheaper, but only
+    /// available with `&mut self`.
     pub fn get_mut_raw(&mut self, id: TypeId) -> Option<&mut Resource> {
         self.resources
             .get_mut(&ResourceId(id))
@@ -254,7 +257,9 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {RunNow, System, SystemData};
+    use RunNow;
+    use System;
+    use SystemData;
 
     #[derive(Default)]
     struct Res;

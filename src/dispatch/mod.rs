@@ -1,9 +1,8 @@
 #[cfg(feature = "parallel")]
 pub use self::async::AsyncDispatcher;
-pub use self::builder::DispatcherBuilder;
-pub use self::dispatcher::Dispatcher;
 #[cfg(feature = "parallel")]
 pub use self::par_seq::{Par, ParSeq, RunWithPool, Seq};
+pub use self::{builder::DispatcherBuilder, dispatcher::Dispatcher};
 
 #[cfg(feature = "parallel")]
 mod async;

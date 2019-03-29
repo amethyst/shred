@@ -1,8 +1,17 @@
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
-use {DefaultProvider, Fetch, FetchMut, PanicHandler, Resource, ResourceId, World,
-     SetupHandler, SystemData};
+use DefaultProvider;
+use Fetch;
+use FetchMut;
+use PanicHandler;
+use Resource;
+use ResourceId;
+use SetupHandler;
+use SystemData;
+use World;
 
 /// Allows to fetch a resource in a system immutably.
 ///
@@ -53,6 +62,7 @@ where
     fn reads() -> Vec<ResourceId> {
         vec![ResourceId::new::<T>()]
     }
+
     fn writes() -> Vec<ResourceId> {
         vec![]
     }
@@ -156,6 +166,7 @@ where
     fn reads() -> Vec<ResourceId> {
         vec![]
     }
+
     fn writes() -> Vec<ResourceId> {
         vec![ResourceId::new::<T>()]
     }

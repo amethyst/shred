@@ -1,10 +1,11 @@
-use std::borrow::Borrow;
-use std::sync::{mpsc, Arc};
+use std::{
+    borrow::Borrow,
+    sync::{mpsc, Arc},
+};
 
 use rayon::ThreadPool;
 
-use dispatch::dispatcher::ThreadLocal;
-use dispatch::stage::Stage;
+use dispatch::{dispatcher::ThreadLocal, stage::Stage};
 use world::World;
 
 pub fn new_async<'a, R>(
@@ -120,7 +121,8 @@ impl<R> Data<R> {
         match *self {
             Data::Inner(ref mut inner) => return Some(inner),
             Data::Rx(ref mut rx) => {
-                let inner = rx.try_recv()
+                let inner = rx
+                    .try_recv()
                     .map(Some)
                     .or_else(|e| match e {
                         TryRecvError::Empty => Ok(None),

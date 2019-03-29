@@ -1,6 +1,7 @@
 //! Warning: this example is a lot more advanced than the others.
 //!
-//! This example shows a possible way to make shred interact with a scripting language.
+//! This example shows a possible way to make shred interact with a scripting
+//! language.
 //!
 //! It does that by implementing `DynamicSystemData` and using `MetaTable`.
 
@@ -9,10 +10,11 @@ extern crate shred;
 // in a real application you would use `fnv`
 use std::collections::HashMap;
 
-use shred::{Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read, Resource,
-            ResourceId, World,
-            System, SystemData};
-use shred::cell::{Ref, RefMut};
+use shred::{
+    cell::{Ref, RefMut},
+    Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read,
+    Resource, ResourceId, System, SystemData, World,
+};
 
 struct Dependencies {
     reads: Vec<ResourceId>,
@@ -49,32 +51,37 @@ impl<'a> System<'a> for DynamicSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         let meta = data.meta_table;
-        let reads: Vec<&Reflection> = data.reads.iter().map(|resource| {
-            // explicitly use the type because we're dealing with `&Resource` which is implemented
-            // by a lot of types; we don't want to accidentally get a `&Box<Resource>` and cast
-            // it to a `&Resource`.
-            let res = Box::as_ref(resource);
+        let reads: Vec<&Reflection> = data
+            .reads
+            .iter()
+            .map(|resource| {
+                // explicitly use the type because we're dealing with `&Resource` which is
+                // implemented by a lot of types; we don't want to accidentally
+                // get a `&Box<Resource>` and cast it to a `&Resource`.
+                let res = Box::as_ref(resource);
 
-            meta.get(res).expect("Not registered in meta table")
-        }).collect();
+                meta.get(res).expect("Not registered in meta table")
+            })
+            .collect();
 
-        let writes: Vec<&mut Reflection> = data.writes.iter_mut().map(|resource| {
-            // explicitly use the type because we're dealing with `&mut Resource` which is
-            // implemented by a lot of types; we don't want to accidentally get a
-            // `&mut Box<Resource>` and cast it to a `&mut Resource`.
-            let res = Box::as_mut(resource);
+        let writes: Vec<&mut Reflection> = data
+            .writes
+            .iter_mut()
+            .map(|resource| {
+                // explicitly use the type because we're dealing with `&mut Resource` which is
+                // implemented by a lot of types; we don't want to accidentally get a
+                // `&mut Box<Resource>` and cast it to a `&mut Resource`.
+                let res = Box::as_mut(resource);
 
-            // For some reason this needs a type ascription, otherwise Rust will think it's
-            // a `&mut (Reflection + '_)` (as opposed to `&mut (Reflection + 'static)`.
-            let res: &mut Reflection = meta.get_mut(res).expect("Not registered in meta table");
+                // For some reason this needs a type ascription, otherwise Rust will think it's
+                // a `&mut (Reflection + '_)` (as opposed to `&mut (Reflection + 'static)`.
+                let res: &mut Reflection = meta.get_mut(res).expect("Not registered in meta table");
 
-            res
-        }).collect();
+                res
+            })
+            .collect();
 
-        let input = ScriptInput {
-            reads,
-            writes,
-        };
+        let input = ScriptInput { reads, writes };
 
         // call the script with the input
         (self.script)(input);
@@ -90,7 +97,8 @@ impl<'a> System<'a> for DynamicSystem {
 }
 
 /// Some trait that all of your dynamic resources should implement.
-/// This trait should be able to register / transfer it to the scripting framework.
+/// This trait should be able to register / transfer it to the scripting
+/// framework.
 trait Reflection {
     fn call_method(&self, s: &str);
 }
@@ -153,21 +161,21 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
             .reads
             .iter()
             .map(|id| id.0)
-            .map(|id| res
-                .try_fetch_internal(id)
-                .expect("bug: the requested resource does not exist")
-                .borrow()
-            )
+            .map(|id| {
+                res.try_fetch_internal(id)
+                    .expect("bug: the requested resource does not exist")
+                    .borrow()
+            })
             .collect();
         let writes = access
             .writes
             .iter()
             .map(|id| id.0)
-            .map(|id| res
-                .try_fetch_internal(id)
-                .expect("bug: the requested resource does not exist")
-                .borrow_mut()
-            )
+            .map(|id| {
+                res.try_fetch_internal(id)
+                    .expect("bug: the requested resource does not exist")
+                    .borrow_mut()
+            })
             .collect();
 
         ScriptSystemData {
@@ -258,14 +266,18 @@ fn main() {
         table.register::<Bar>("Bar");
     }
 
-    let mut dispatcher = DispatcherBuilder::new().with(NormalSys, "normal", &[]).build();
+    let mut dispatcher = DispatcherBuilder::new()
+        .with(NormalSys, "normal", &[])
+        .build();
     dispatcher.setup(&mut res);
 
     let script0 = create_script_sys(&res);
 
     // it is recommended you create a second dispatcher dedicated to scripts,
     // that'll allow you to rebuild if necessary
-    let mut scripts = DispatcherBuilder::new().with(script0, "script0", &[]).build();
+    let mut scripts = DispatcherBuilder::new()
+        .with(script0, "script0", &[])
+        .build();
     scripts.setup(&mut res);
 
     // Game loop

@@ -181,7 +181,7 @@ fn basic(b: &mut Bencher) {
         .with(SpringForce, "spring", &[])
         .with(IntegrationSystem, "integration", &[])
         .with(ClearForceAccum, "clear_force", &["integration"]) // clear_force is executed after
-                                                               // the integration
+        // the integration
         .build();
 
     let mut res = World::new();
