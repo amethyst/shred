@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::cell::TrustCell;
-use crate::world::{FetchMut, Resource, ResourceId};
+use crate::{
+    cell::TrustCell,
+    world::{FetchMut, Resource, ResourceId},
+};
 
 type StdEntry<'a, K, V> =
     hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;

@@ -258,9 +258,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RunNow;
-    use crate::System;
-    use crate::SystemData;
+    use crate::{RunNow, System, SystemData};
 
     #[derive(Default)]
     struct Res;

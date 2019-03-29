@@ -38,12 +38,14 @@ use arrayvec::ArrayVec;
 use hashbrown::HashMap;
 use smallvec::SmallVec;
 
-use crate::dispatch::{
-    dispatcher::{SystemExecSend, SystemId},
-    util::check_intersection,
+use crate::{
+    dispatch::{
+        dispatcher::{SystemExecSend, SystemId},
+        util::check_intersection,
+    },
+    system::{RunningTime, System},
+    world::{ResourceId, World},
 };
-use crate::system::{RunningTime, System};
-use crate::world::{ResourceId, World};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
 
@@ -466,8 +468,7 @@ mod tests {
 
     #[test]
     fn uses_group() {
-        use crate::Read;
-        use crate::Write;
+        use crate::{Read, Write};
 
         struct SysA;
 

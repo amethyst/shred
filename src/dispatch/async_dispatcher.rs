@@ -5,8 +5,10 @@ use std::{
 
 use rayon::ThreadPool;
 
-use crate::dispatch::{dispatcher::ThreadLocal, stage::Stage};
-use crate::world::World;
+use crate::{
+    dispatch::{dispatcher::ThreadLocal, stage::Stage},
+    world::World,
+};
 
 pub fn new_async<'a, R>(
     res: R,

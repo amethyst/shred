@@ -2,12 +2,14 @@ use std::fmt;
 
 use hashbrown::HashMap;
 
-use crate::dispatch::{
-    dispatcher::{SystemId, ThreadLocal},
-    stage::StagesBuilder,
-    Dispatcher,
+use crate::{
+    dispatch::{
+        dispatcher::{SystemId, ThreadLocal},
+        stage::StagesBuilder,
+        Dispatcher,
+    },
+    system::{RunNow, System},
 };
-use crate::system::{RunNow, System};
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -311,7 +313,10 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ///
     /// It does not allow non-static types and accepts a `World` struct or a
     /// value that can be borrowed as `World`.
-    pub fn build_async<R>(self, res: R) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
+    pub fn build_async<R>(
+        self,
+        res: R,
+    ) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
         use crate::dispatch::async_dispatcher::new_async;
 
         new_async(

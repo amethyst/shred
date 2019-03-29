@@ -74,15 +74,17 @@ mod world;
 
 #[cfg(feature = "parallel")]
 pub use crate::dispatch::AsyncDispatcher;
-pub use crate::dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
 pub use crate::dispatch::{Par, ParSeq, RunWithPool, Seq};
-pub use crate::meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
-pub use crate::system::{
-    Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
-    SystemData,
-};
-pub use crate::world::{
-    DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
-    SetupHandler, World, Write, WriteExpect,
+pub use crate::{
+    dispatch::{Dispatcher, DispatcherBuilder},
+    meta::{CastFrom, MetaIter, MetaIterMut, MetaTable},
+    system::{
+        Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
+        SystemData,
+    },
+    world::{
+        DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource,
+        ResourceId, SetupHandler, World, Write, WriteExpect,
+    },
 };

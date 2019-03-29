@@ -2,10 +2,11 @@ use std::borrow::Borrow;
 
 use rayon::{join, ThreadPool};
 
-use crate::dispatch::util::check_intersection;
-use crate::system::{RunNow, System};
-use crate::world::{ResourceId, World};
-
+use crate::{
+    dispatch::util::check_intersection,
+    system::{RunNow, System},
+    world::{ResourceId, World},
+};
 
 /// The "leave node" for the `Par` / `Seq` list.
 pub struct Nil;
