@@ -24,7 +24,7 @@ shared and exclusive resource access, in parallel.
 ```rust
 extern crate shred;
 
-use shred::{DispatcherBuilder, Read, Resource, World, System, Write};
+use shred::{DispatcherBuilder, Read, Resource, System, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -52,14 +52,14 @@ impl<'a> System<'a> for PrintSystem {
 }
 
 fn main() {
-    let mut resources = World::new();
+    let mut world = World::new();
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
-    //resources.add(ResA); (We don't need to add `ResA`, a default value will be instantiated)
-    resources.insert(ResB);
+    //world.add(ResA); (We don't need to add `ResA`, a default value will be instantiated)
+    world.insert(ResB);
 
-    dispatcher.dispatch(&mut resources);
+    dispatcher.dispatch(&mut world);
 }
 ```
 
