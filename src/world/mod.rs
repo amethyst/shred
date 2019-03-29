@@ -15,8 +15,9 @@ use std::{
 use hashbrown::HashMap;
 use mopa::Any;
 
+use crate::cell::{Ref, RefMut, TrustCell};
+
 use self::entry::create_entry;
-use cell::{Ref, RefMut, TrustCell};
 
 mod data;
 mod entry;
@@ -257,9 +258,9 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use RunNow;
-    use System;
-    use SystemData;
+    use crate::RunNow;
+    use crate::System;
+    use crate::SystemData;
 
     #[derive(Default)]
     struct Res;

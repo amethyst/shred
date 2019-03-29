@@ -38,12 +38,12 @@ use arrayvec::ArrayVec;
 use hashbrown::HashMap;
 use smallvec::SmallVec;
 
-use dispatch::{
+use crate::dispatch::{
     dispatcher::{SystemExecSend, SystemId},
     util::check_intersection,
 };
-use system::{RunningTime, System};
-use world::{ResourceId, World};
+use crate::system::{RunningTime, System};
+use crate::world::{ResourceId, World};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
 
@@ -137,7 +137,7 @@ impl<'a> StagesBuilder<'a> {
     where
         T: for<'b> System<'b> + Send + 'a,
     {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         let mut reads = system.accessor().reads();
         let writes = system.accessor().writes();
@@ -466,8 +466,8 @@ mod tests {
 
     #[test]
     fn uses_group() {
-        use Read;
-        use Write;
+        use crate::Read;
+        use crate::Write;
 
         struct SysA;
 

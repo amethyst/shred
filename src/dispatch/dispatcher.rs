@@ -1,8 +1,8 @@
 use smallvec::SmallVec;
 
-use dispatch::stage::Stage;
-use system::RunNow;
-use world::World;
+use crate::dispatch::stage::Stage;
+use crate::system::RunNow;
+use crate::world::World;
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
@@ -149,9 +149,9 @@ pub fn new_dispatcher<'a, 'b>(
 
 #[cfg(test)]
 mod tests {
-    use dispatch::builder::DispatcherBuilder;
-    use system::*;
-    use world::*;
+    use crate::dispatch::builder::DispatcherBuilder;
+    use crate::system::*;
+    use crate::world::*;
 
     #[derive(Default)]
     struct Res(i32);

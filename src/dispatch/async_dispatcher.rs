@@ -5,8 +5,8 @@ use std::{
 
 use rayon::ThreadPool;
 
-use dispatch::{dispatcher::ThreadLocal, stage::Stage};
-use world::World;
+use crate::dispatch::{dispatcher::ThreadLocal, stage::Stage};
+use crate::world::World;
 
 pub fn new_async<'a, R>(
     res: R,

@@ -1,10 +1,11 @@
 use std::borrow::Borrow;
 
-use dispatch::util::check_intersection;
-use system::{RunNow, System};
-use world::{ResourceId, World};
-
 use rayon::{join, ThreadPool};
+
+use crate::dispatch::util::check_intersection;
+use crate::system::{RunNow, System};
+use crate::world::{ResourceId, World};
+
 
 /// The "leave node" for the `Par` / `Seq` list.
 pub struct Nil;
@@ -291,13 +292,13 @@ where
     }
 
     fn reads(&self, reads: &mut Vec<ResourceId>) {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         reads.extend(self.accessor().reads())
     }
 
     fn writes(&self, writes: &mut Vec<ResourceId>) {
-        use system::Accessor;
+        use crate::system::Accessor;
 
         writes.extend(self.accessor().writes())
     }

@@ -3,8 +3,8 @@ use std::{any::TypeId, marker::PhantomData};
 use hashbrown::HashMap;
 use mopa::Any;
 
-use Resource;
-use World;
+use crate::Resource;
+use crate::World;
 
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the

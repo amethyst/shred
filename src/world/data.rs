@@ -3,15 +3,15 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use DefaultProvider;
-use Fetch;
-use FetchMut;
-use PanicHandler;
-use Resource;
-use ResourceId;
-use SetupHandler;
-use SystemData;
-use World;
+use crate::DefaultProvider;
+use crate::Fetch;
+use crate::FetchMut;
+use crate::PanicHandler;
+use crate::Resource;
+use crate::ResourceId;
+use crate::SetupHandler;
+use crate::SystemData;
+use crate::World;
 
 /// Allows to fetch a resource in a system immutably.
 ///

@@ -2,12 +2,12 @@ use std::fmt;
 
 use hashbrown::HashMap;
 
-use dispatch::{
+use crate::dispatch::{
     dispatcher::{SystemId, ThreadLocal},
     stage::StagesBuilder,
     Dispatcher,
 };
-use system::{RunNow, System};
+use crate::system::{RunNow, System};
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -270,7 +270,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// precompute useful information in
     /// order to speed up dispatching.
     pub fn build(self) -> Dispatcher<'a, 'b> {
-        use dispatch::dispatcher::new_dispatcher;
+        use crate::dispatch::dispatcher::new_dispatcher;
 
         #[cfg(feature = "parallel")]
         let d = new_dispatcher(
@@ -311,8 +311,8 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ///
     /// It does not allow non-static types and accepts a `World` struct or a
     /// value that can be borrowed as `World`.
-    pub fn build_async<R>(self, res: R) -> ::dispatch::async::AsyncDispatcher<'b, R> {
-        use dispatch::async::new_async;
+    pub fn build_async<R>(self, res: R) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
+        use crate::dispatch::async_dispatcher::new_async;
 
         new_async(
             res,

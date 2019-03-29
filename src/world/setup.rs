@@ -1,5 +1,5 @@
-use Resource;
-use World;
+use crate::Resource;
+use crate::World;
 
 #[cfg(feature = "nightly")]
 macro_rules! fetch_panic {
