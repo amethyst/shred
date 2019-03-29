@@ -182,7 +182,16 @@ impl World {
     where
         T: Resource,
     {
-        self.try_fetch().unwrap_or_else(|| fetch_panic!())
+        self.try_fetch().unwrap_or_else(|| {
+            if self.resources.is_empty() {
+                eprintln!(
+                    "Note: Could not find a resource (see the following panic);\
+                     the `World` is completely empty. Did you accidentally create a fresh `World`?"
+                )
+            }
+
+            fetch_panic!()
+        })
     }
 
     /// Like `fetch`, but returns an `Option` instead of inserting a default
