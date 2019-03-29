@@ -88,3 +88,8 @@ pub use crate::{
         ResourceId, SetupHandler, World, Write, WriteExpect,
     },
 };
+
+/// Alias for `World` for easier migration to the new version. Will be removed
+/// in the future.
+#[deprecated(since = "0.8.0", note = "renamed to `World`")]
+pub type Resources = World;
