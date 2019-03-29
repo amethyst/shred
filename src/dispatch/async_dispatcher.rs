@@ -33,11 +33,14 @@ pub struct AsyncDispatcher<'a, R> {
 
 impl<'a, R> AsyncDispatcher<'a, R>
 where
-    R: Borrow<World> + BorrowMut<World> + Send + Sync + 'static,
+    R: Borrow<World> + Send + Sync + 'static,
 {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
-    pub fn setup(&mut self) {
+    pub fn setup(&mut self)
+    where
+        R: BorrowMut<World>,
+    {
         let inner = self.data.inner();
         let stages = &mut inner.stages;
         let world = inner.world.borrow_mut();
