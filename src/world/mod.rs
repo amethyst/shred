@@ -141,8 +141,8 @@ impl World {
     /// # #[derive(Debug)] struct MyRes(i32);
     /// use shred::World;
     ///
-    /// let mut res = World::new();
-    /// res.insert(MyRes(5));
+    /// let mut world = World::new();
+    /// world.insert(MyRes(5));
     /// ```
     pub fn insert<R>(&mut self, r: R)
     where

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use cell::TrustCell;
-use res::{FetchMut, Resource, ResourceId};
+use world::{FetchMut, Resource, ResourceId};
 
 type StdEntry<'a, K, V> = hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;
 
@@ -16,9 +16,9 @@ type StdEntry<'a, K, V> = hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_m
 /// #[derive(Debug)]
 /// struct Res(i32);
 ///
-/// let mut res = World::new();
+/// let mut world = World::new();
 ///
-/// let value = res.entry().or_insert(Res(4));
+/// let value = world.entry().or_insert(Res(4));
 /// println!("{:?}", value.0 * 2);
 /// ```
 pub struct Entry<'a, T: 'a> {
@@ -63,7 +63,7 @@ pub fn create_entry<'a, T>(e: StdEntry<'a, ResourceId, TrustCell<Box<Resource>>>
 
 #[cfg(test)]
 mod tests {
-    use res::World;
+    use world::World;
 
     #[test]
     fn test_entry() {

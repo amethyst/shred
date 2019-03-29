@@ -72,8 +72,8 @@ pub mod cell;
 
 mod dispatch;
 mod meta;
-mod res;
 mod system;
+mod world;
 
 #[cfg(feature = "parallel")]
 pub use dispatch::AsyncDispatcher;
@@ -81,11 +81,11 @@ pub use dispatch::{Dispatcher, DispatcherBuilder};
 #[cfg(feature = "parallel")]
 pub use dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use meta::{CastFrom, MetaIter, MetaIterMut, MetaTable};
-pub use res::{
-    DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
-    World, SetupHandler, Write, WriteExpect,
-};
 pub use system::{
     Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,
     SystemData,
+};
+pub use world::{
+    DefaultProvider, Entry, Fetch, FetchMut, PanicHandler, Read, ReadExpect, Resource, ResourceId,
+    World, SetupHandler, Write, WriteExpect,
 };

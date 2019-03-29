@@ -1,9 +1,9 @@
 use std::borrow::Borrow;
 
 use dispatch::util::check_intersection;
-use res::{ResourceId, World};
 use system::RunNow;
 use system::System;
+use world::{ResourceId, World};
 
 use rayon::{join, ThreadPool};
 
@@ -187,7 +187,7 @@ impl<H> Par<H, Nil> {
 /// #
 /// # let pool = ThreadPool::new(Default::default()).unwrap();
 /// #
-/// # let mut res = World::new();
+/// # let mut world = World::new();
 /// let x = 5u8;
 ///
 /// let mut dispatcher = ParSeq::new(
@@ -206,7 +206,7 @@ impl<H> Par<H, Nil> {
 ///     &pool,
 /// );
 ///
-/// dispatcher.dispatch(&mut res);
+/// dispatcher.dispatch(&mut world);
 /// # }
 /// ```
 pub struct ParSeq<P, T> {
@@ -226,13 +226,13 @@ where
         ParSeq { run, pool }
     }
 
-    /// Sets up `res` for `dispatch`ing.
+    /// Sets up `world` for `dispatch`ing.
     /// This will add default values for required resources by calling `System::setup`.
     pub fn setup(&mut self, res: &mut World) {
         self.run.setup(res);
     }
 
-    /// Dispatches the systems using `res`.
+    /// Dispatches the systems using `world`.
     /// This doesn't call any virtual functions.
     ///
     /// Please note that this method assumes that no resource
