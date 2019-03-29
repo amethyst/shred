@@ -11,7 +11,7 @@
 //!
 //! for stage in stages {
 //!     stage.for_each_group(|group| for system in group {
-//!         system.run(res);
+//!         system.run(world);
 //!     });
 //! }
 //!
@@ -38,8 +38,8 @@ use smallvec::SmallVec;
 
 use dispatch::dispatcher::{SystemExecSend, SystemId};
 use dispatch::util::check_intersection;
-use res::{ResourceId, World};
 use system::{RunningTime, System};
+use world::{ResourceId, World};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
 

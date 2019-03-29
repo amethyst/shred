@@ -5,7 +5,7 @@ use rayon::ThreadPool;
 
 use dispatch::dispatcher::ThreadLocal;
 use dispatch::stage::Stage;
-use res::World;
+use world::World;
 
 pub fn new_async<'a, R>(
     res: R,

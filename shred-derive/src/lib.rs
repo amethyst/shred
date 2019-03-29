@@ -53,13 +53,13 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
             SystemData< #impl_fetch_lt >
             for #name #ty_generics #where_clause
         {
-            fn setup(res: &mut World) {
+            fn setup(world: &mut World) {
                 #(
-                    <#tys as SystemData> :: setup(res);
+                    <#tys as SystemData> :: setup(world);
                 )*
             }
 
-            fn fetch(res: & #impl_fetch_lt World) -> Self {
+            fn fetch(world: & #impl_fetch_lt World) -> Self {
                 #fetch_return
             }
 
@@ -130,13 +130,13 @@ fn gen_from_body(ast: &Data, name: &Ident) -> (proc_macro2::TokenStream, Vec<Typ
 
             quote! {
                 #name {
-                    #( #identifiers: SystemData::fetch(res) ),*
+                    #( #identifiers: SystemData::fetch(world) ),*
                 }
             }
         }
         DataType::Tuple => {
             let count = tys.len();
-            let fetch = vec![quote! { SystemData::fetch(res) }; count];
+            let fetch = vec![quote! { SystemData::fetch(world) }; count];
 
             quote! {
                 #name ( #( #fetch ),* )

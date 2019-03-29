@@ -211,17 +211,17 @@ where
 ///     }
 /// }
 ///
-/// let mut res = World::new();
+/// let mut world = World::new();
 ///
-/// res.insert(ImplementorA(3));
-/// res.insert(ImplementorB(1));
+/// world.insert(ImplementorA(3));
+/// world.insert(ImplementorB(1));
 ///
 /// let mut table = MetaTable::<Object>::new();
 /// table.register(&ImplementorA(31415)); // Can just be some instance of type `&ImplementorA`.
 /// table.register(&ImplementorB(27182));
 ///
 /// {
-///     let mut iter = table.iter(&mut res);
+///     let mut iter = table.iter(&mut world);
 ///     assert_eq!(iter.next().unwrap().method1(), 3);
 ///     assert_eq!(iter.next().unwrap().method1(), 1);
 /// }
@@ -273,8 +273,8 @@ impl<T: ?Sized> MetaTable<T> {
         }
     }
 
-    /// Tries to convert `res` to a trait object of type `&T`.
-    /// If `res` doesn't have an implementation for `T` (or it wasn't registered),
+    /// Tries to convert `world` to a trait object of type `&T`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't registered),
     /// this will return `None`.
     pub fn get<'a>(&self, res: &'a Resource) -> Option<&'a T> {
         unsafe {
@@ -284,8 +284,8 @@ impl<T: ?Sized> MetaTable<T> {
         }
     }
 
-    /// Tries to convert `res` to a trait object of type `&mut T`.
-    /// If `res` doesn't have an implementation for `T` (or it wasn't registered),
+    /// Tries to convert `world` to a trait object of type `&mut T`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't registered),
     /// this will return `None`.
     pub fn get_mut<'a>(&self, res: &'a Resource) -> Option<&'a mut T> {
         unsafe {
