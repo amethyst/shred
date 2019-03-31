@@ -121,6 +121,13 @@ pub trait RunNow<'a> {
 
     /// Sets up `World` for a later call to `run_now`.
     fn setup(&mut self, world: &mut World);
+
+    /// Performs clean up that requires resources from the `World`.
+    /// This commonly removes components from `world` which depend on external
+    /// resources.
+    fn dispose(&mut self, world: &mut World) {
+        let _ = world;
+    }
 }
 
 impl<'a, T> RunNow<'a> for T
@@ -134,6 +141,10 @@ where
 
     fn setup(&mut self, world: &mut World) {
         T::setup(self, world);
+    }
+
+    fn dispose(&mut self, world: &mut World) {
+        T::dispose(self, world);
     }
 }
 
@@ -184,6 +195,13 @@ pub trait System<'a> {
     /// Sets up the `World` using `Self::SystemData::setup`.
     fn setup(&mut self, world: &mut World) {
         <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), world)
+    }
+
+    /// Performs clean up that requires resources from the `World`.
+    /// This commonly removes components from `world` which depend on external
+    /// resources.
+    fn dispose(&mut self, world: &mut World) {
+        let _ = world;
     }
 }
 
