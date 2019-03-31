@@ -93,8 +93,8 @@ impl<'a> Stage<'a> {
         }
     }
 
-    pub fn dispose(&mut self, world: &mut World) {
-        for group in &mut self.groups {
+    pub fn dispose(self, world: &mut World) {
+        for group in self.groups {
             for sys in group {
                 sys.dispose(world);
             }
