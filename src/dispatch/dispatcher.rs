@@ -32,7 +32,8 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// / or resources from the `World` which are associated with external
     /// resources.
     ///
-    /// Calling any method after `dispose` (including `dispose` itself) will panic.
+    /// Calling any method after `dispose` (including `dispose` itself) will
+    /// panic.
     pub fn dispose(&mut self, world: &mut World) {
         assert!(!self.disposed, "Tried to call `world.dispose()` twice");
 
@@ -134,7 +135,10 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 
     fn assert_not_disposed(&self) {
-        assert!(!self.disposed, "Cannot call a method after `world.dispose()`");
+        assert!(
+            !self.disposed,
+            "Cannot call a method after `world.dispose()`"
+        );
     }
 }
 
