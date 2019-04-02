@@ -92,7 +92,7 @@ impl<T> Resource for T where T: Any + Send + Sync {}
 /// The id of a [`Resource`], which simply wraps a type id.
 ///
 /// [`Resource`]: trait.Resource.html
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ResourceId {
     type_id: TypeId,
 }
@@ -246,22 +246,22 @@ impl World {
 
     /// Internal function for fetching resources, should only be used if you
     /// know what you're doing.
-    pub fn try_fetch_internal(&self, id: TypeId) -> Option<&TrustCell<Box<Resource>>> {
-        self.resources.get(&ResourceId::from_type_id(id))
+    pub fn try_fetch_internal(&self, id: ResourceId) -> Option<&TrustCell<Box<Resource>>> {
+        self.resources.get(&id)
     }
 
     /// Retrieves a resource without fetching, which is cheaper, but only
     /// available with `&mut self`.
     pub fn get_mut<T: Resource>(&mut self) -> Option<&mut T> {
-        self.get_mut_raw(TypeId::of::<T>())
+        self.get_mut_raw(ResourceId::new::<T>())
             .map(|res| unsafe { res.downcast_mut_unchecked() })
     }
 
     /// Retrieves a resource without fetching, which is cheaper, but only
     /// available with `&mut self`.
-    pub fn get_mut_raw(&mut self, id: TypeId) -> Option<&mut Resource> {
+    pub fn get_mut_raw(&mut self, id: ResourceId) -> Option<&mut Resource> {
         self.resources
-            .get_mut(&ResourceId::from_type_id(id))
+            .get_mut(&id)
             .map(TrustCell::get_mut)
             .map(Box::as_mut)
     }
