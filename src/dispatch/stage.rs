@@ -383,7 +383,7 @@ mod tests {
             .map(|groups| {
                 groups
                     .into_iter()
-                    .map(|reads| reads.into_iter().map(|id| *id).collect())
+                    .map(|reads| reads.into_iter().map(|id| id.clone()).collect())
                     .collect()
             })
             .collect()
@@ -395,7 +395,7 @@ mod tests {
             .map(|groups| {
                 groups
                     .into_iter()
-                    .map(|writes| writes.into_iter().map(|id| *id).collect())
+                    .map(|writes| writes.into_iter().map(|id| id.clone()).collect())
                     .collect()
             })
             .collect()

@@ -3,7 +3,7 @@ use std::{any::TypeId, marker::PhantomData};
 use hashbrown::HashMap;
 use mopa::Any;
 
-use crate::{Resource, World};
+use crate::{Resource, World, ResourceId};
 
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the
@@ -78,7 +78,7 @@ where
         unsafe {
             self.world
                 .try_fetch_internal(match self.tys.get(index) {
-                    Some(&x) => x,
+                    Some(&x) => ResourceId::from_type_id(x),
                     None => return None,
                 })
                 .map(|res| {
@@ -142,7 +142,7 @@ where
         unsafe {
             self.world
                 .try_fetch_internal(match self.tys.get(index) {
-                    Some(&x) => x,
+                    Some(&x) => ResourceId::from_type_id(x),
                     None => return None,
                 })
                 .map(|res| {

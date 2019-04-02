@@ -136,7 +136,7 @@ impl ResourceTable {
     }
 
     fn get(&self, name: &str) -> ResourceId {
-        *self.map.get(name).unwrap()
+        self.map.get(name).cloned().unwrap()
     }
 }
 
@@ -160,9 +160,8 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
         let reads = access
             .reads
             .iter()
-            .map(|id| id.0)
             .map(|id| {
-                res.try_fetch_internal(id)
+                res.try_fetch_internal(id.clone())
                     .expect("bug: the requested resource does not exist")
                     .borrow()
             })
@@ -170,9 +169,8 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
         let writes = access
             .writes
             .iter()
-            .map(|id| id.0)
             .map(|id| {
-                res.try_fetch_internal(id)
+                res.try_fetch_internal(id.clone())
                     .expect("bug: the requested resource does not exist")
                     .borrow_mut()
             })
