@@ -125,7 +125,7 @@ pub trait RunNow<'a> {
     /// Performs clean up that requires resources from the `World`.
     /// This commonly removes components from `world` which depend on external
     /// resources.
-    fn dispose(&mut self, world: &mut World) {
+    fn dispose(self: Box<Self>, world: &mut World) {
         let _ = world;
     }
 }
@@ -143,8 +143,8 @@ where
         T::setup(self, world);
     }
 
-    fn dispose(&mut self, world: &mut World) {
-        T::dispose(self, world);
+    fn dispose(self: Box<Self>, world: &mut World) {
+        T::dispose(*self, world);
     }
 }
 
@@ -200,7 +200,10 @@ pub trait System<'a> {
     /// Performs clean up that requires resources from the `World`.
     /// This commonly removes components from `world` which depend on external
     /// resources.
-    fn dispose(&mut self, world: &mut World) {
+    fn dispose(self, world: &mut World)
+    where
+        Self: Sized,
+    {
         let _ = world;
     }
 }
