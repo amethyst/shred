@@ -28,9 +28,6 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// external resources. It is common this method removes components and
     /// / or resources from the `World` which are associated with external
     /// resources.
-    ///
-    /// Calling any method after `dispose` (including `dispose` itself) will
-    /// panic.
     pub fn dispose(self, world: &mut World) {
         for stage in self.stages {
             stage.dispose(world);
