@@ -36,6 +36,17 @@ pub struct Fetch<'a, T: 'a> {
     phantom: PhantomData<&'a T>,
 }
 
+impl<'a, T: 'a> Fetch<'a, T> {
+    /// Creates a new `Fetch` value from an untyped `Ref`; do not use this
+    /// unless you know what you're doing.
+    pub unsafe fn from_inner_unchecked(inner: Ref<'a, Box<Resource>>) -> Self {
+        Fetch {
+            inner,
+            phantom: PhantomData,
+        }
+    }
+}
+
 impl<'a, T> Deref for Fetch<'a, T>
 where
     T: Resource,
@@ -58,6 +69,17 @@ where
 pub struct FetchMut<'a, T: 'a> {
     inner: RefMut<'a, Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
+}
+
+impl<'a, T: 'a> FetchMut<'a, T> {
+    /// Creates a new `FetchMut` value from an untyped `Ref`; do not use this
+    /// unless you know what you're doing.
+    pub unsafe fn from_inner_unchecked(inner: RefMut<'a, Box<Resource>>) -> Self {
+        FetchMut {
+            inner,
+            phantom: PhantomData,
+        }
+    }
 }
 
 impl<'a, T> Deref for FetchMut<'a, T>
@@ -89,23 +111,55 @@ mopafy!(Resource);
 
 impl<T> Resource for T where T: Any + Send + Sync {}
 
-/// The id of a [`Resource`], which simply wraps a type id.
+/// The id of a [`Resource`], which simply wraps a type id and a "dynamic ID".
+/// The "dynamic ID" is usually just left `0`, and, unless such documentation
+/// says otherwise, other libraries will assume that it is always `0`; non-zero
+/// IDs are only used for special resource types that are specifically defined
+/// in a more dynamic way, such that resource types can essentially be created
+/// at run time, without having different static types.
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ResourceId {
     type_id: TypeId,
+    dynamic_id: u64,
 }
 
 impl ResourceId {
     /// Creates a new resource id from a given type.
+    #[inline]
     pub fn new<T: Resource>() -> Self {
-        ResourceId::from_type_id(TypeId::of::<T>())
+        ResourceId::new_with_dynamic_id::<T>(0)
     }
 
     /// Create a new resource id from a raw type ID.
+    #[inline]
     pub fn from_type_id(type_id: TypeId) -> Self {
-        ResourceId { type_id }
+        ResourceId::from_type_id_and_dynamic_id(type_id, 0)
+    }
+
+    /// Creates a new resource id from a given type and a `dynamic_id`.
+    ///
+    /// This is usually not what you want (unless you're implementing scripting
+    /// with `shred` or some similar mechanism to define resources at run-time).
+    ///
+    /// Creating resource IDs with a `dynamic_id` unequal to `0` is only
+    /// recommended for special types that are specifically defined for
+    /// scripting; most libraries will just assume that resources are
+    /// identified only by their type.
+    #[inline]
+    pub fn new_with_dynamic_id<T: Resource>(dynamic_id: u64) -> Self {
+        ResourceId::from_type_id_and_dynamic_id(TypeId::of::<T>(), dynamic_id)
+    }
+
+    /// Create a new resource id from a raw type ID and a "dynamic ID" (see type
+    /// documentation).
+    #[inline]
+    pub fn from_type_id_and_dynamic_id(type_id: TypeId, dynamic_id: u64) -> Self {
+        ResourceId {
+            type_id,
+            dynamic_id,
+        }
     }
 }
 
@@ -153,8 +207,7 @@ impl World {
     where
         R: Resource,
     {
-        self.resources
-            .insert(ResourceId::new::<R>(), TrustCell::new(Box::new(r)));
+        self.insert_internal(ResourceId::new::<R>(), r);
     }
 
     /// Removes a resource of type `R` from the `World` and returns its
@@ -169,12 +222,7 @@ impl World {
     where
         R: Resource,
     {
-        self.resources
-            .remove(&ResourceId::new::<R>())
-            .map(TrustCell::into_inner)
-            .map(|x| x.downcast())
-            .map(|x| x.ok().unwrap())
-            .map(|x| *x)
+        self.remove_internal(ResourceId::new::<R>())
     }
 
     /// Returns true if the specified resource type `R` exists in `self`.
@@ -262,6 +310,33 @@ impl World {
             inner: r.borrow_mut(),
             phantom: PhantomData,
         })
+    }
+
+    /// Internal function for inserting resources, should only be used if you
+    /// know what you're doing.
+    ///
+    /// This is useful for inserting resources with a custom `ResourceId`.
+    pub fn insert_internal<R>(&mut self, id: ResourceId, r: R)
+    where
+        R: Resource,
+    {
+        self.resources.insert(id, TrustCell::new(Box::new(r)));
+    }
+
+    /// Internal function for removing resources, should only be used if you
+    /// know what you're doing.
+    ///
+    /// This is useful for removing resources with a custom `ResourceId`.
+    pub fn remove_internal<R>(&mut self, id: ResourceId) -> Option<R>
+    where
+        R: Resource,
+    {
+        self.resources
+            .remove(&id)
+            .map(TrustCell::into_inner)
+            .map(|x: Box<Resource>| x.downcast())
+            .map(|x: Result<Box<R>, _>| x.ok().unwrap())
+            .map(|x| *x)
     }
 
     /// Internal function for fetching resources, should only be used if you
@@ -355,6 +430,8 @@ mod tests {
         world.insert(Res);
 
         assert!(world.has_value::<Res>());
+
+        println!("{:#?}", world.resources.keys().collect::<Vec<_>>());
 
         world.remove::<Res>().unwrap();
 
