@@ -94,6 +94,11 @@ impl<T> TrustCell<T> {
         }
     }
 
+    /// Consumes this cell and returns ownership of `T`.
+    pub fn into_inner(self) -> T {
+        self.inner.into_inner()
+    }
+
     /// Get an immutable reference to the inner data.
     ///
     /// Absence of write accesses is checked at run-time.
