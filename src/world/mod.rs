@@ -157,6 +157,26 @@ impl World {
             .insert(ResourceId::new::<R>(), TrustCell::new(Box::new(r)));
     }
 
+    /// Removes a resource of type `R` from the `World` and returns its
+    /// ownership to the caller. In case there is no such resource in this
+    /// `World`, `None` will be returned.
+    ///
+    /// Use this method with caution; other functions and systems might assume
+    /// this resource still exists. Thus, only use this if you're sure no
+    /// system will try to access this resource after you removed it (or else
+    /// you will get a panic).
+    pub fn remove<R>(&mut self) -> Option<R>
+    where
+        R: Resource,
+    {
+        self.resources
+            .remove(&ResourceId::new::<R>())
+            .map(TrustCell::into_inner)
+            .map(|x| x.downcast())
+            .map(|x| x.ok().unwrap())
+            .map(|x| *x)
+    }
+
     /// Returns true if the specified resource type `R` exists in `self`.
     pub fn has_value<R>(&self) -> bool
     where
@@ -326,6 +346,23 @@ mod tests {
 
         let write: FetchMut<Res> = world.fetch_mut();
         let read: Fetch<Res> = world.fetch();
+    }
+
+    #[test]
+    fn remove_insert() {
+        let mut world = World::new();
+
+        world.insert(Res);
+
+        assert!(world.has_value::<Res>());
+
+        world.remove::<Res>().unwrap();
+
+        assert!(!world.has_value::<Res>());
+
+        world.insert(Res);
+
+        assert!(world.has_value::<Res>());
     }
 
     #[test]

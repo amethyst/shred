@@ -425,6 +425,34 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_iter_all_after_removal() {
+        let mut world = World::new();
+
+        world.insert(ImplementorA(3));
+        world.insert(ImplementorB(1));
+
+        let mut table = MetaTable::<Object>::new();
+        table.register(&ImplementorA(125));
+        table.register(&ImplementorB(111111));
+
+
+        {
+            let mut iter = table.iter(&mut world);
+            assert_eq!(iter.next().unwrap().method1(), 3);
+            assert_eq!(iter.next().unwrap().method1(), 1);
+        }
+
+        world.remove::<ImplementorA>().unwrap();
+
+        {
+            let mut iter = table.iter(&mut world);
+            assert_eq!(iter.next().unwrap().method1(), 1);
+        }
+
+        world.remove::<ImplementorB>().unwrap();
+    }
+
     struct ImplementorC;
 
     impl Object for ImplementorC {
