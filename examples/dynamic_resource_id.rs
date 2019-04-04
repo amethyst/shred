@@ -152,11 +152,9 @@ impl<'a> DynamicSystemData<'a> for ScriptingResData<'a> {
                 .iter()
                 .map(|id| {
                     world
-                        .try_fetch_internal(id.clone())
+                        .try_fetch_by_id(id.clone())
                         .expect("Resource no longer exists")
-                        .borrow()
                 })
-                .map(|r| unsafe { Fetch::from_inner_unchecked(r) })
                 .collect(),
         }
     }

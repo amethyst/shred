@@ -36,17 +36,6 @@ pub struct Fetch<'a, T: 'a> {
     phantom: PhantomData<&'a T>,
 }
 
-impl<'a, T: 'a> Fetch<'a, T> {
-    /// Creates a new `Fetch` value from an untyped `Ref`; do not use this
-    /// unless you know what you're doing.
-    pub unsafe fn from_inner_unchecked(inner: Ref<'a, Box<Resource>>) -> Self {
-        Fetch {
-            inner,
-            phantom: PhantomData,
-        }
-    }
-}
-
 impl<'a, T> Deref for Fetch<'a, T>
 where
     T: Resource,
@@ -69,17 +58,6 @@ where
 pub struct FetchMut<'a, T: 'a> {
     inner: RefMut<'a, Box<Resource>>,
     phantom: PhantomData<&'a mut T>,
-}
-
-impl<'a, T: 'a> FetchMut<'a, T> {
-    /// Creates a new `FetchMut` value from an untyped `Ref`; do not use this
-    /// unless you know what you're doing.
-    pub unsafe fn from_inner_unchecked(inner: RefMut<'a, Box<Resource>>) -> Self {
-        FetchMut {
-            inner,
-            phantom: PhantomData,
-        }
-    }
 }
 
 impl<'a, T> Deref for FetchMut<'a, T>
@@ -283,6 +261,31 @@ impl World {
         })
     }
 
+    /// Like `try_fetch`, but fetches the resource by its `ResourceId` which
+    /// allows using a dynamic ID.
+    ///
+    /// This is usually not what you need; please read the type-level
+    /// documentation of `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `T`.
+    pub fn try_fetch_by_id<T>(&self, id: ResourceId) -> Option<Fetch<T>>
+    where
+        T: Resource,
+    {
+        let res_id0 = ResourceId::new::<T>();
+        assert_eq!(
+            res_id0.type_id, id.type_id,
+            "Passed a `ResourceId` with a wrong type ID"
+        );
+
+        self.resources.get(&id).map(|r| Fetch {
+            inner: r.borrow(),
+            phantom: PhantomData,
+        })
+    }
+
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
@@ -307,6 +310,31 @@ impl World {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| FetchMut {
+            inner: r.borrow_mut(),
+            phantom: PhantomData,
+        })
+    }
+
+    /// Like `try_fetch_mut`, but fetches the resource by its `ResourceId` which
+    /// allows using a dynamic ID.
+    ///
+    /// This is usually not what you need; please read the type-level
+    /// documentation of `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `T`.
+    pub fn try_fetch_mut_by_id<T>(&self, id: ResourceId) -> Option<FetchMut<T>>
+    where
+        T: Resource,
+    {
+        let res_id0 = ResourceId::new::<T>();
+        assert_eq!(
+            res_id0.type_id, id.type_id,
+            "Passed a `ResourceId` with a wrong type ID"
+        );
+
+        self.resources.get(&id).map(|r| FetchMut {
             inner: r.borrow_mut(),
             phantom: PhantomData,
         })
