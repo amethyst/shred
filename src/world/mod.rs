@@ -419,6 +419,54 @@ mod tests {
     }
 
     #[test]
+    fn fetch_by_id() {
+        let mut world = World::new();
+
+        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(1), 5);
+        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(2), 15);
+        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(3), 45);
+
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(2))
+                .map(|x| *x),
+            Some(15)
+        );
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(1))
+                .map(|x| *x),
+            Some(5)
+        );
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(3))
+                .map(|x| *x),
+            Some(45)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_fetch_by_id0() {
+        let mut world = World::new();
+
+        world.insert(5i32);
+
+        world.try_fetch_by_id::<u32>(ResourceId::new_with_dynamic_id::<i32>(111));
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_fetch_by_id1() {
+        let mut world = World::new();
+
+        world.insert(5i32);
+
+        world.try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<u32>(111));
+    }
+
+    #[test]
     fn add() {
         struct Foo;
 
