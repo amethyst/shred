@@ -206,3 +206,35 @@ fn basic(b: &mut Bencher) {
 
     b.iter(|| dispatcher.dispatch(&mut res));
 }
+
+#[bench]
+fn bench_fetching(b: &mut Bencher) {
+    let mut world = World::new();
+
+    let mass = VecStorage::new(Mass(10.0));
+    let mut pos = VecStorage::new(Pos(Vec3::new(0.0, 0.0, 0.0)));
+    let vel = VecStorage::new(Vel(Vec3::new(0.0, 0.0, 0.0)));
+    let force = VecStorage::new(Force(Vec3::new(0.0, 0.0, 0.0)));
+    let spring = VecStorage::new(Spring {
+        constant: 2.0,
+        connection_to: 0,
+        rest: 1.0,
+    });
+
+    pos.data[0] = Pos(Vec3::new(-5.0, -5.0, -5.0));
+
+    world.insert(DeltaTime(0.05));
+    world.insert(mass);
+    world.insert(pos);
+    world.insert(vel);
+    world.insert(force);
+    world.insert(spring);
+
+    b.iter(|| {
+        for _ in 0..100 {
+            world.fetch::<DeltaTime>();
+            world.fetch::<VecStorage<Pos>>();
+            world.fetch::<VecStorage<Spring>>();
+        }
+    })
+}
