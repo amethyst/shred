@@ -44,7 +44,7 @@ impl ScriptingInterface {
         self.id_alloc += 1;
 
         let id = self.resource_id(name).unwrap();
-        world.insert_internal(id, res);
+        world.insert_by_id(id, res);
     }
 
     pub fn remove_rt_resource(
@@ -55,13 +55,13 @@ impl ScriptingInterface {
         let id = self.type_map.remove(name);
 
         id.and_then(|id| {
-            world.remove_internal(ResourceId::new_with_dynamic_id::<ScriptableResource>(id))
+            world.remove_by_id(ResourceId::new_with_dynamic_id::<ScriptableResource>(id))
         })
     }
 
     pub fn clear_rt_resources(&mut self, world: &mut World) {
         for &dynamic_id in self.type_map.values() {
-            world.remove_internal::<ScriptableResource>(ResourceId::new_with_dynamic_id::<
+            world.remove_by_id::<ScriptableResource>(ResourceId::new_with_dynamic_id::<
                 ScriptableResource,
             >(dynamic_id));
         }

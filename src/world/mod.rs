@@ -139,6 +139,14 @@ impl ResourceId {
             dynamic_id,
         }
     }
+
+    fn assert_same_type_id<R: Resource>(&self) {
+        let res_id0 = ResourceId::new::<R>();
+        assert_eq!(
+            res_id0.type_id, self.type_id,
+            "Passed a `ResourceId` with a wrong type ID"
+        );
+    }
 }
 
 /// A resource container, which provides methods to access to
@@ -185,7 +193,7 @@ impl World {
     where
         R: Resource,
     {
-        self.insert_internal(ResourceId::new::<R>(), r);
+        self.insert_by_id(ResourceId::new::<R>(), r);
     }
 
     /// Removes a resource of type `R` from the `World` and returns its
@@ -200,7 +208,7 @@ impl World {
     where
         R: Resource,
     {
-        self.remove_internal(ResourceId::new::<R>())
+        self.remove_by_id(ResourceId::new::<R>())
     }
 
     /// Returns true if the specified resource type `R` exists in `self`.
@@ -274,11 +282,7 @@ impl World {
     where
         T: Resource,
     {
-        let res_id0 = ResourceId::new::<T>();
-        assert_eq!(
-            res_id0.type_id, id.type_id,
-            "Passed a `ResourceId` with a wrong type ID"
-        );
+        id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| Fetch {
             inner: r.borrow(),
@@ -328,11 +332,7 @@ impl World {
     where
         T: Resource,
     {
-        let res_id0 = ResourceId::new::<T>();
-        assert_eq!(
-            res_id0.type_id, id.type_id,
-            "Passed a `ResourceId` with a wrong type ID"
-        );
+        id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| FetchMut {
             inner: r.borrow_mut(),
@@ -344,10 +344,16 @@ impl World {
     /// know what you're doing.
     ///
     /// This is useful for inserting resources with a custom `ResourceId`.
-    pub fn insert_internal<R>(&mut self, id: ResourceId, r: R)
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `R`.
+    pub fn insert_by_id<R>(&mut self, id: ResourceId, r: R)
     where
         R: Resource,
     {
+        id.assert_same_type_id::<R>();
+
         self.resources.insert(id, TrustCell::new(Box::new(r)));
     }
 
@@ -355,10 +361,16 @@ impl World {
     /// know what you're doing.
     ///
     /// This is useful for removing resources with a custom `ResourceId`.
-    pub fn remove_internal<R>(&mut self, id: ResourceId) -> Option<R>
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `R`.
+    pub fn remove_by_id<R>(&mut self, id: ResourceId) -> Option<R>
     where
         R: Resource,
     {
+        id.assert_same_type_id::<R>();
+
         self.resources
             .remove(&id)
             .map(TrustCell::into_inner)
@@ -422,9 +434,9 @@ mod tests {
     fn fetch_by_id() {
         let mut world = World::new();
 
-        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(1), 5);
-        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(2), 15);
-        world.insert_internal(ResourceId::new_with_dynamic_id::<i32>(3), 45);
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(1), 5);
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(2), 15);
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(3), 45);
 
         assert_eq!(
             world
