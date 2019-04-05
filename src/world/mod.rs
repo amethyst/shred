@@ -89,23 +89,63 @@ mopafy!(Resource);
 
 impl<T> Resource for T where T: Any + Send + Sync {}
 
-/// The id of a [`Resource`], which simply wraps a type id.
+/// The id of a [`Resource`], which simply wraps a type id and a "dynamic ID".
+/// The "dynamic ID" is usually just left `0`, and, unless such documentation
+/// says otherwise, other libraries will assume that it is always `0`; non-zero
+/// IDs are only used for special resource types that are specifically defined
+/// in a more dynamic way, such that resource types can essentially be created
+/// at run time, without having different static types.
 ///
 /// [`Resource`]: trait.Resource.html
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ResourceId {
     type_id: TypeId,
+    dynamic_id: u64,
 }
 
 impl ResourceId {
     /// Creates a new resource id from a given type.
+    #[inline]
     pub fn new<T: Resource>() -> Self {
-        ResourceId::from_type_id(TypeId::of::<T>())
+        ResourceId::new_with_dynamic_id::<T>(0)
     }
 
     /// Create a new resource id from a raw type ID.
+    #[inline]
     pub fn from_type_id(type_id: TypeId) -> Self {
-        ResourceId { type_id }
+        ResourceId::from_type_id_and_dynamic_id(type_id, 0)
+    }
+
+    /// Creates a new resource id from a given type and a `dynamic_id`.
+    ///
+    /// This is usually not what you want (unless you're implementing scripting
+    /// with `shred` or some similar mechanism to define resources at run-time).
+    ///
+    /// Creating resource IDs with a `dynamic_id` unequal to `0` is only
+    /// recommended for special types that are specifically defined for
+    /// scripting; most libraries will just assume that resources are
+    /// identified only by their type.
+    #[inline]
+    pub fn new_with_dynamic_id<T: Resource>(dynamic_id: u64) -> Self {
+        ResourceId::from_type_id_and_dynamic_id(TypeId::of::<T>(), dynamic_id)
+    }
+
+    /// Create a new resource id from a raw type ID and a "dynamic ID" (see type
+    /// documentation).
+    #[inline]
+    pub fn from_type_id_and_dynamic_id(type_id: TypeId, dynamic_id: u64) -> Self {
+        ResourceId {
+            type_id,
+            dynamic_id,
+        }
+    }
+
+    fn assert_same_type_id<R: Resource>(&self) {
+        let res_id0 = ResourceId::new::<R>();
+        assert_eq!(
+            res_id0.type_id, self.type_id,
+            "Passed a `ResourceId` with a wrong type ID"
+        );
     }
 }
 
@@ -153,8 +193,7 @@ impl World {
     where
         R: Resource,
     {
-        self.resources
-            .insert(ResourceId::new::<R>(), TrustCell::new(Box::new(r)));
+        self.insert_by_id(ResourceId::new::<R>(), r);
     }
 
     /// Removes a resource of type `R` from the `World` and returns its
@@ -169,12 +208,7 @@ impl World {
     where
         R: Resource,
     {
-        self.resources
-            .remove(&ResourceId::new::<R>())
-            .map(TrustCell::into_inner)
-            .map(|x| x.downcast())
-            .map(|x| x.ok().unwrap())
-            .map(|x| *x)
+        self.remove_by_id(ResourceId::new::<R>())
     }
 
     /// Returns true if the specified resource type `R` exists in `self`.
@@ -235,6 +269,27 @@ impl World {
         })
     }
 
+    /// Like `try_fetch`, but fetches the resource by its `ResourceId` which
+    /// allows using a dynamic ID.
+    ///
+    /// This is usually not what you need; please read the type-level
+    /// documentation of `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `T`.
+    pub fn try_fetch_by_id<T>(&self, id: ResourceId) -> Option<Fetch<T>>
+    where
+        T: Resource,
+    {
+        id.assert_same_type_id::<T>();
+
+        self.resources.get(&id).map(|r| Fetch {
+            inner: r.borrow(),
+            phantom: PhantomData,
+        })
+    }
+
     /// Fetches the resource with the specified type `T` mutably.
     ///
     /// Please see `fetch` for details.
@@ -262,6 +317,66 @@ impl World {
             inner: r.borrow_mut(),
             phantom: PhantomData,
         })
+    }
+
+    /// Like `try_fetch_mut`, but fetches the resource by its `ResourceId` which
+    /// allows using a dynamic ID.
+    ///
+    /// This is usually not what you need; please read the type-level
+    /// documentation of `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `T`.
+    pub fn try_fetch_mut_by_id<T>(&self, id: ResourceId) -> Option<FetchMut<T>>
+    where
+        T: Resource,
+    {
+        id.assert_same_type_id::<T>();
+
+        self.resources.get(&id).map(|r| FetchMut {
+            inner: r.borrow_mut(),
+            phantom: PhantomData,
+        })
+    }
+
+    /// Internal function for inserting resources, should only be used if you
+    /// know what you're doing.
+    ///
+    /// This is useful for inserting resources with a custom `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `R`.
+    pub fn insert_by_id<R>(&mut self, id: ResourceId, r: R)
+    where
+        R: Resource,
+    {
+        id.assert_same_type_id::<R>();
+
+        self.resources.insert(id, TrustCell::new(Box::new(r)));
+    }
+
+    /// Internal function for removing resources, should only be used if you
+    /// know what you're doing.
+    ///
+    /// This is useful for removing resources with a custom `ResourceId`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `id` refers to a different type ID than `R`.
+    pub fn remove_by_id<R>(&mut self, id: ResourceId) -> Option<R>
+    where
+        R: Resource,
+    {
+        id.assert_same_type_id::<R>();
+
+        self.resources
+            .remove(&id)
+            .map(TrustCell::into_inner)
+            .map(|x: Box<Resource>| x.downcast())
+            .map(|x: Result<Box<R>, _>| x.ok().unwrap())
+            .map(|x| *x)
     }
 
     /// Internal function for fetching resources, should only be used if you
@@ -316,6 +431,54 @@ mod tests {
     }
 
     #[test]
+    fn fetch_by_id() {
+        let mut world = World::new();
+
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(1), 5);
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(2), 15);
+        world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(3), 45);
+
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(2))
+                .map(|x| *x),
+            Some(15)
+        );
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(1))
+                .map(|x| *x),
+            Some(5)
+        );
+        assert_eq!(
+            world
+                .try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<i32>(3))
+                .map(|x| *x),
+            Some(45)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_fetch_by_id0() {
+        let mut world = World::new();
+
+        world.insert(5i32);
+
+        world.try_fetch_by_id::<u32>(ResourceId::new_with_dynamic_id::<i32>(111));
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_fetch_by_id1() {
+        let mut world = World::new();
+
+        world.insert(5i32);
+
+        world.try_fetch_by_id::<i32>(ResourceId::new_with_dynamic_id::<u32>(111));
+    }
+
+    #[test]
     fn add() {
         struct Foo;
 
@@ -355,6 +518,8 @@ mod tests {
         world.insert(Res);
 
         assert!(world.has_value::<Res>());
+
+        println!("{:#?}", world.resources.keys().collect::<Vec<_>>());
 
         world.remove::<Res>().unwrap();
 
