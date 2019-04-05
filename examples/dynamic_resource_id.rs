@@ -9,7 +9,7 @@
 //! considered an anti-pattern. Instead, you should use multiple components to
 //! achieve your goal of multiple cameras.
 //!
-//! The code in this example is structured into multiple steps which hopefull
+//! The code in this example is structured into multiple steps which hopefully
 //! make it easier to understand. Make sure you understood a step before you go
 //! to the next.
 
