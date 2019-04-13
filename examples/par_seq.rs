@@ -41,7 +41,7 @@ fn main() {
 
     let pool = ThreadPoolBuilder::new().build().expect("OS error");
 
-    let mut res = World::new();
+    let mut res = World::empty();
     let x = 5u8;
 
     let mut dispatcher = ParSeq::new(

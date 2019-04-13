@@ -249,7 +249,7 @@ fn main() {
         }
     }
 
-    let mut res = World::new();
+    let mut res = World::empty();
 
     {
         let mut table = res.entry().or_insert_with(|| ReflectionTable::new());

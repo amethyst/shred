@@ -37,7 +37,7 @@
 //! }
 //!
 //! fn main() {
-//!     let mut world = World::new();
+//!     let mut world = World::empty();
 //!     let mut dispatcher = DispatcherBuilder::new()
 //!         .with(EmptySystem, "empty", &[])
 //!         .build();

@@ -212,7 +212,7 @@ mod tests {
     }
 
     fn new_world() -> World {
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res(0));
 
         world

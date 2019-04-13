@@ -19,7 +19,7 @@ type StdEntry<'a, K, V> =
 /// #[derive(Debug)]
 /// struct Res(i32);
 ///
-/// let mut world = World::new();
+/// let mut world = World::empty();
 ///
 /// let value = world.entry().or_insert(Res(4));
 /// println!("{:?}", value.0 * 2);
@@ -74,7 +74,7 @@ mod tests {
     fn test_entry() {
         struct Res;
 
-        let mut world = World::new();
+        let mut world = World::empty();
         world.entry().or_insert(Res);
 
         assert!(world.has_value::<Res>());

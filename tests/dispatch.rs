@@ -77,7 +77,7 @@ fn dispatch_builder_invalid() {
 
 #[test]
 fn dispatch_basic() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let number = 5;
@@ -93,7 +93,7 @@ fn dispatch_basic() {
 
 #[test]
 fn dispatch_ww_block() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -106,7 +106,7 @@ fn dispatch_ww_block() {
 
 #[test]
 fn dispatch_rw_block() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -119,7 +119,7 @@ fn dispatch_rw_block() {
 
 #[test]
 fn dispatch_rw_block_rev() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -132,7 +132,7 @@ fn dispatch_rw_block_rev() {
 
 #[test]
 fn dispatch_sequential() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
@@ -146,7 +146,7 @@ fn dispatch_sequential() {
 #[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
@@ -162,7 +162,7 @@ fn dispatch_async() {
 #[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async_res() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
 
     let mut d = DispatcherBuilder::new()
@@ -178,7 +178,7 @@ fn dispatch_async_res() {
 
 #[test]
 fn dispatch_stage_group() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(Res);
     res.insert(ResB);
 

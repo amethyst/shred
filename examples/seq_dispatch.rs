@@ -28,7 +28,7 @@ impl<'a> System<'a> for EmptySystem {
 }
 
 fn main() {
-    let mut resources = World::new();
+    let mut resources = World::empty();
     let mut dispatcher = DispatcherBuilder::new()
         .with(EmptySystem, "empty", &[])
         .build();
