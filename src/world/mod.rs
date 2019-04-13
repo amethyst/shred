@@ -162,7 +162,9 @@ pub struct World {
 
 impl World {
     /// Creates a new, empty resource container.
-    pub fn new() -> Self {
+    ///
+    /// Note that if you're using Specs, you should use `WorldExt::new` instead.
+    pub fn empty() -> Self {
         Default::default()
     }
 
