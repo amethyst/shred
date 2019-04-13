@@ -82,7 +82,7 @@ impl ScriptingInterface {
 // -- Step 2 - Setup the World --
 
 fn setup_world() -> World {
-    let mut world = World::new();
+    let mut world = World::empty();
 
     let mut interface = ScriptingInterface::new();
 

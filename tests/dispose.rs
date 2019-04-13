@@ -20,7 +20,7 @@ impl<'a> System<'a> for Sys {
 
 #[test]
 fn test_dispose() {
-    let mut world = World::new();
+    let mut world = World::empty();
 
     let mut dispatcher = DispatcherBuilder::new().with(Sys, "sys", &[]).build();
 

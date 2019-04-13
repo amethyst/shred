@@ -188,7 +188,7 @@ impl World {
     /// # #[derive(Debug)] struct MyRes(i32);
     /// use shred::World;
     ///
-    /// let mut world = World::new();
+    /// let mut world = World::empty();
     /// world.insert(MyRes(5));
     /// ```
     pub fn insert<R>(&mut self, r: R)
@@ -417,7 +417,7 @@ mod tests {
         assert_eq!(Read::<Res>::reads(), vec![ResourceId::new::<Res>()]);
         assert_eq!(Read::<Res>::writes(), vec![]);
 
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res);
         <Read<Res> as SystemData>::fetch(&world);
     }
@@ -427,14 +427,14 @@ mod tests {
         assert_eq!(Write::<Res>::reads(), vec![]);
         assert_eq!(Write::<Res>::writes(), vec![ResourceId::new::<Res>()]);
 
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res);
         <Write<Res> as SystemData>::fetch(&world);
     }
 
     #[test]
     fn fetch_by_id() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(1), 5);
         world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(2), 15);
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_fetch_by_id0() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(5i32);
 
@@ -473,7 +473,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_fetch_by_id1() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(5i32);
 
@@ -484,7 +484,7 @@ mod tests {
     fn add() {
         struct Foo;
 
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res);
 
         assert!(world.has_value::<Res>());
@@ -495,7 +495,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Already borrowed")]
     fn read_write_fails() {
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res);
 
         let read: Fetch<Res> = world.fetch();
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Already borrowed mutably")]
     fn write_read_fails() {
-        let mut world = World::new();
+        let mut world = World::empty();
         world.insert(Res);
 
         let write: FetchMut<Res> = world.fetch_mut();
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn remove_insert() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(Res);
 
@@ -546,7 +546,7 @@ mod tests {
             }
         }
 
-        let mut world = World::new();
+        let mut world = World::empty();
         assert!(world.try_fetch::<i32>().is_none());
 
         let mut sys = Sys;

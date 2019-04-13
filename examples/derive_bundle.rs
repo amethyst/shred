@@ -23,7 +23,7 @@ struct Nested<'a> {
 }
 
 fn main() {
-    let mut res = World::new();
+    let mut res = World::empty();
     res.insert(ResA);
     res.insert(ResB);
 

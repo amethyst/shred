@@ -27,7 +27,7 @@ impl<'a> System<'a> for PrintSystem {
 }
 
 fn main() {
-    let mut resources = World::new();
+    let mut resources = World::empty();
     let mut dispatcher = DispatcherBuilder::new()
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();

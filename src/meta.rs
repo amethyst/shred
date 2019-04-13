@@ -213,7 +213,7 @@ where
 ///     }
 /// }
 ///
-/// let mut world = World::new();
+/// let mut world = World::empty();
 ///
 /// world.insert(ImplementorA(3));
 /// world.insert(ImplementorB(1));
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_iter_all() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(ImplementorA(3));
         world.insert(ImplementorB(1));
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_iter_all_after_removal() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(ImplementorA(3));
         world.insert(ImplementorB(1));
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn get() {
-        let mut world = World::new();
+        let mut world = World::empty();
 
         world.insert(ImplementorC);
         world.insert(ImplementorD);
