@@ -114,6 +114,14 @@ pub trait RunNow<'a> {
 
     /// Sets up `Resources` for a later call to `run_now`.
     fn setup(&mut self, res: &mut Resources);
+
+    /// Performs clean up that requires resources from the `Resources`.
+    ///
+    /// This commonly removes components from `Resources` which depend on external
+    /// resources.
+    fn dispose(self: Box<Self>, res: &mut Resources) {
+        let _ = res;
+    }
 }
 
 impl<'a, T> RunNow<'a> for T
@@ -127,6 +135,10 @@ where
 
     fn setup(&mut self, res: &mut Resources) {
         T::setup(self, res);
+    }
+
+    fn dispose(self: Box<Self>, res: &mut Resources) {
+        T::dispose(*self, res);
     }
 }
 
@@ -169,14 +181,24 @@ pub trait System<'a> {
     /// Return the accessor from the [`SystemData`].
     fn accessor<'b>(&'b self) -> AccessorCow<'a, 'b, Self> {
         AccessorCow::Owned(
-            AccessorTy::<'a, Self>::try_new()
-                .expect("Missing implementation for `accessor`"),
+            AccessorTy::<'a, Self>::try_new().expect("Missing implementation for `accessor`"),
         )
     }
 
     /// Sets up the `Resources` using `Self::SystemData::setup`.
     fn setup(&mut self, res: &mut Resources) {
         <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), res)
+    }
+
+    /// Performs clean up that requires resources from the `Resources`.
+    ///
+    /// This commonly removes components from `Resources` which depend on external
+    /// resources.
+    fn dispose(self, res: &mut Resources)
+    where
+        Self: Sized,
+    {
+        let _ = res;
     }
 }
 
