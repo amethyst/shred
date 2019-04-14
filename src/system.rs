@@ -115,11 +115,12 @@ pub trait RunNow<'a> {
     /// Sets up `Resources` for a later call to `run_now`.
     fn setup(&mut self, res: &mut Resources);
 
-    /// Performs clean up that requires resources from the `World`.
-    /// This commonly removes components from `world` which depend on external
+    /// Performs clean up that requires resources from the `Resources`.
+    ///
+    /// This commonly removes components from `Resources` which depend on external
     /// resources.
-    fn dispose(self: Box<Self>, world: &mut Resources) {
-        let _ = world;
+    fn dispose(self: Box<Self>, res: &mut Resources) {
+        let _ = res;
     }
 }
 
@@ -136,8 +137,8 @@ where
         T::setup(self, res);
     }
 
-    fn dispose(self: Box<Self>, world: &mut Resources) {
-        T::dispose(*self, world);
+    fn dispose(self: Box<Self>, res: &mut Resources) {
+        T::dispose(*self, res);
     }
 }
 
@@ -189,14 +190,15 @@ pub trait System<'a> {
         <Self::SystemData as DynamicSystemData>::setup(&self.accessor(), res)
     }
 
-    /// Performs clean up that requires resources from the `World`.
-    /// This commonly removes components from `world` which depend on external
+    /// Performs clean up that requires resources from the `Resources`.
+    ///
+    /// This commonly removes components from `Resources` which depend on external
     /// resources.
-    fn dispose(self, world: &mut Resources)
+    fn dispose(self, res: &mut Resources)
     where
         Self: Sized,
     {
-        let _ = world;
+        let _ = res;
     }
 }
 

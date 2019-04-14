@@ -87,10 +87,10 @@ impl<'a> Stage<'a> {
         }
     }
 
-    pub fn dispose(self, world: &mut Resources) {
+    pub fn dispose(self, res: &mut Resources) {
         for group in self.groups {
             for sys in group {
-                sys.dispose(world);
+                sys.dispose(res);
             }
         }
     }

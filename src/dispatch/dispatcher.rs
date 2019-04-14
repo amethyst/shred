@@ -28,18 +28,18 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
 
     /// Calls the `dispose` method of all systems and allows them to release
     /// external resources. It is common this method removes components and
-    /// / or resources from the `World` which are associated with external
+    /// / or resources from the `Resources` which are associated with external
     /// resources.
     ///
     /// Calling any method after `dispose` (including `dispose` itself) will
     /// panic.
-    pub fn dispose(self, world: &mut Resources) {
+    pub fn dispose(self, res: &mut Resources) {
         for stage in self.stages {
-            stage.dispose(world);
+            stage.dispose(res);
         }
 
         for sys in self.thread_local {
-            sys.dispose(world);
+            sys.dispose(res);
         }
     }
 
@@ -133,8 +133,8 @@ impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
         self.setup(res);
     }
 
-    fn dispose(self: Box<Self>, world: &mut Resources) {
-        (*self).dispose(world);
+    fn dispose(self: Box<Self>, res: &mut Resources) {
+        (*self).dispose(res);
     }
 }
 
