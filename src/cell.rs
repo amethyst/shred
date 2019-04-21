@@ -233,6 +233,16 @@ mod tests {
     }
 
     #[test]
+    fn allow_clone_reads() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let a = cell.borrow();
+        let b = a.clone();
+
+        assert_eq!(10, *a + *b);
+    }
+
+    #[test]
     fn allow_single_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
@@ -302,6 +312,17 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         let _a = cell.try_borrow().unwrap();
+
+        assert!(cell.try_borrow_mut().is_err());
+    }
+
+    #[test]
+    fn cloned_borrow_does_not_allow_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let a = cell.borrow();
+        let _b = a.clone();
+        drop(a);
 
         assert!(cell.try_borrow_mut().is_err());
     }
