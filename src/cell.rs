@@ -49,6 +49,16 @@ impl<'a, T> Drop for Ref<'a, T> {
     }
 }
 
+impl<'a, T> Clone for Ref<'a, T> {
+    fn clone(&self) -> Self {
+        self.flag.fetch_add(1, Ordering::Release);
+        Ref {
+            flag: self.flag,
+            value: self.value,
+        }
+    }
+}
+
 /// A mutable reference to data in a `TrustCell`.
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
@@ -223,6 +233,16 @@ mod tests {
     }
 
     #[test]
+    fn allow_clone_reads() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let a = cell.borrow();
+        let b = a.clone();
+
+        assert_eq!(10, *a + *b);
+    }
+
+    #[test]
     fn allow_single_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
@@ -292,6 +312,17 @@ mod tests {
         let cell: TrustCell<_> = TrustCell::new(5);
 
         let _a = cell.try_borrow().unwrap();
+
+        assert!(cell.try_borrow_mut().is_err());
+    }
+
+    #[test]
+    fn cloned_borrow_does_not_allow_write() {
+        let cell: TrustCell<_> = TrustCell::new(5);
+
+        let a = cell.borrow();
+        let _b = a.clone();
+        drop(a);
 
         assert!(cell.try_borrow_mut().is_err());
     }
