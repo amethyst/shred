@@ -51,13 +51,13 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
             SystemData< #impl_fetch_lt >
             for #name #ty_generics #where_clause
         {
-            fn setup(world: &mut World) {
+            fn setup(world: &mut Resources) {
                 #(
                     <#tys as SystemData> :: setup(world);
                 )*
             }
 
-            fn fetch(world: & #impl_fetch_lt World) -> Self {
+            fn fetch(world: & #impl_fetch_lt Resources) -> Self {
                 #fetch_return
             }
 
