@@ -30,12 +30,12 @@ impl Error for InvalidBorrow {
 ///
 /// Access the value via `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
-pub struct Ref<'a, T: 'a> {
+pub struct Ref<'a, T: 'a + ?Sized> {
     flag: &'a AtomicUsize,
     value: &'a T,
 }
 
-impl<'a, T> Deref for Ref<'a, T> {
+impl<'a, T: ?Sized> Deref for Ref<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -43,13 +43,13 @@ impl<'a, T> Deref for Ref<'a, T> {
     }
 }
 
-impl<'a, T> Drop for Ref<'a, T> {
+impl<'a, T: ?Sized> Drop for Ref<'a, T> {
     fn drop(&mut self) {
         self.flag.fetch_sub(1, Ordering::Release);
     }
 }
 
-impl<'a, T> Clone for Ref<'a, T> {
+impl<'a, T: ?Sized> Clone for Ref<'a, T> {
     fn clone(&self) -> Self {
         self.flag.fetch_add(1, Ordering::Release);
         Ref {
@@ -63,12 +63,12 @@ impl<'a, T> Clone for Ref<'a, T> {
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
-pub struct RefMut<'a, T: 'a> {
+pub struct RefMut<'a, T: 'a + ?Sized> {
     flag: &'a AtomicUsize,
     value: &'a mut T,
 }
 
-impl<'a, T> Deref for RefMut<'a, T> {
+impl<'a, T: ?Sized> Deref for RefMut<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -76,13 +76,13 @@ impl<'a, T> Deref for RefMut<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for RefMut<'a, T> {
+impl<'a, T: ?Sized> DerefMut for RefMut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.value
     }
 }
 
-impl<'a, T> Drop for RefMut<'a, T> {
+impl<'a, T: ?Sized> Drop for RefMut<'a, T> {
     fn drop(&mut self) {
         self.flag.store(0, Ordering::Release)
     }
@@ -326,4 +326,60 @@ mod tests {
 
         assert!(cell.try_borrow_mut().is_err());
     }
+
+    #[test]
+    fn ref_with_non_sized() {
+        let r: Ref<'_, [i32]> = Ref {
+            flag: &AtomicUsize::new(1),
+            value: &[2, 3, 4, 5][..],
+        };
+
+        assert_eq!(&*r, &[2, 3, 4, 5][..]);
+    }
+
+    #[test]
+    fn ref_with_non_sized_clone() {
+        let r: Ref<'_, [i32]> = Ref {
+            flag: &AtomicUsize::new(1),
+            value: &[2, 3, 4, 5][..],
+        };
+        let rr = r.clone();
+
+        assert_eq!(&*r, &[2, 3, 4, 5][..]);
+        assert_eq!(r.flag.load(Ordering::SeqCst), 2);
+
+        assert_eq!(&*rr, &[2, 3, 4, 5][..]);
+        assert_eq!(rr.flag.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn ref_with_trait_obj() {
+        let ra: Ref<'_, dyn std::any::Any> = Ref {
+            flag: &AtomicUsize::new(1),
+            value: &2i32,
+        };
+
+        assert_eq!(ra.downcast_ref::<i32>().unwrap(), &2i32);
+    }
+
+    #[test]
+    fn ref_mut_with_non_sized() {
+        let mut r: RefMut<'_, [i32]> = RefMut {
+            flag: &AtomicUsize::new(1),
+            value: &mut [2, 3, 4, 5][..],
+        };
+
+        assert_eq!(&mut *r, &mut [2, 3, 4, 5][..]);
+    }
+
+    #[test]
+    fn ref_mut_with_trait_obj() {
+        let mut ra: RefMut<'_, dyn std::any::Any> = RefMut {
+            flag: &AtomicUsize::new(1),
+            value: &mut 2i32,
+        };
+
+        assert_eq!(ra.downcast_mut::<i32>().unwrap(), &mut 2i32);
+    }
+
 }
