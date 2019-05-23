@@ -182,19 +182,18 @@ impl World {
     ///
     /// # Examples
     ///
-    /// Every type satisfying `Any + Debug + Send + Sync` automatically
+    /// Every type satisfying `Any + Send + Sync` automatically
     /// implements `Resource`, thus can be added:
     ///
     /// ```rust
     /// # #![allow(dead_code)]
-    /// #[derive(Debug)]
     /// struct MyRes(i32);
     /// ```
     ///
     /// When you have a resource, simply insert it like this:
     ///
     /// ```rust
-    /// # #[derive(Debug)] struct MyRes(i32);
+    /// # struct MyRes(i32);
     /// use shred::World;
     ///
     /// let mut world = World::empty();
