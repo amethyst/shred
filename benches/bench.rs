@@ -10,7 +10,7 @@ use std::ops::{Index, IndexMut};
 
 use cgmath::Vector3;
 use shred::*;
-use test::Bencher;
+use test::{black_box, Bencher};
 
 #[derive(Debug)]
 struct VecStorage<T> {
@@ -236,5 +236,35 @@ fn bench_fetching(b: &mut Bencher) {
             world.fetch::<VecStorage<Pos>>();
             world.fetch::<VecStorage<Spring>>();
         }
+    })
+}
+
+#[bench]
+fn bench_indirection_refs(b: &mut Bencher) {
+    use shred::cell::{Ref, TrustCell};
+    use std::ops::Deref;
+
+    let cell = TrustCell::new(Box::new(10));
+    let refs: Vec<Ref<'_, Box<usize>>> = std::iter::repeat(cell.borrow()).take(10000).collect();
+
+    b.iter(|| {
+        let sum: usize = refs.iter().map(|v| v.deref().deref()).sum();
+        black_box(sum);
+    })
+}
+
+#[bench]
+fn bench_direct_refs(b: &mut Bencher) {
+    use shred::cell::{Ref, TrustCell};
+    use std::ops::Deref;
+
+    let cell = TrustCell::new(Box::new(10));
+    let refs: Vec<Ref<'_, usize>> = std::iter::repeat(cell.borrow().map(Box::as_ref))
+        .take(10000)
+        .collect();
+
+    b.iter(|| {
+        let sum: usize = refs.iter().map(|v| v.deref()).sum();
+        black_box(sum);
     })
 }
