@@ -32,7 +32,7 @@ mod setup;
 ///
 /// * `T`: The type of the resource
 pub struct Fetch<'a, T: 'a> {
-    inner: Ref<'a, Box<Resource>>,
+    inner: Ref<'a, dyn Resource>,
     phantom: PhantomData<&'a T>,
 }
 
@@ -65,7 +65,7 @@ impl<'a, T> Clone for Fetch<'a, T> {
 ///
 /// * `T`: The type of the resource
 pub struct FetchMut<'a, T: 'a> {
-    inner: RefMut<'a, Box<Resource>>,
+    inner: RefMut<'a, dyn Resource>,
     phantom: PhantomData<&'a mut T>,
 }
 
@@ -274,7 +274,7 @@ impl World {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| Fetch {
-            inner: r.borrow(),
+            inner: Ref::map(r.borrow(), Box::as_ref),
             phantom: PhantomData,
         })
     }
@@ -295,7 +295,7 @@ impl World {
         id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| Fetch {
-            inner: r.borrow(),
+            inner: Ref::map(r.borrow(), Box::as_ref),
             phantom: PhantomData,
         })
     }
@@ -324,7 +324,7 @@ impl World {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| FetchMut {
-            inner: r.borrow_mut(),
+            inner: RefMut::map(r.borrow_mut(), Box::as_mut),
             phantom: PhantomData,
         })
     }
@@ -345,7 +345,7 @@ impl World {
         id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| FetchMut {
-            inner: r.borrow_mut(),
+            inner: RefMut::map(r.borrow_mut(), Box::as_mut),
             phantom: PhantomData,
         })
     }

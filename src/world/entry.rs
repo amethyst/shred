@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    cell::TrustCell,
+    cell::{RefMut, TrustCell},
     world::{FetchMut, Resource, ResourceId},
 };
 
@@ -50,7 +50,7 @@ where
         let value = self
             .inner
             .or_insert_with(move || TrustCell::new(Box::new(f())));
-        let inner = value.borrow_mut();
+        let inner = RefMut::map(value.borrow_mut(), Box::as_mut);
 
         FetchMut {
             inner,
