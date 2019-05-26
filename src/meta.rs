@@ -3,7 +3,7 @@ use std::{any::TypeId, marker::PhantomData};
 use hashbrown::HashMap;
 use mopa::Any;
 
-use crate::{Resource, World, ResourceId};
+use crate::{Resource, ResourceId, World};
 
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the
@@ -435,7 +435,6 @@ mod tests {
         let mut table = MetaTable::<Object>::new();
         table.register(&ImplementorA(125));
         table.register(&ImplementorB(111111));
-
 
         {
             let mut iter = table.iter(&mut world);

@@ -30,7 +30,7 @@ impl Error for InvalidBorrow {
 ///
 /// Access the value via `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
-pub struct Ref<'a, T: 'a + ?Sized> {
+pub struct Ref<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
     value: &'a T,
 }
@@ -130,7 +130,7 @@ impl<'a, T: ?Sized> Clone for Ref<'a, T> {
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
-pub struct RefMut<'a, T: 'a + ?Sized> {
+pub struct RefMut<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
     value: &'a mut T,
 }
