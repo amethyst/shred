@@ -15,7 +15,10 @@ use std::{
 use hashbrown::HashMap;
 use mopa::Any;
 
-use crate::cell::{Ref, RefMut, TrustCell};
+use crate::{
+    cell::{Ref, RefMut, TrustCell},
+    SystemData,
+};
 
 use self::entry::create_entry;
 
@@ -158,8 +161,24 @@ impl ResourceId {
     }
 }
 
-/// A resource container, which provides methods to access to
+/// A [Resource] container, which provides methods to insert, access and manage
 /// the contained resources.
+///
+/// Many methods take `&self` which works because everything
+/// is stored with **interior mutability**. In case you violate
+/// the borrowing rules of Rust (multiple reads xor one write),
+/// you will get a panic.
+///
+/// # Use with Specs
+///
+/// If you're using this from the Specs ECS library, there are two things to be
+/// aware of:
+///
+/// 1. There are many utility methods Specs provides. To use them, you need to
+/// import `specs::WorldExt`.
+/// 2. You should not use [World::empty], but rather `specs::WorldExt::new`. The
+/// latter can simply be called using `World::new()`, as long as `WorldExt`
+/// is imported.
 ///
 /// # Resource Ids
 ///
@@ -240,6 +259,134 @@ impl World {
         R: Resource,
     {
         create_entry(self.resources.entry(ResourceId::new::<R>()))
+    }
+
+    /// Gets `SystemData` `T` from the `World`. This can be used to retrieve
+    /// data just like in [System](crate::System)s.
+    ///
+    /// This will not setup the system data, i.e. resources fetched here must
+    /// exist already.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use shred::*;
+    /// # #[derive(Default)] struct Timer; #[derive(Default)] struct AnotherResource;
+    ///
+    /// // NOTE: If you use Specs, use `World::new` instead.
+    /// let mut world = World::empty();
+    /// world.insert(Timer);
+    /// world.insert(AnotherResource);
+    /// let system_data: (Read<Timer>, Read<AnotherResource>) = world.system_data();
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// * Panics if `T` is already borrowed in an incompatible way.
+    pub fn system_data<'a, T>(&'a self) -> T
+    where
+        T: SystemData<'a>,
+    {
+        SystemData::fetch(&self)
+    }
+
+    /// Sets up system data `T` for fetching afterwards.
+    ///
+    /// Most `SystemData` implementations will insert a sensible default value,
+    /// by implementing [SystemData::setup]. However, it is not guaranteed to
+    /// do that; if there is no sensible default, `setup` might not do anything.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use shred::{Read, World};
+    ///
+    /// #[derive(Default)]
+    /// struct MyCounter(u32);
+    ///
+    /// // NOTE: If you use Specs, use `World::new` instead.
+    /// let mut world = World::empty();
+    /// assert!(!world.has_value::<MyCounter>());
+    ///
+    /// // `Read<MyCounter>` requires a `Default` implementation, and uses
+    /// // that to initialize the resource
+    /// world.setup::<Read<MyCounter>>();
+    /// assert!(world.has_value::<MyCounter>());
+    /// ```
+    ///
+    /// Here's another example, showing the case where no resource gets
+    /// initialized:
+    ///
+    /// ```
+    /// use shred::{ReadExpect, World};
+    ///
+    /// struct MyCounter(u32);
+    ///
+    /// // NOTE: If you use Specs, use `World::new` instead.
+    /// let mut world = World::empty();
+    ///
+    /// world.setup::<ReadExpect<MyCounter>>();
+    /// ```
+    pub fn setup<'a, T: SystemData<'a>>(&mut self) {
+        T::setup(self);
+    }
+
+    /// Executes `f` once, right now and with the specified system data.
+    ///
+    /// This sets up the system data `f` expects, fetches it and then
+    /// executes `f`. This is essentially like a one-time [System].
+    ///
+    /// This is especially useful if you either need a lot of system data or,
+    /// with Specs, if you want to build an entity and for that you need to
+    /// access resources first - just fetching the resources and building
+    /// the entity would cause a double borrow.
+    ///
+    /// **Calling this method is equivalent to:**
+    ///
+    /// ```
+    /// # use shred::*;
+    /// # struct MySystemData; impl MySystemData { fn do_something(&self) {} }
+    /// # impl<'a> SystemData<'a> for MySystemData {
+    /// #     fn fetch(res: &World) -> Self { MySystemData }
+    /// #     fn reads() -> Vec<ResourceId> { vec![] }
+    /// #     fn writes() -> Vec<ResourceId> { vec![] }
+    /// #     fn setup(res: &mut World) {}
+    /// # }
+    /// # let mut world = World::empty();
+    /// {
+    ///     // note the extra scope
+    ///     world.setup::<MySystemData>();
+    ///     let my_data: MySystemData = world.system_data();
+    ///     my_data.do_something();
+    /// }
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use shred::*;
+    /// // NOTE: If you use Specs, use `World::new` instead.
+    /// let mut world = World::empty();
+    ///
+    /// #[derive(Default)]
+    /// struct MyRes {
+    ///     field: i32,
+    /// }
+    ///
+    /// world.exec(|(mut my_res,): (Write<MyRes>,)| {
+    ///     assert_eq!(my_res.field, 0);
+    ///     my_res.field = 5;
+    /// });
+    ///
+    /// assert_eq!(world.fetch::<MyRes>().field, 5);
+    /// ```
+    pub fn exec<'a, F, R, T>(&'a mut self, f: F) -> R
+    where
+        F: FnOnce(T) -> R,
+        T: SystemData<'a>,
+    {
+        self.setup::<T>();
+        f(self.system_data())
     }
 
     /// Fetches the resource with the specified type `T` or panics if it doesn't
