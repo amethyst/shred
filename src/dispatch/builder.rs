@@ -183,9 +183,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ///
     /// Thread-local systems are dispatched in-order.
     ///
-    /// Same as
-    /// [`add_thread_local()`](struct.DispatcherBuilder.html#method.
-    /// add_thread_local), but returns `self` to enable method chaining.
+    /// Same as [DispatcherBuilder::add_thread_local], but returns `self` to enable method chaining.
     pub fn with_thread_local<T>(mut self, system: T) -> Self
     where
         T: for<'c> RunNow<'c> + 'b,
@@ -217,9 +215,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Thread-local systems are not affected by barriers;
     /// they're always executed at the end.
     ///
-    /// Same as
-    /// [`add_barrier()`](struct.DispatcherBuilder.html#method.add_barrier),
-    /// but returns `self` to enable method chaining.
+    /// Same as [DispatcherBuilder::add_barrier], but returns `self` to enable method chaining.
     pub fn with_barrier(mut self) -> Self {
         self.add_barrier();
 
