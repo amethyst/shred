@@ -616,6 +616,60 @@ mod tests {
     }
 
     #[test]
+    fn system_data() {
+        let mut world = World::empty();
+
+        world.insert(5u32);
+        let x = *world.system_data::<Read<u32>>();
+        assert_eq!(x, 5);
+    }
+
+    #[test]
+    fn setup() {
+        let mut world = World::empty();
+
+        world.insert(5u32);
+        world.setup::<Read<u32>>();
+        let x = *world.system_data::<Read<u32>>();
+        assert_eq!(x, 5);
+
+        world.remove::<u32>();
+        world.setup::<Read<u32>>();
+        let x = *world.system_data::<Read<u32>>();
+        assert_eq!(x, 0);
+    }
+
+    #[test]
+    fn exec() {
+        let mut world = World::empty();
+
+        world.exec(|(float, boolean): (Read<f32>, Read<bool>)| {
+            assert_eq!(*float, 0.0);
+            assert_eq!(*boolean, false);
+        });
+
+        world.exec(|(mut float, mut boolean): (Write<f32>, Write<bool>)| {
+            *float = 4.3;
+            *boolean = true;
+        });
+
+        world.exec(|(float, boolean): (Read<f32>, ReadExpect<bool>)| {
+            assert_eq!(*float, 4.3);
+            assert_eq!(*boolean, true);
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn exec_panic() {
+        let mut world = World::empty();
+
+        world.exec(|(_float, _boolean): (Write<f32>, Write<bool>)| {
+            panic!();
+        });
+    }
+
+    #[test]
     #[should_panic]
     fn invalid_fetch_by_id0() {
         let mut world = World::empty();
