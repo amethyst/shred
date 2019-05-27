@@ -43,16 +43,13 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     ///
     /// This function automatically redirects to
     ///
-    /// * [`dispatch_par`] in case it is supported
-    /// * [`dispatch_seq`] otherwise
+    /// * [Dispatcher::dispatch_par] in case it is supported
+    /// * [Dispatcher::dispatch_seq] otherwise
     ///
     /// and runs `dispatch_thread_local` afterwards.
     ///
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
-    ///
-    /// [`dispatch_par`]: struct.Dispatcher.html#method.dispatch_par
-    /// [`dispatch_seq`]: struct.Dispatcher.html#method.dispatch_seq
     pub fn dispatch(&mut self, world: &World) {
         #[cfg(feature = "parallel")]
         self.dispatch_par(world);
