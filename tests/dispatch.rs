@@ -1,6 +1,4 @@
 extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 
 use shred::{
     Dispatcher, DispatcherBuilder, Read, ResourceId, RunningTime, System, SystemData, World, Write,
@@ -77,8 +75,8 @@ fn dispatch_builder_invalid() {
 
 #[test]
 fn dispatch_basic() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let number = 5;
 
@@ -88,59 +86,59 @@ fn dispatch_basic() {
         .with(Whatever(&number), "w", &[])
         .build();
 
-    d.dispatch(&mut res);
+    d.dispatch(&world);
 }
 
 #[test]
 fn dispatch_ww_block() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
         .with(DummySysMut, "b", &[])
         .build();
 
-    d.dispatch(&mut res);
+    d.dispatch(&world);
 }
 
 #[test]
 fn dispatch_rw_block() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySys, "a", &[])
         .with(DummySysMut, "b", &[])
         .build();
 
-    d.dispatch(&mut res);
+    d.dispatch(&world);
 }
 
 #[test]
 fn dispatch_rw_block_rev() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
         .with(DummySys, "b", &[])
         .build();
 
-    d.dispatch(&mut res);
+    d.dispatch(&world);
 }
 
 #[test]
 fn dispatch_sequential() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let mut d: Dispatcher = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
         .with(DummySys, "b", &[])
         .build();
 
-    d.dispatch_seq(&mut res);
+    d.dispatch_seq(&world);
 }
 
 #[cfg(feature = "parallel")]
@@ -162,13 +160,13 @@ fn dispatch_async() {
 #[cfg(feature = "parallel")]
 #[test]
 fn dispatch_async_res() {
-    let mut res = World::empty();
-    res.insert(Res);
+    let mut world = World::empty();
+    world.insert(Res);
 
     let mut d = DispatcherBuilder::new()
         .with(DummySysMut, "a", &[])
         .with(DummySys, "b", &[])
-        .build_async(res);
+        .build_async(world);
 
     d.dispatch();
 
@@ -178,9 +176,9 @@ fn dispatch_async_res() {
 
 #[test]
 fn dispatch_stage_group() {
-    let mut res = World::empty();
-    res.insert(Res);
-    res.insert(ResB);
+    let mut world = World::empty();
+    world.insert(Res);
+    world.insert(ResB);
 
     struct ReadingFromResB;
 
@@ -216,5 +214,5 @@ fn dispatch_stage_group() {
         .with(WritingToResB, "write_b", &[])
         .build();
 
-    d.dispatch(&mut res);
+    d.dispatch(&world);
 }

@@ -125,6 +125,7 @@ pub trait RunNow<'a> {
     /// Performs clean up that requires resources from the `World`.
     /// This commonly removes components from `world` which depend on external
     /// resources.
+    #[allow(clippy::boxed_local)]
     fn dispose(self: Box<Self>, world: &mut World) {
         let _ = world;
     }
@@ -211,6 +212,26 @@ pub trait System<'a> {
 /// A static system data that can specify its dependencies at statically (at
 /// compile-time). Most system data is a `SystemData`, the `DynamicSystemData`
 /// type is only needed for very special setups.
+///
+/// You can derive this using the `#[derive(SystemData)]` macro provided by
+/// `shred-derive`. That is as simple as enabling the `shred-derive` feature.
+///
+/// # Examples
+///
+/// ```
+/// use shred::{Read, ResourceId, SystemData, World, Write};
+///
+/// pub struct Clock;
+/// pub struct Timer;
+///
+/// // This will implement `SystemData` for `MySystemData`.
+/// // Please note that this will only work if `SystemData`, `World` and `ResourceId` are included.
+/// #[derive(SystemData)]
+/// pub struct MySystemData<'a> {
+///     pub clock: Read<'a, Clock>,
+///     pub timer: Write<'a, Timer>,
+/// }
+/// ```
 pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `World`.
     fn setup(world: &mut World);
@@ -249,9 +270,7 @@ where
 impl<'a> SystemData<'a> for () {
     fn setup(_: &mut World) {}
 
-    fn fetch(_: &'a World) -> Self {
-        ()
-    }
+    fn fetch(_: &'a World) -> Self {}
 
     fn reads() -> Vec<ResourceId> {
         Vec::new()

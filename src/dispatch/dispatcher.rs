@@ -111,8 +111,9 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn max_threads(&self) -> usize {
         self.stages
             .iter()
-            .map(|s| s.max_threads())
-            .fold(0, |highest, value| highest.max(value))
+            .map(Stage::max_threads)
+            .max()
+            .unwrap_or(0)
     }
 }
 
@@ -221,14 +222,14 @@ mod tests {
         DispatcherBuilder::new()
             .with(Panic, "p", &[])
             .build()
-            .dispatch(&mut new_world())
+            .dispatch(&new_world())
     }
 
     #[test]
     fn stages() {
         let mut d = new_builder().build();
 
-        d.dispatch(&mut new_world());
+        d.dispatch(&new_world());
     }
 
     #[test]

@@ -159,7 +159,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
                 *self
                     .map
                     .get(*x)
-                    .expect(&format!("No such system registered (\"{}\")", *x))
+                    .unwrap_or_else(|| panic!("No such system registered (\"{}\")", *x))
             })
             .collect();
 

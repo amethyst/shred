@@ -97,7 +97,15 @@ where
 /// readers).
 pub trait Resource: Any + Send + Sync + 'static {}
 
-mopafy!(Resource);
+mod __resource_mopafy_scope {
+    #![allow(clippy::all)]
+
+    use mopa::mopafy;
+
+    use super::Resource;
+
+    mopafy!(Resource);
+}
 
 impl<T> Resource for T where T: Any + Send + Sync {}
 
@@ -334,7 +342,8 @@ impl World {
     /// Executes `f` once, right now and with the specified system data.
     ///
     /// This sets up the system data `f` expects, fetches it and then
-    /// executes `f`. This is essentially like a one-time [System].
+    /// executes `f`. This is essentially like a one-time
+    /// [System](crate::System).
     ///
     /// This is especially useful if you either need a lot of system data or,
     /// with Specs, if you want to build an entity and for that you need to
@@ -526,6 +535,9 @@ impl World {
     where
         R: Resource,
     {
+        // False-positive
+        #![allow(clippy::redundant_closure)]
+
         id.assert_same_type_id::<R>();
 
         self.resources
@@ -589,6 +601,8 @@ mod tests {
 
     #[test]
     fn fetch_by_id() {
+        #![allow(clippy::map_clone)] // False positive
+
         let mut world = World::empty();
 
         world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(1), 5);
@@ -641,6 +655,8 @@ mod tests {
 
     #[test]
     fn exec() {
+        #![allow(clippy::float_cmp)]
+
         let mut world = World::empty();
 
         world.exec(|(float, boolean): (Read<f32>, Read<bool>)| {

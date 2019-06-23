@@ -8,8 +8,6 @@
 //!
 //! ```rust
 //! extern crate shred;
-//! #[macro_use]
-//! extern crate shred_derive;
 //!
 //! use shred::{DispatcherBuilder, Read, Resource, ResourceId, System, SystemData, World, Write};
 //!
@@ -19,7 +17,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
-//! #[derive(SystemData)]
+//! #[derive(SystemData)] // Provided with `shred-derive` feature
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
 //!     b: Write<'a, ResB>,
@@ -57,20 +55,17 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 
-extern crate arrayvec;
-extern crate hashbrown;
-#[macro_use]
-extern crate mopa;
-#[cfg(feature = "parallel")]
-extern crate rayon;
-extern crate smallvec;
-
 pub mod cell;
 
 mod dispatch;
 mod meta;
 mod system;
 mod world;
+
+/// A reexport of the `#[derive(SystemData]` macro provided by `shred-derive`.
+/// This requires that the `shred-derive` feature is enabled.
+#[cfg(feature = "shred-derive")]
+pub use shred_derive::SystemData;
 
 #[cfg(feature = "parallel")]
 pub use crate::dispatch::AsyncDispatcher;

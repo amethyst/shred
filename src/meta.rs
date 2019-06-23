@@ -406,16 +406,16 @@ mod tests {
 
         let mut table = MetaTable::<Object>::new();
         table.register(&ImplementorA(125));
-        table.register(&ImplementorB(111111));
+        table.register(&ImplementorB(111_111));
 
         {
-            let mut iter = table.iter(&mut world);
+            let mut iter = table.iter(&world);
             assert_eq!(iter.next().unwrap().method1(), 3);
             assert_eq!(iter.next().unwrap().method1(), 1);
         }
 
         {
-            let mut iter_mut = table.iter_mut(&mut world);
+            let mut iter_mut = table.iter_mut(&world);
             let obj = iter_mut.next().unwrap();
             obj.method2(3);
             assert_eq!(obj.method1(), 6);
@@ -434,10 +434,10 @@ mod tests {
 
         let mut table = MetaTable::<Object>::new();
         table.register(&ImplementorA(125));
-        table.register(&ImplementorB(111111));
+        table.register(&ImplementorB(111_111));
 
         {
-            let mut iter = table.iter(&mut world);
+            let mut iter = table.iter(&world);
             assert_eq!(iter.next().unwrap().method1(), 3);
             assert_eq!(iter.next().unwrap().method1(), 1);
         }
@@ -445,7 +445,7 @@ mod tests {
         world.remove::<ImplementorA>().unwrap();
 
         {
-            let mut iter = table.iter(&mut world);
+            let mut iter = table.iter(&world);
             assert_eq!(iter.next().unwrap().method1(), 1);
         }
 

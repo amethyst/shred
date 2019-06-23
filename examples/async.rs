@@ -1,6 +1,4 @@
 extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 
 use shred::{DispatcherBuilder, Read, ResourceId, System, SystemData, World, Write};
 
