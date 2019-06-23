@@ -125,6 +125,7 @@ pub trait RunNow<'a> {
     /// Performs clean up that requires resources from the `World`.
     /// This commonly removes components from `world` which depend on external
     /// resources.
+    #[allow(clippy::boxed_local)]
     fn dispose(self: Box<Self>, world: &mut World) {
         let _ = world;
     }
@@ -270,7 +271,6 @@ impl<'a> SystemData<'a> for () {
     fn setup(_: &mut World) {}
 
     fn fetch(_: &'a World) -> Self {
-        ()
     }
 
     fn reads() -> Vec<ResourceId> {

@@ -325,15 +325,14 @@ impl<'a> StagesBuilder<'a> {
 
                 if inters {
                     true
-                } else {
-                    if check_intersection(new_dep.iter(), ids[stage][group].iter()) {
-                        dep_conflict = true;
+                } else if check_intersection(new_dep.iter(), ids[stage][group].iter()) {
+                    dep_conflict = true;
 
-                        true
-                    } else {
-                        false
-                    }
+                    true
+                } else {
+                    false
                 }
+
             })
             .fold(Conflict::None, Conflict::add);
 
@@ -367,11 +366,11 @@ mod tests {
     fn create_ids(
         ids: &[&[&[usize]]],
     ) -> Vec<GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>> {
-        ids.into_iter()
+        ids.iter()
             .map(|groups| {
                 groups
-                    .into_iter()
-                    .map(|systems| systems.into_iter().map(|id| SystemId(*id)).collect())
+                    .iter()
+                    .map(|systems| systems.iter().map(|id| SystemId(*id)).collect())
                     .collect()
             })
             .collect()
@@ -379,11 +378,11 @@ mod tests {
 
     fn create_reads(reads: &[&[&[ResourceId]]]) -> Vec<GroupVec<SmallVec<[ResourceId; 12]>>> {
         reads
-            .into_iter()
+            .iter()
             .map(|groups| {
                 groups
-                    .into_iter()
-                    .map(|reads| reads.into_iter().map(|id| id.clone()).collect())
+                    .iter()
+                    .map(|reads| reads.iter().cloned().collect())
                     .collect()
             })
             .collect()
@@ -391,11 +390,11 @@ mod tests {
 
     fn create_writes(writes: &[&[&[ResourceId]]]) -> Vec<GroupVec<SmallVec<[ResourceId; 10]>>> {
         writes
-            .into_iter()
+            .iter()
             .map(|groups| {
                 groups
-                    .into_iter()
-                    .map(|writes| writes.into_iter().map(|id| id.clone()).collect())
+                    .iter()
+                    .map(|writes| writes.iter().cloned().collect())
                     .collect()
             })
             .collect()
@@ -520,7 +519,7 @@ mod tests {
         builder.insert(SmallVec::new(), SystemId(1), SysB);
         builder.insert(SmallVec::new(), SystemId(2), SysC);
 
-        let ref ids = builder.ids[0];
+        let ids = &builder.ids[0];
 
         assert_eq!(ids[0][0], SystemId(0));
         assert_eq!(ids[1][0], SystemId(1));

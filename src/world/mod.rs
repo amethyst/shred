@@ -13,7 +13,7 @@ use std::{
 };
 
 use hashbrown::HashMap;
-use mopa::{Any, mopafy};
+use mopa::Any;
 
 use crate::{
     cell::{Ref, RefMut, TrustCell},
@@ -97,7 +97,15 @@ where
 /// readers).
 pub trait Resource: Any + Send + Sync + 'static {}
 
-mopafy!(Resource);
+mod __resource_mopafy_scope {
+    #![allow(clippy::all)]
+
+    use mopa::mopafy;
+
+    use super::Resource;
+
+    mopafy!(Resource);
+}
 
 impl<T> Resource for T where T: Any + Send + Sync {}
 
@@ -526,6 +534,9 @@ impl World {
     where
         R: Resource,
     {
+        // False-positive
+        #![allow(clippy::redundant_closure)]
+
         id.assert_same_type_id::<R>();
 
         self.resources
@@ -589,6 +600,8 @@ mod tests {
 
     #[test]
     fn fetch_by_id() {
+        #![allow(clippy::map_clone)] // False positive
+
         let mut world = World::empty();
 
         world.insert_by_id(ResourceId::new_with_dynamic_id::<i32>(1), 5);
@@ -641,6 +654,8 @@ mod tests {
 
     #[test]
     fn exec() {
+        #![allow(clippy::float_cmp)]
+
         let mut world = World::empty();
 
         world.exec(|(float, boolean): (Read<f32>, Read<bool>)| {

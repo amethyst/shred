@@ -41,7 +41,7 @@ fn main() {
 
     let pool = ThreadPoolBuilder::new().build().expect("OS error");
 
-    let mut res = World::empty();
+    let mut world = World::empty();
     let x = 5u8;
 
     let mut dispatcher = ParSeq::new(
@@ -60,8 +60,8 @@ fn main() {
         &pool,
     );
 
-    dispatcher.setup(&mut res);
-    dispatcher.dispatch(&mut res);
+    dispatcher.setup(&mut world);
+    dispatcher.dispatch(&world);
 
     // If we want to generate this graph from a `DispatcherBuilder`,
     // we can use `print_par_seq`:

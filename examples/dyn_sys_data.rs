@@ -197,16 +197,14 @@ fn create_script_sys(res: &World) -> DynamicSystem {
     // -- how we create the system --
     let table = res.fetch::<ResourceTable>();
 
-    let sys = DynamicSystem {
+    DynamicSystem {
         dependencies: Dependencies {
             reads: reads.iter().map(|r| table.get(r)).collect(),
             writes: writes.iter().map(|r| table.get(r)).collect(),
         },
         // just pass the function pointer
         script,
-    };
-
-    sys
+    }
 }
 
 fn main() {

@@ -8,8 +8,6 @@
 //!
 //! ```rust
 //! extern crate shred;
-//! #[macro_use]
-//! extern crate shred_derive;
 //!
 //! use shred::{DispatcherBuilder, Read, Resource, ResourceId, System, SystemData, World, Write};
 //!
@@ -19,7 +17,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
-//! #[derive(SystemData)]
+//! #[derive(SystemData)] // Provided with `shred-derive` feature
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
 //!     b: Write<'a, ResB>,

@@ -8,7 +8,7 @@ pub trait PointsToU64 {
 
 impl PointsToU64 for Box<u64> {
     fn get_u64(&self) -> u64 {
-        *(&**self)
+        **self
     }
 }
 
