@@ -213,13 +213,13 @@ pub trait System<'a> {
 /// compile-time). Most system data is a `SystemData`, the `DynamicSystemData`
 /// type is only needed for very special setups.
 ///
-/// You can derive this using the `#[derive(SystemData)]` macro provided by `shred-derive`.
-/// That is as simple as enabling the `shred-derive` feature.
+/// You can derive this using the `#[derive(SystemData)]` macro provided by
+/// `shred-derive`. That is as simple as enabling the `shred-derive` feature.
 ///
 /// # Examples
 ///
 /// ```
-/// use shred::{Read, ResourceId, SystemData, Write, World};
+/// use shred::{Read, ResourceId, SystemData, World, Write};
 ///
 /// struct Clock;
 /// struct Timer;
@@ -270,8 +270,7 @@ where
 impl<'a> SystemData<'a> for () {
     fn setup(_: &mut World) {}
 
-    fn fetch(_: &'a World) -> Self {
-    }
+    fn fetch(_: &'a World) -> Self {}
 
     fn reads() -> Vec<ResourceId> {
         Vec::new()

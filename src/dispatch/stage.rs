@@ -332,7 +332,6 @@ impl<'a> StagesBuilder<'a> {
                 } else {
                     false
                 }
-
             })
             .fold(Conflict::None, Conflict::add);
 
