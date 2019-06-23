@@ -13,7 +13,7 @@ use std::{
 };
 
 use hashbrown::HashMap;
-use mopa::Any;
+use mopa::{Any, mopafy};
 
 use crate::{
     cell::{Ref, RefMut, TrustCell},

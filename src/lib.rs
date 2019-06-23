@@ -57,14 +57,6 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 
-extern crate arrayvec;
-extern crate hashbrown;
-#[macro_use]
-extern crate mopa;
-#[cfg(feature = "parallel")]
-extern crate rayon;
-extern crate smallvec;
-
 pub mod cell;
 
 mod dispatch;
