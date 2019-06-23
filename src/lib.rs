@@ -72,6 +72,11 @@ mod meta;
 mod system;
 mod world;
 
+/// A reexport of the `#[derive(SystemData]` macro provided by `shred-derive`.
+/// This requires that the `shred-derive` feature is enabled.
+#[cfg(feature = "shred-derive")]
+pub use shred_derive::SystemData;
+
 #[cfg(feature = "parallel")]
 pub use crate::dispatch::AsyncDispatcher;
 #[cfg(feature = "parallel")]

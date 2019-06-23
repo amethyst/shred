@@ -211,6 +211,26 @@ pub trait System<'a> {
 /// A static system data that can specify its dependencies at statically (at
 /// compile-time). Most system data is a `SystemData`, the `DynamicSystemData`
 /// type is only needed for very special setups.
+///
+/// You can derive this using the `#[derive(SystemData)]` macro provided by `shred-derive`.
+/// That is as simple as enabling the `shred-derive` feature.
+///
+/// # Examples
+///
+/// ```
+/// use shred::{Read, ResourceId, SystemData, Write, World};
+///
+/// struct Clock;
+/// struct Timer;
+///
+/// // This will implement `SystemData` for `MySystemData`.
+/// // Please note that this will only work if `SystemData`, `World` and `ResourceId` are included.
+/// #[derive(SystemData)]
+/// pub struct MySystemData<'a> {
+///     pub clock: Read<'a, Clock>,
+///     pub timer: Write<'a, Timer>,
+/// }
+/// ```
 pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `World`.
     fn setup(world: &mut World);

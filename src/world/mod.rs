@@ -334,7 +334,7 @@ impl World {
     /// Executes `f` once, right now and with the specified system data.
     ///
     /// This sets up the system data `f` expects, fetches it and then
-    /// executes `f`. This is essentially like a one-time [System].
+    /// executes `f`. This is essentially like a one-time [System](crate::System).
     ///
     /// This is especially useful if you either need a lot of system data or,
     /// with Specs, if you want to build an entity and for that you need to
