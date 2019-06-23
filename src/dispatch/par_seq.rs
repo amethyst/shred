@@ -149,7 +149,7 @@ impl<H> Par<H, Nil> {
 /// #[macro_use(par, seq)]
 /// extern crate shred;
 ///
-/// # use rayon::ThreadPool;
+/// # use rayon::ThreadPoolBuilder;
 /// #
 /// # use shred::{ParSeq, World, System};
 /// #
@@ -182,7 +182,7 @@ impl<H> Par<H, Nil> {
 /// # fn main() {
 /// # #![cfg_attr(rustfmt, rustfmt_skip)]
 /// #
-/// # let pool = ThreadPool::new(Default::default()).unwrap();
+/// # let pool = ThreadPoolBuilder::default().build().unwrap();
 /// #
 /// # let mut world = World::empty();
 /// let x = 5u8;

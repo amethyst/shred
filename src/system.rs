@@ -221,8 +221,8 @@ pub trait System<'a> {
 /// ```
 /// use shred::{Read, ResourceId, SystemData, World, Write};
 ///
-/// struct Clock;
-/// struct Timer;
+/// pub struct Clock;
+/// pub struct Timer;
 ///
 /// // This will implement `SystemData` for `MySystemData`.
 /// // Please note that this will only work if `SystemData`, `World` and `ResourceId` are included.
