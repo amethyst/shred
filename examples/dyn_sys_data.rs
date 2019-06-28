@@ -75,8 +75,10 @@ impl<'a> System<'a> for DynamicSystem {
 
                 // For some reason this needs a type ascription, otherwise Rust will think it's
                 // a `&mut (Reflection + '_)` (as opposed to `&mut (Reflection + 'static)`.
-                let res: &mut dyn Reflection = meta.get_mut(res).expect("Not registered in meta \
-                table");
+                let res: &mut dyn Reflection = meta.get_mut(res).expect(
+                    "Not registered in meta \
+                     table",
+                );
 
                 res
             })
