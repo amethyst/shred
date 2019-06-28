@@ -134,8 +134,8 @@ impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SystemId(pub usize);
 
-pub type SystemExecSend<'b> = Box<for<'a> RunNow<'a> + Send + 'b>;
-pub type ThreadLocal<'a> = SmallVec<[Box<for<'b> RunNow<'b> + 'a>; 4]>;
+pub type SystemExecSend<'b> = Box<dyn for<'a> RunNow<'a> + Send + 'b>;
+pub type ThreadLocal<'a> = SmallVec<[Box<dyn for<'b> RunNow<'b> + 'a>; 4]>;
 
 #[cfg(feature = "parallel")]
 pub fn new_dispatcher<'a, 'b>(

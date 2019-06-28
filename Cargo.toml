@@ -31,11 +31,10 @@ members = ["shred-derive"]
 
 [dev-dependencies]
 cgmath = "0.17"
-shred = { path = ".", features = ["shred-derive"] }
 shred-derive = { path = "shred-derive", version = "0.6.0" }
 
 [features]
-default = ["parallel"]
+default = ["parallel", "shred-derive"]
 parallel = ["rayon"]
 nightly = []
 

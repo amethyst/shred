@@ -193,7 +193,7 @@ impl ResourceId {
 /// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct World {
-    resources: HashMap<ResourceId, TrustCell<Box<Resource>>>,
+    resources: HashMap<ResourceId, TrustCell<Box<dyn Resource>>>,
 }
 
 impl World {
@@ -543,14 +543,14 @@ impl World {
         self.resources
             .remove(&id)
             .map(TrustCell::into_inner)
-            .map(|x: Box<Resource>| x.downcast())
+            .map(|x: Box<dyn Resource>| x.downcast())
             .map(|x: Result<Box<R>, _>| x.ok().unwrap())
             .map(|x| *x)
     }
 
     /// Internal function for fetching resources, should only be used if you
     /// know what you're doing.
-    pub fn try_fetch_internal(&self, id: ResourceId) -> Option<&TrustCell<Box<Resource>>> {
+    pub fn try_fetch_internal(&self, id: ResourceId) -> Option<&TrustCell<Box<dyn Resource>>> {
         self.resources.get(&id)
     }
 
@@ -563,7 +563,7 @@ impl World {
 
     /// Retrieves a resource without fetching, which is cheaper, but only
     /// available with `&mut self`.
-    pub fn get_mut_raw(&mut self, id: ResourceId) -> Option<&mut Resource> {
+    pub fn get_mut_raw(&mut self, id: ResourceId) -> Option<&mut dyn Resource> {
         self.resources
             .get_mut(&id)
             .map(TrustCell::get_mut)

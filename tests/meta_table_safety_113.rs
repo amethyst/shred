@@ -17,7 +17,7 @@ struct MultipleData {
     pointer: Box<u64>,
 }
 
-unsafe impl CastFrom<MultipleData> for PointsToU64 {
+unsafe impl CastFrom<MultipleData> for dyn PointsToU64 {
     fn cast(t: &MultipleData) -> &Self {
         // this is wrong and will cause a panic
         &t.pointer
@@ -31,7 +31,7 @@ unsafe impl CastFrom<MultipleData> for PointsToU64 {
 #[test]
 #[should_panic(expected = "Bug: `CastFrom` did not cast `self`")]
 fn test_panics() {
-    let mut table: MetaTable<PointsToU64> = MetaTable::new();
+    let mut table: MetaTable<dyn PointsToU64> = MetaTable::new();
     let md = MultipleData {
         _number: 0x0, // this will be casted to a pointer, then dereferenced
         pointer: Box::new(42),

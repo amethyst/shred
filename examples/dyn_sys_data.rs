@@ -51,7 +51,7 @@ impl<'a> System<'a> for DynamicSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         let meta = data.meta_table;
-        let reads: Vec<&Reflection> = data
+        let reads: Vec<&dyn Reflection> = data
             .reads
             .iter()
             .map(|resource| {
@@ -64,7 +64,7 @@ impl<'a> System<'a> for DynamicSystem {
             })
             .collect();
 
-        let writes: Vec<&mut Reflection> = data
+        let writes: Vec<&mut dyn Reflection> = data
             .writes
             .iter_mut()
             .map(|resource| {
@@ -75,7 +75,8 @@ impl<'a> System<'a> for DynamicSystem {
 
                 // For some reason this needs a type ascription, otherwise Rust will think it's
                 // a `&mut (Reflection + '_)` (as opposed to `&mut (Reflection + 'static)`.
-                let res: &mut Reflection = meta.get_mut(res).expect("Not registered in meta table");
+                let res: &mut dyn Reflection = meta.get_mut(res).expect("Not registered in meta \
+                table");
 
                 res
             })
@@ -104,7 +105,7 @@ trait Reflection {
 }
 
 // necessary for `MetaTable`
-unsafe impl<T> CastFrom<T> for Reflection
+unsafe impl<T> CastFrom<T> for dyn Reflection
 where
     T: Reflection + 'static,
 {
@@ -117,7 +118,7 @@ where
     }
 }
 
-type ReflectionTable = MetaTable<Reflection>;
+type ReflectionTable = MetaTable<dyn Reflection>;
 
 /// Maps resource names to resource ids.
 struct ResourceTable {
@@ -141,14 +142,14 @@ impl ResourceTable {
 }
 
 struct ScriptInput<'a> {
-    reads: Vec<&'a Reflection>,
-    writes: Vec<&'a mut Reflection>,
+    reads: Vec<&'a dyn Reflection>,
+    writes: Vec<&'a mut dyn Reflection>,
 }
 
 struct ScriptSystemData<'a> {
     meta_table: Read<'a, ReflectionTable>,
-    reads: Vec<Ref<'a, Box<Resource + 'static>>>,
-    writes: Vec<RefMut<'a, Box<Resource + 'static>>>,
+    reads: Vec<Ref<'a, Box<dyn Resource + 'static>>>,
+    writes: Vec<RefMut<'a, Box<dyn Resource + 'static>>>,
 }
 
 impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {

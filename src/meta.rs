@@ -33,15 +33,15 @@ unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 ///     fn foo2(&mut self, x: i32) -> i32;
 /// }
 ///
-/// unsafe impl<T> CastFrom<T> for Foo
+/// unsafe impl<T> CastFrom<T> for dyn Foo
 /// where
 ///     T: Foo + 'static,
 /// {
-///     fn cast(t: &T) -> &(Foo + 'static) {
+///     fn cast(t: &T) -> &(dyn Foo + 'static) {
 ///         t
 ///     }
 ///
-///     fn cast_mut(t: &mut T) -> &mut (Foo + 'static) {
+///     fn cast_mut(t: &mut T) -> &mut (dyn Foo + 'static) {
 ///         t
 ///     }
 /// }
@@ -83,7 +83,8 @@ where
                 })
                 .map(|res| {
                     self.fat[index]
-                        .create_ptr::<T>(Box::as_ref(&res.borrow()) as *const Resource as *const ())
+                        .create_ptr::<T>(Box::as_ref(&res.borrow()) as *const dyn Resource as *const
+                        ())
                 })
                 // we lengthen the lifetime from `'_` to `'a` here, see above
                 .map(|ptr| &*ptr)
@@ -147,7 +148,7 @@ where
                 })
                 .map(|res| {
                     self.fat[index].create_ptr::<T>(Box::as_mut(&mut res.borrow_mut())
-                        as *mut Resource
+                        as *mut dyn Resource
                         as *const ()) as *mut T
                 })
                 // we lengthen the lifetime from `'_` to `'a` here, see above
@@ -176,7 +177,7 @@ where
 ///     fn method2(&mut self, x: i32);
 /// }
 ///
-/// unsafe impl<T> CastFrom<T> for Object
+/// unsafe impl<T> CastFrom<T> for dyn Object
 /// where
 ///     T: Object + 'static,
 /// {
@@ -218,7 +219,7 @@ where
 /// world.insert(ImplementorA(3));
 /// world.insert(ImplementorB(1));
 ///
-/// let mut table = MetaTable::<Object>::new();
+/// let mut table = MetaTable::<dyn Object>::new();
 /// table.register(&ImplementorA(31415)); // Can just be some instance of type `&ImplementorA`.
 /// table.register(&ImplementorB(27182));
 ///
@@ -287,7 +288,7 @@ impl<T: ?Sized> MetaTable<T> {
     /// Tries to convert `world` to a trait object of type `&T`.
     /// If `world` doesn't have an implementation for `T` (or it wasn't
     /// registered), this will return `None`.
-    pub fn get<'a>(&self, res: &'a Resource) -> Option<&'a T> {
+    pub fn get<'a>(&self, res: &'a dyn Resource) -> Option<&'a T> {
         unsafe {
             self.indices
                 .get(&Any::get_type_id(res))
@@ -298,7 +299,7 @@ impl<T: ?Sized> MetaTable<T> {
     /// Tries to convert `world` to a trait object of type `&mut T`.
     /// If `world` doesn't have an implementation for `T` (or it wasn't
     /// registered), this will return `None`.
-    pub fn get_mut<'a>(&self, res: &'a Resource) -> Option<&'a mut T> {
+    pub fn get_mut<'a>(&self, res: &'a dyn Resource) -> Option<&'a mut T> {
         unsafe {
             self.indices.get(&Any::get_type_id(res)).map(move |&ind| {
                 &mut *(self.fat[ind].create_ptr::<T>(res as *const _ as *const ()) as *mut T)
@@ -360,7 +361,7 @@ mod tests {
         fn method2(&mut self, x: i32);
     }
 
-    unsafe impl<T> CastFrom<T> for Object
+    unsafe impl<T> CastFrom<T> for dyn Object
     where
         T: Object + 'static,
     {
@@ -404,7 +405,7 @@ mod tests {
         world.insert(ImplementorA(3));
         world.insert(ImplementorB(1));
 
-        let mut table = MetaTable::<Object>::new();
+        let mut table = MetaTable::<dyn Object>::new();
         table.register(&ImplementorA(125));
         table.register(&ImplementorB(111_111));
 
@@ -432,7 +433,7 @@ mod tests {
         world.insert(ImplementorA(3));
         world.insert(ImplementorB(1));
 
-        let mut table = MetaTable::<Object>::new();
+        let mut table = MetaTable::<dyn Object>::new();
         table.register(&ImplementorA(125));
         table.register(&ImplementorB(111_111));
 
@@ -483,7 +484,7 @@ mod tests {
         world.insert(ImplementorC);
         world.insert(ImplementorD);
 
-        let mut table = MetaTable::<Object>::new();
+        let mut table = MetaTable::<dyn Object>::new();
         table.register(&ImplementorC);
         table.register(&ImplementorD);
 
