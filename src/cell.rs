@@ -9,6 +9,29 @@ use std::{
     usize,
 };
 
+#[cfg(feature = "nightly")]
+macro_rules! borrow_panic {
+    ($s:expr) => {{
+        panic!(
+            "Tried to fetch data of type {:?}, but it was already borrowed{}.",
+            unsafe { ::std::intrinsics::type_name::<T>() },
+            $s,
+        )
+    }};
+}
+
+#[cfg(not(feature = "nightly"))]
+macro_rules! borrow_panic {
+    ($s:expr) => {{
+        panic!(
+            "Tried to fetch data, but it was already borrowed{}.\n\
+             You can get the type name of the incorrectly borrowed data by enabling `shred`'s \
+             `nightly` feature.",
+            $s,
+        )
+    }};
+}
+
 /// Marker struct for an invalid borrow error
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct InvalidBorrow;
@@ -254,7 +277,7 @@ impl<T> TrustCell<T> {
     /// This function will panic if there is a mutable reference to the data
     /// already in use.
     pub fn borrow(&self) -> Ref<T> {
-        self.check_flag_read().expect("Already borrowed mutably");
+        self.check_flag_read().unwrap_or_else(|_| borrow_panic!(" mutably"));
 
         Ref {
             flag: &self.flag,
@@ -284,7 +307,7 @@ impl<T> TrustCell<T> {
     /// This function will panic if there are any references to the data already
     /// in use.
     pub fn borrow_mut(&self) -> RefMut<T> {
-        self.check_flag_write().expect("Already borrowed");
+        self.check_flag_write().unwrap_or_else(|_| borrow_panic!(""));
 
         RefMut {
             flag: &self.flag,
@@ -392,7 +415,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Already borrowed mutably")]
+    #[should_panic(expected = "but it was already borrowed mutably")]
     fn panic_write_and_read() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
@@ -403,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Already borrowed")]
+    #[should_panic(expected = "but it was already borrowed")]
     fn panic_write_and_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
@@ -414,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Already borrowed")]
+    #[should_panic(expected = "but it was already borrowed")]
     fn panic_read_and_write() {
         let cell: TrustCell<_> = TrustCell::new(5);
 
@@ -586,7 +609,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Already borrowed")]
+    #[should_panic(expected = "but it was already borrowed")]
     fn ref_mut_map_retains_mut_borrow() {
         let cell = TrustCell::new(Box::new(10));
 
