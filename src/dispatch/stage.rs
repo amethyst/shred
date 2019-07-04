@@ -45,6 +45,7 @@ use crate::{
     },
     system::{RunningTime, System},
     world::{ResourceId, World},
+    BatchBuilder,
 };
 
 const MAX_SYSTEMS_PER_GROUP: usize = 5;
@@ -181,6 +182,43 @@ impl<'a> StagesBuilder<'a> {
         self.reads[stage][group].extend(reads);
         self.running_time[stage][group] += new_time as u8;
         self.stages[stage].groups[group].push(Box::new(system));
+        self.writes[stage][group].extend(writes);
+    }
+
+    pub fn insert_batch(
+        &mut self,
+        mut dep: SmallVec<[SystemId; 4]>,
+        id: SystemId,
+        batch_builder: BatchBuilder<'a>,
+    ) {
+        let (reads, writes, batch_system) = batch_builder.build();
+
+        let new_time = batch_system.running_time();
+
+        let target = self.insertion_target(&reads, &writes, &mut dep, new_time);
+
+        let (stage, group) = match target {
+            InsertionTarget::Stage(stage) => {
+                let group = self.ids[stage].len();
+                self.add_group(stage);
+
+                (stage, group)
+            }
+            InsertionTarget::Group(stage, group) => (stage, group),
+            InsertionTarget::NewStage => {
+                let stage = self.stages.len();
+
+                self.add_stage();
+                self.add_group(stage);
+
+                (stage, 0)
+            }
+        };
+
+        self.ids[stage][group].push(id);
+        self.reads[stage][group].extend(reads);
+        self.running_time[stage][group] += new_time as u8;
+        self.stages[stage].groups[group].push(Box::new(batch_system));
         self.writes[stage][group].extend(writes);
     }
 

@@ -4,6 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
+        batch_builder::BatchBuilder,
         dispatcher::{SystemId, ThreadLocal},
         stage::StagesBuilder,
         Dispatcher,
@@ -177,6 +178,59 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.stages_builder.insert(dependencies, id, system);
     }
 
+    /// Add a Batch with its sub systems.
+    /// A Batch is useful when for a single dispatching you need to execute some systems
+    /// multiple times.
+    ///
+    /// Indeed using a BatchBuilder you can attach to the Batch some Systems.
+    /// By adding a BatchControllerSystem, you will be able to control it.
+    pub fn with_batch(mut self, batch_builder: BatchBuilder<'a>, name: &str, dep: &[&str]) -> Self {
+        self.add_batch(batch_builder, name, dep);
+
+        self
+    }
+
+    /// Add a Batch with its sub systems.
+    /// A Batch is useful when for a single dispatching you need to execute some systems
+    /// multiple times.
+    ///
+    /// Indeed using a BatchBuilder you can attach to the Batch some Systems.
+    /// By adding a BatchControllerSystem, you will be able to control it.
+    pub fn add_batch(&mut self, batch_builder: BatchBuilder<'a>, name: &str, dep: &[&str]) {
+        use hashbrown::hash_map::Entry;
+
+        let id = self.next_id();
+
+        let dependencies = dep
+            .iter()
+            .map(|x| {
+                *self
+                    .map
+                    .get(*x)
+                    .expect(&format!("No such system registered (\"{}\")", *x))
+            })
+            .collect();
+
+        if name != "" {
+            if let Entry::Vacant(e) = self.map.entry(name.to_owned()) {
+                e.insert(id);
+            } else {
+                panic!(
+                    "Cannot insert multiple systems with the same name (\"{}\")",
+                    name
+                );
+            }
+        }
+
+        let mut batch_builder = batch_builder;
+
+        #[cfg(feature = "parallel")]
+        batch_builder.set_thread_pool(self.get_thread_pool());
+
+        self.stages_builder
+            .insert_batch(dependencies, id, batch_builder);
+    }
+
     /// Adds a new thread local system.
     ///
     /// Please only use this if your struct is not `Send` and `Sync`.
@@ -290,6 +344,14 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.current_id += 1;
 
         SystemId(id)
+    }
+
+    #[cfg(feature = "parallel")]
+    fn get_thread_pool(&mut self) -> Option<::std::sync::Arc<::rayon::ThreadPool>> {
+        if self.thread_pool.is_none() {
+            self.thread_pool = Some(Self::create_thread_pool());
+        }
+        self.thread_pool.clone()
     }
 
     #[cfg(feature = "parallel")]
