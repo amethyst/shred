@@ -139,6 +139,34 @@ pub struct StagesBuilder<'a> {
 }
 
 impl<'a> StagesBuilder<'a> {
+    pub fn fetch_all_reads(&self) -> Vec<ResourceId> {
+        let mut v = Vec::<ResourceId>::new();
+        for stages in self.reads.iter() {
+            for groups in stages.iter() {
+                for r in groups.iter() {
+                    v.push(r.clone());
+                }
+            }
+        }
+        v.sort();
+        v.dedup();
+        v
+    }
+
+    pub fn fetch_all_writes(&self) -> Vec<ResourceId> {
+        let mut v = Vec::<ResourceId>::new();
+        for stages in self.writes.iter() {
+            for groups in stages.iter() {
+                for r in groups.iter() {
+                    v.push(r.clone());
+                }
+            }
+        }
+        v.sort();
+        v.dedup();
+        v
+    }
+
     pub fn add_barrier(&mut self) {
         self.barrier = self.stages.len();
     }

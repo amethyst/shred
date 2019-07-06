@@ -93,7 +93,7 @@ use crate::{
 pub struct DispatcherBuilder<'a, 'b> {
     current_id: usize,
     map: HashMap<String, SystemId>,
-    stages_builder: StagesBuilder<'a>,
+    pub(crate) stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
     thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,

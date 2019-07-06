@@ -277,7 +277,8 @@ impl<T> TrustCell<T> {
     /// This function will panic if there is a mutable reference to the data
     /// already in use.
     pub fn borrow(&self) -> Ref<T> {
-        self.check_flag_read().unwrap_or_else(|_| borrow_panic!(" mutably"));
+        self.check_flag_read()
+            .unwrap_or_else(|_| borrow_panic!(" mutably"));
 
         Ref {
             flag: &self.flag,
@@ -307,7 +308,8 @@ impl<T> TrustCell<T> {
     /// This function will panic if there are any references to the data already
     /// in use.
     pub fn borrow_mut(&self) -> RefMut<T> {
-        self.check_flag_write().unwrap_or_else(|_| borrow_panic!(""));
+        self.check_flag_write()
+            .unwrap_or_else(|_| borrow_panic!(""));
 
         RefMut {
             flag: &self.flag,
