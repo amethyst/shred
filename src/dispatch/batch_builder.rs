@@ -10,7 +10,7 @@ use crate::{
 /// By wrapping a `Dispatcher` inside a system, we can control the execution of a whole
 /// group of system, without sacrificing parallelism or conciseness.
 ///
-/// The BatchBuilder accept the dispatcher builder as parameter, and the type of the
+/// The `BatchBuilder` accepts the `DispatcherBuilder` as parameter, and the type of the
 /// System that will drive the execution of the internal dispatcher.
 ///
 /// Note that depending on the dependencies of the SubSystems the Batch
