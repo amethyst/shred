@@ -101,7 +101,7 @@ pub trait BatchController<'a, 'b> {
     
     /// Here you must set all the resource types that you want to use inside the
     /// BatchControllertSystem.
-    /// All other are fetched automatically.
+    /// All the system data needed for the controlled systems is fetched automatically.
     type BatchSystemData: SystemData<'a>;
     
     /// Create the instance of the BatchControllerSystem
