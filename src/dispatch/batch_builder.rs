@@ -53,7 +53,7 @@ impl<'a, 'b> BatchBuilder<'a, 'b> {
     }
 }
 
-/// The BatchAccessor is responsible for the notification of the read and write resources
+/// The `BatchAccessor` is used to notify the main dispatcher of the read and write resources
 /// of the subsystems
 pub struct BatchAccessor {
     reads: Vec<ResourceId>,
