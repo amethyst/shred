@@ -99,7 +99,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// in order to be used as BatchControllerSystem.
 pub trait BatchController<'a, 'b> {
     
-    /// Here you must set all the Resources type that you want to use inside the
+    /// Here you must set all the resource types that you want to use inside the
     /// BatchControllertSystem.
     /// All other are fetched automatically.
     type BatchSystemData: SystemData<'a>;
