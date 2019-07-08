@@ -6,7 +6,7 @@ use crate::{
 
 /// The `BatchBuilder` is responsible for the creation of the Batch.
 ///
-/// The `Batch` is a Systam that have the capabilities to contain another dispatcher
+/// The `Batch` is a `System` which contains a `Dispatcher`.
 /// Thanks to this characteristic is possible to customize its dispatching
 ///
 /// The BatchBuilder accept the dispatcher builder as parameter, and the type of the
