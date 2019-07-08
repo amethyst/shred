@@ -11,7 +11,7 @@ use crate::{
 /// group of system, without sacrificing parallelism or conciseness.
 ///
 /// The `BatchBuilder` accepts the `DispatcherBuilder` as parameter, and the type of the
-/// System that will drive the execution of the internal dispatcher.
+/// `System` that will drive the execution of the internal dispatcher.
 ///
 /// Note that depending on the dependencies of the SubSystems the Batch
 /// can run in parallel with other Systems.
