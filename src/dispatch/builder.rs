@@ -189,6 +189,12 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Note that depending on the dependencies of the SubSystems the Batch
     /// can run in parallel with other Systems.
     /// In addition the Sub Systems can run in parallel within the Batch.
+    ///
+    /// The `Dispatcher` created for this `Batch` is completelly separate,
+    /// from the parent `Dispatcher`.
+    /// This mean that the dependencies, the `System` names, etc.. specified on the `Batch`
+    /// `Dispatcher` are not visible on the parent, and is not allowed to specify cross
+    /// dependencies.
     pub fn with_batch<T>(mut self, dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str]) -> Self
     where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
@@ -208,6 +214,12 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Note that depending on the dependencies of the SubSystems the Batch
     /// can run in parallel with other Systems.
     /// In addition the Sub Systems can run in parallel within the Batch.
+    ///
+    /// The `Dispatcher` created for this `Batch` is completelly separate,
+    /// from the parent `Dispatcher`.
+    /// This mean that the dependencies, the `System` names, etc.. specified on the `Batch`
+    /// `Dispatcher` are not visible on the parent, and is not allowed to specify cross
+    /// dependencies.
     pub fn add_batch<T>(&mut self, mut dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str])
     where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
