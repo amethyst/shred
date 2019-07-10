@@ -1,11 +1,11 @@
 use crate::{
-    dispatch::{Dispatcher},
-    world::ResourceId,
-    Accessor, AccessorCow, DynamicSystemData, RunningTime, System, SystemData, World,
+    dispatch::Dispatcher, world::ResourceId, Accessor, AccessorCow, DynamicSystemData, RunningTime,
+    System, SystemData, World,
 };
 
-/// The `BatchAccessor` is used to notify the main dispatcher of the read and write resources
-/// of the `System`s contained by the `Batch` ("sub systems").
+/// The `BatchAccessor` is used to notify the main dispatcher of the read and
+/// write resources of the `System`s contained by the `Batch` ("sub systems").
+#[derive(Debug)]
 pub struct BatchAccessor {
     reads: Vec<ResourceId>,
     writes: Vec<ResourceId>,
@@ -49,10 +49,10 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// The BatchController is the additional trait that a normal System must
 /// implement in order to be used as BatchControllerSystem.
 pub trait BatchController<'a, 'b> {
-    
     /// Here you must set all the resource types that you want to use inside the
     /// `BatchControllerSystem`.
-    /// All the system data needed for the controlled systems is fetched automatically.
+    /// All the system data needed for the controlled systems is fetched
+    /// automatically.
     type BatchSystemData: SystemData<'a>;
 
     /// Create the instance of the BatchControllerSystem

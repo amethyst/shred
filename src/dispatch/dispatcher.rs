@@ -2,8 +2,8 @@ use smallvec::SmallVec;
 
 use crate::{dispatch::stage::Stage, system::RunNow, world::World};
 
-/// This wrapper is used to share a replaceable ThreadPool with other dispatchers.
-/// Useful with batch dispatchers.
+/// This wrapper is used to share a replaceable ThreadPool with other
+/// dispatchers. Useful with batch dispatchers.
 #[derive(Debug, Default)]
 pub struct ThreadPoolWrapper(pub Option<::std::sync::Arc<::rayon::ThreadPool>>);
 
@@ -79,11 +79,17 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn dispatch_par(&mut self, world: &World) {
         let stages = &mut self.stages;
 
-        self.thread_pool.read().unwrap().0.as_ref().unwrap().install(move || {
-            for stage in stages {
-                stage.execute(world);
-            }
-        });
+        self.thread_pool
+            .read()
+            .unwrap()
+            .0
+            .as_ref()
+            .unwrap()
+            .install(move || {
+                for stage in stages {
+                    stage.execute(world);
+                }
+            });
     }
 
     /// Dispatches the systems (except thread local systems) sequentially.

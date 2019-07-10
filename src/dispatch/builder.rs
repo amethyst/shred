@@ -6,9 +6,7 @@ use crate::{
     dispatch::{
         dispatcher::{SystemId, ThreadLocal, ThreadPoolWrapper},
         stage::StagesBuilder,
-        Dispatcher,
-        BatchController,
-        BatchAccessor,
+        BatchAccessor, BatchController, Dispatcher,
     },
     system::{RunNow, System, SystemData},
 };
@@ -180,11 +178,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     }
 
     /// The `Batch` is a `System` which contains a `Dispatcher`.
-    /// By wrapping a `Dispatcher` inside a system, we can control the execution of a whole
-    /// group of system, without sacrificing parallelism or conciseness.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution
+    /// of a whole group of system, without sacrificing parallelism or
+    /// conciseness.
     ///
-    /// This function accepts the `DispatcherBuilder` as parameter, and the type of the
-    /// `System` that will drive the execution of the internal dispatcher.
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type
+    /// of the `System` that will drive the execution of the internal
+    /// dispatcher.
     ///
     /// Note that depending on the dependencies of the SubSystems the Batch
     /// can run in parallel with other Systems.
@@ -192,10 +192,15 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ///
     /// The `Dispatcher` created for this `Batch` is completelly separate,
     /// from the parent `Dispatcher`.
-    /// This mean that the dependencies, the `System` names, etc.. specified on the `Batch`
-    /// `Dispatcher` are not visible on the parent, and is not allowed to specify cross
-    /// dependencies.
-    pub fn with_batch<T>(mut self, dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str]) -> Self
+    /// This mean that the dependencies, the `System` names, etc.. specified on
+    /// the `Batch` `Dispatcher` are not visible on the parent, and is not
+    /// allowed to specify cross dependencies.
+    pub fn with_batch<T>(
+        mut self,
+        dispatcher_builder: DispatcherBuilder<'a, 'b>,
+        name: &str,
+        dep: &[&str],
+    ) -> Self
     where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
     {
@@ -205,11 +210,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     }
 
     /// The `Batch` is a `System` which contains a `Dispatcher`.
-    /// By wrapping a `Dispatcher` inside a system, we can control the execution of a whole
-    /// group of system, without sacrificing parallelism or conciseness.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution
+    /// of a whole group of system, without sacrificing parallelism or
+    /// conciseness.
     ///
-    /// This function accepts the `DispatcherBuilder` as parameter, and the type of the
-    /// `System` that will drive the execution of the internal dispatcher.
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type
+    /// of the `System` that will drive the execution of the internal
+    /// dispatcher.
     ///
     /// Note that depending on the dependencies of the SubSystems the Batch
     /// can run in parallel with other Systems.
@@ -217,14 +224,17 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ///
     /// The `Dispatcher` created for this `Batch` is completelly separate,
     /// from the parent `Dispatcher`.
-    /// This mean that the dependencies, the `System` names, etc.. specified on the `Batch`
-    /// `Dispatcher` are not visible on the parent, and is not allowed to specify cross
-    /// dependencies.
-    pub fn add_batch<T>(&mut self, mut dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str])
-    where
+    /// This mean that the dependencies, the `System` names, etc.. specified on
+    /// the `Batch` `Dispatcher` are not visible on the parent, and is not
+    /// allowed to specify cross dependencies.
+    pub fn add_batch<T>(
+        &mut self,
+        mut dispatcher_builder: DispatcherBuilder<'a, 'b>,
+        name: &str,
+        dep: &[&str],
+    ) where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
     {
-
         dispatcher_builder.thread_pool = self.thread_pool.clone();
 
         let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
@@ -341,7 +351,11 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         use crate::dispatch::dispatcher::new_dispatcher;
 
         #[cfg(feature = "parallel")]
-        self.thread_pool.write().unwrap().0.get_or_insert(Self::create_thread_pool());
+        self.thread_pool
+            .write()
+            .unwrap()
+            .0
+            .get_or_insert(Self::create_thread_pool());
 
         #[cfg(feature = "parallel")]
         let d = new_dispatcher(
@@ -388,7 +402,11 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
         use crate::dispatch::async_dispatcher::new_async;
 
-        self.thread_pool.write().unwrap().0.get_or_insert(Self::create_thread_pool());
+        self.thread_pool
+            .write()
+            .unwrap()
+            .0
+            .get_or_insert(Self::create_thread_pool());
 
         new_async(
             world,

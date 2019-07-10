@@ -4,7 +4,10 @@ use std::{
 };
 
 use crate::{
-    dispatch::{dispatcher::{ThreadLocal, ThreadPoolWrapper}, stage::Stage},
+    dispatch::{
+        dispatcher::{ThreadLocal, ThreadPoolWrapper},
+        stage::Stage,
+    },
     world::World,
 };
 use std::borrow::BorrowMut;
@@ -60,17 +63,23 @@ where
     pub fn dispatch(&mut self) {
         let (snd, mut inner) = self.data.sender();
 
-        self.thread_pool.read().unwrap().0.as_ref().unwrap().spawn(move || {
-            {
-                let world: &World = inner.world.borrow();
+        self.thread_pool
+            .read()
+            .unwrap()
+            .0
+            .as_ref()
+            .unwrap()
+            .spawn(move || {
+                {
+                    let world: &World = inner.world.borrow();
 
-                for stage in &mut inner.stages {
-                    stage.execute(world);
+                    for stage in &mut inner.stages {
+                        stage.execute(world);
+                    }
                 }
-            }
 
-            let _ = snd.send(inner);
-        });
+                let _ = snd.send(inner);
+            });
     }
 
     /// Waits for all the asynchronously dispatched systems to finish
