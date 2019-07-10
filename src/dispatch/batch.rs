@@ -12,7 +12,7 @@ pub struct BatchAccessor {
 }
 
 impl BatchAccessor {
-    /// Create the BatchAccessor
+    /// Create the `BatchAccessor`
     pub fn new(reads: Vec<ResourceId>, writes: Vec<ResourceId>) -> Self {
         BatchAccessor { reads, writes }
     }
@@ -32,8 +32,8 @@ impl Accessor for BatchAccessor {
     }
 }
 
-/// The BatchUncheckedWorld wrap an instance of the world.
-/// It's safe to be used only in the context of the Batch.
+/// The `BatchUncheckedWorld` wrap an instance of the world.
+/// It's safe to be used only in the context of the `Batch`.
 pub struct BatchUncheckedWorld<'a>(pub &'a World);
 
 impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
@@ -46,8 +46,8 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
     }
 }
 
-/// The BatchController is the additional trait that a normal System must
-/// implement in order to be used as BatchControllerSystem.
+/// The `BatchController` is the additional trait that a normal System must
+/// implement in order to be used as `BatchControllerSystem`.
 pub trait BatchController<'a, 'b> {
     /// Here you must set all the resource types that you want to use inside the
     /// `BatchControllerSystem`.
@@ -59,10 +59,10 @@ pub trait BatchController<'a, 'b> {
     fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
 }
 
-/// The DefaultBatchControllerSystem is a simple implementation that will
+/// The `DefaultBatchControllerSystem` is a simple implementation that will
 /// dispatch the inner dispatcher one time.
 ///
-/// Usually you want to create your own dispatcher.
+/// Usually you want to create your own `Dispatcher`.
 pub struct DefaultBatchControllerSystem<'a, 'b> {
     accessor: BatchAccessor,
     dispatcher: Dispatcher<'a, 'b>,
