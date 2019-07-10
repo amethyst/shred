@@ -4,7 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
-        dispatcher::{SystemId, ThreadLocal,},
+        dispatcher::{SystemId, ThreadLocal, ThreadPoolWrapper},
         stage::StagesBuilder,
         Dispatcher,
         BatchController,
@@ -98,7 +98,7 @@ pub struct DispatcherBuilder<'a, 'b> {
     pub(crate) stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
-    thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,
+    thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 }
 
 impl<'a, 'b> DispatcherBuilder<'a, 'b> {
@@ -208,10 +208,12 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// Note that depending on the dependencies of the SubSystems the Batch
     /// can run in parallel with other Systems.
     /// In addition the Sub Systems can run in parallel within the Batch.
-    pub fn add_batch<T>(&mut self, dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str])
+    pub fn add_batch<T>(&mut self, mut dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str])
     where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
     {
+
+        dispatcher_builder.thread_pool = self.thread_pool.clone();
 
         let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
         reads.extend(<T::BatchSystemData as SystemData>::reads());
@@ -308,7 +310,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// and use that instead of creating one.
     #[cfg(feature = "parallel")]
     pub fn add_pool(&mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) {
-        self.thread_pool = Some(pool);
+        self.thread_pool.write().unwrap().0 = Some(pool);
     }
 
     /// Prints the equivalent system graph
@@ -327,10 +329,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         use crate::dispatch::dispatcher::new_dispatcher;
 
         #[cfg(feature = "parallel")]
+        self.thread_pool.write().unwrap().0.get_or_insert(Self::create_thread_pool());
+
+        #[cfg(feature = "parallel")]
         let d = new_dispatcher(
             self.stages_builder.build(),
             self.thread_local,
-            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+            self.thread_pool,
         );
 
         #[cfg(not(feature = "parallel"))]
@@ -371,11 +376,13 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
         use crate::dispatch::async_dispatcher::new_async;
 
+        self.thread_pool.write().unwrap().0.get_or_insert(Self::create_thread_pool());
+
         new_async(
             world,
             self.stages_builder.build(),
             self.thread_local,
-            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+            self.thread_pool,
         )
     }
 }
