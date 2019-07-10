@@ -20,23 +20,21 @@
 //! Check the **CustomBatchControllerSystem** which execute its inner Systems
 //! three times.
 
-use std::{thread::sleep, time::Duration};
 
 use shred::{
-    AccessorCow, BatchAccessor, BatchBuilder, BatchController, BatchUncheckedWorld, Dispatcher,
+    AccessorCow, BatchAccessor, BatchController, BatchUncheckedWorld, Dispatcher,
     DispatcherBuilder, Read, RunningTime, System, World, Write,
 };
+use std::thread::sleep;
+use std::time::Duration;
 
 fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with(SayHelloSystem, "say_hello_system", &[])
-        .with(
-            BatchBuilder::new(
-                DispatcherBuilder::new()
-                    .with(BuyTomatoSystem, "buy_tomato_system", &[])
-                    .with(BuyPotatoSystem, "buy_potato_system", &[]),
-            )
-            .build::<CustomBatchControllerSystem>(),
+        .with_batch::<CustomBatchControllerSystem>(
+            DispatcherBuilder::new()
+                .with(BuyTomatoSystem, "buy_tomato_system", &[])
+                .with(BuyPotatoSystem, "buy_potato_system", &[]),
             "BatchSystemTest",
             &[],
         )
