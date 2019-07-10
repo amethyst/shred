@@ -20,13 +20,11 @@
 //! Check the **CustomBatchControllerSystem** which execute its inner Systems
 //! three times.
 
-
 use shred::{
     AccessorCow, BatchAccessor, BatchController, BatchUncheckedWorld, Dispatcher,
     DispatcherBuilder, Read, RunningTime, System, World, Write,
 };
-use std::thread::sleep;
-use std::time::Duration;
+use std::{thread::sleep, time::Duration};
 
 fn main() {
     let mut dispatcher = DispatcherBuilder::new()
