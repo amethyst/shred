@@ -4,11 +4,13 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
-        dispatcher::{SystemId, ThreadLocal},
+        dispatcher::{SystemId, ThreadLocal,},
         stage::StagesBuilder,
         Dispatcher,
+        BatchController,
+        BatchAccessor,
     },
-    system::{RunNow, System},
+    system::{RunNow, System, SystemData},
 };
 
 /// Builder for the [`Dispatcher`].
@@ -175,6 +177,58 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         }
 
         self.stages_builder.insert(dependencies, id, system);
+    }
+
+    /// The `Batch` is a `System` which contains a `Dispatcher`.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution of a whole
+    /// group of system, without sacrificing parallelism or conciseness.
+    ///
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type of the
+    /// `System` that will drive the execution of the internal dispatcher.
+    ///
+    /// Note that depending on the dependencies of the SubSystems the Batch
+    /// can run in parallel with other Systems.
+    /// In addition the Sub Systems can run in parallel within the Batch.
+    pub fn with_batch<T>(mut self, dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str]) -> Self
+    where
+        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+    {
+        self.add_batch::<T>(dispatcher_builder, name, dep);
+
+        self
+    }
+
+    /// The `Batch` is a `System` which contains a `Dispatcher`.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution of a whole
+    /// group of system, without sacrificing parallelism or conciseness.
+    ///
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type of the
+    /// `System` that will drive the execution of the internal dispatcher.
+    ///
+    /// Note that depending on the dependencies of the SubSystems the Batch
+    /// can run in parallel with other Systems.
+    /// In addition the Sub Systems can run in parallel within the Batch.
+    pub fn add_batch<T>(&mut self, dispatcher_builder: DispatcherBuilder<'a, 'b>, name: &str, dep: &[&str])
+    where
+        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+    {
+
+        let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
+        reads.extend(<T::BatchSystemData as SystemData>::reads());
+        reads.sort();
+        reads.dedup();
+
+        let mut writes = dispatcher_builder.stages_builder.fetch_all_writes();
+        writes.extend(<T::BatchSystemData as SystemData>::reads());
+        writes.sort();
+        writes.dedup();
+
+        let accessor = BatchAccessor::new(reads, writes);
+        let dispatcher = dispatcher_builder.build();
+
+        let batch_system = T::create(accessor, dispatcher);
+
+        self.add(batch_system, name, dep);
     }
 
     /// Adds a new thread local system.
