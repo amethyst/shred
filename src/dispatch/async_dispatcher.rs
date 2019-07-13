@@ -70,12 +70,10 @@ where
             .as_ref()
             .unwrap()
             .spawn(move || {
-                {
-                    let world: &World = inner.world.borrow();
+                let world: &World = inner.world.borrow();
 
-                    for stage in &mut inner.stages {
-                        stage.execute(world);
-                    }
+                for stage in &mut inner.stages {
+                    stage.execute(world);
                 }
 
                 let _ = snd.send(inner);

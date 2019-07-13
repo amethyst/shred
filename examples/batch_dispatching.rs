@@ -91,7 +91,7 @@ impl<'a> System<'a> for BuyPotatoSystem {
 pub struct BuyTomatoSystem;
 
 impl<'a> System<'a> for BuyTomatoSystem {
-    type SystemData = (Write<'a, PotatoStore>);
+    type SystemData = (Write<'a, TomatoStore>);
 
     fn run(&mut self, _data: Self::SystemData) {
         println!("Buy Tomato")

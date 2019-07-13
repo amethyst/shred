@@ -33,7 +33,7 @@ impl Accessor for BatchAccessor {
 }
 
 /// The `BatchUncheckedWorld` wrap an instance of the world.
-/// It's safe to be used only in the context of the `Batch`.
+/// You have to specify this as `SystemData` of the `BatchControllerSystem`.
 pub struct BatchUncheckedWorld<'a>(pub &'a World);
 
 impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
@@ -48,11 +48,21 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 
 /// The `BatchController` is the additional trait that a normal System must
 /// implement in order to be used as `BatchControllerSystem`.
+///
+/// Note that the `System` must also implement `Send` because the `Dispatcher`
+/// is by default un-send.
+/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
+/// tracks of all used resources and thus the `System` can be safely executed in
+/// multi thread.
 pub trait BatchController<'a, 'b> {
-    /// Here you must set all the resource types that you want to use inside the
-    /// `BatchControllerSystem`.
-    /// All the system data needed for the controlled systems is fetched
-    /// automatically.
+    /// Here you must set all the `Resource` types that you want to use directly
+    /// inside the `BatchControllerSystem`.
+    ///
+    /// Remember to drop the references to the fetcher `Resource` before to
+    /// dispatch the inner `Dispatcher`.
+    ///
+    /// It's not required to specify the sub systems resources here because they
+    /// are handled automatically.
     type BatchSystemData: SystemData<'a>;
 
     /// Create the instance of the BatchControllerSystem
@@ -63,6 +73,10 @@ pub trait BatchController<'a, 'b> {
 /// dispatch the inner dispatcher one time.
 ///
 /// Usually you want to create your own `Dispatcher`.
+///
+/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
+/// tracks of all used resources and thus the `System` can be safely executed in
+/// multi thread.
 pub struct DefaultBatchControllerSystem<'a, 'b> {
     accessor: BatchAccessor,
     dispatcher: Dispatcher<'a, 'b>,
@@ -99,6 +113,9 @@ impl<'a> System<'a> for DefaultBatchControllerSystem<'_, '_> {
     }
 }
 
+/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
+/// tracks of all used resources and thus the `System` can be safely executed in
+/// multi thread.
 unsafe impl<'a, 'b> Send for DefaultBatchControllerSystem<'a, 'b> {}
 
 #[cfg(test)]
