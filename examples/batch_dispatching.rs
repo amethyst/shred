@@ -10,7 +10,7 @@
 //!
 //! Notice that none of these systems are directly depending on others.
 //! The `SayHelloSystem` is requesting the resources `TomatoStore` and
-//! **PotatoStore**, which are also requested by the other two systems inside
+//! `PotatoStore`, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
 //! This to demonstrate that the dispatcher is able to correctly organize, their
