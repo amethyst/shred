@@ -96,7 +96,7 @@ impl<'a> System<'a> for BuyTomatoSystem {
     }
 }
 
-// TEST custom Batch Controller
+/// Batch controller that customizes how inner systems are executed
 
 pub struct CustomBatchControllerSystem<'a, 'b> {
     accessor: BatchAccessor,
