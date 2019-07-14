@@ -51,7 +51,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 ///
 /// Note that the `System` must also implement `Send` because the `Dispatcher`
 /// is by default un-send.
-/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
+/// The safety of implementing `Send` is ensured by `BatchAccessor` which keeps
 /// tracks of all used resources and thus the `System` can be safely executed in
 /// multi thread.
 pub trait BatchController<'a, 'b> {
