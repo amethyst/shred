@@ -1,4 +1,4 @@
-//! This example show how to use the Batch dispatcher.
+//! This example shows how to use and define a batch dispatcher.
 //!
 //! The Batch is a feature that allow to control the dispatching of a group of
 //! systems.
