@@ -53,7 +53,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// is by default un-send.
 /// The safety of implementing `Send` is ensured by `BatchAccessor` which keeps
 /// tracks of all used resources and thus the `System` can be safely executed in
-/// multi thread.
+/// with multiple threads.
 pub trait BatchController<'a, 'b> {
     /// Here you must set all the `Resource` types that you want to use directly
     /// inside the `BatchControllerSystem`.
