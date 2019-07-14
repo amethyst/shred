@@ -62,7 +62,7 @@ pub trait BatchController<'a, 'b> {
     /// `System`s `Resource`.
     ///
     /// Since the sub `System`s can use the same `Resource's as the
-    /// `BatchControllerSystem` is necessary to drop the references to the
+    /// `BatchController` it's necessary to drop the references to the
     /// fetched `Resource`s before dispatching the inner `System`s.
     ///
     /// Now is easy to understand that specify the `BatchControllerSystem`
