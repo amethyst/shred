@@ -16,7 +16,7 @@
 //! This example demonstrates that the batch dispatcher is able to affect on how the systems inside the batch are executed
 //!
 //! Is also showed how to use a custom BatchControllerSystem.
-//! Check the **CustomBatchControllerSystem** which execute its inner Systems
+//! This is done by defining `CustomBatchControllerSystem` which executes its inner `System`s
 //! three times.
 
 use shred::{
