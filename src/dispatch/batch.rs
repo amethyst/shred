@@ -4,7 +4,7 @@ use crate::{
 };
 
 /// The `BatchAccessor` is used to notify the main dispatcher of the read and
-/// write resources of the `System`s contained by the `Batch` ("sub systems").
+/// write resources of the `System`s contained in the batch ("sub systems").
 #[derive(Debug)]
 pub struct BatchAccessor {
     reads: Vec<ResourceId>,
