@@ -6,7 +6,7 @@
 //! Specifically here we have three Systems
 //! - **SayHelloSystem**: Which is directly registered under the main
 //!   dispatcher.
-//! - **BuyTomatoSystem** and **BuyPotatoSystem** are registered in the batch.
+//! - `BuyTomatoSystem` and `BuyPotatoSystem` are registered to the batch.
 //!
 //! Notice that none of these systems are directly depending on others.
 //! The SayHelloSystem is requesting the resources **TomatoStore** and
