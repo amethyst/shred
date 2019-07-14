@@ -32,7 +32,7 @@ impl Accessor for BatchAccessor {
     }
 }
 
-/// The `BatchUncheckedWorld` wrap an instance of the world.
+/// The `BatchUncheckedWorld` wraps an instance of the world.
 /// You have to specify this as `SystemData` of the `BatchControllerSystem`.
 pub struct BatchUncheckedWorld<'a>(pub &'a World);
 
