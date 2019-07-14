@@ -4,7 +4,7 @@
 //! systems.
 //!
 //! Specifically here we have three Systems
-//! - **SayHelloSystem**: Which is directly registered under the main
+//! - `SayHelloSystem`: Which is directly registered under the main
 //!   dispatcher.
 //! - `BuyTomatoSystem` and `BuyPotatoSystem` are registered to the batch.
 //!
