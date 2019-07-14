@@ -12,7 +12,7 @@ pub struct BatchAccessor {
 }
 
 impl BatchAccessor {
-    /// Create the `BatchAccessor`
+    /// Creates a `BatchAccessor`
     pub fn new(reads: Vec<ResourceId>, writes: Vec<ResourceId>) -> Self {
         BatchAccessor { reads, writes }
     }
