@@ -122,7 +122,7 @@ impl<'a> System<'a> for CustomBatchControllerSystem<'_, '_> {
 
     fn run(&mut self, data: Self::SystemData) {
         {
-            // Unload before dispatch the inner dispatcher
+            // The scope is used to unload the resource before dispatching inner systems
             let _ts = data.0.fetch::<TomatoStore>();
         }
         println!("Batch execution");
