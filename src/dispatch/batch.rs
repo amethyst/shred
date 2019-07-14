@@ -61,7 +61,7 @@ pub trait BatchController<'a, 'b> {
     /// a normal `System` does) because there is a direct dependecy with the sub
     /// `System`s `Resource`.
     ///
-    /// Since the sub `System`s will use the same `Resource' of the
+    /// Since the sub `System`s can use the same `Resource's as the
     /// `BatchControllerSystem` is necessary to drop the references to the
     /// fetched `Resource`s before dispatching the inner `System`s.
     ///
