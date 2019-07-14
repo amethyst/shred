@@ -56,7 +56,6 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// with multiple threads.
 pub trait BatchController<'a, 'b> {
     /// This associated type has to contain all resources batch controller uses directly.
-    /// inside the `BatchControllerSystem`.
     ///
     /// These have to be specified here, instead of `SystemData` (as
     /// a normal `System` does) because there is a direct dependecy with the sub
