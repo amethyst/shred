@@ -60,7 +60,7 @@ pub struct PotatoStore(i32);
 #[derive(Default)]
 pub struct TomatoStore(f32);
 
-// Say Hello Sytem
+/// System that says "Hello!"
 
 pub struct SayHelloSystem;
 
