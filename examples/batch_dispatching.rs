@@ -9,7 +9,7 @@
 //! - `BuyTomatoSystem` and `BuyPotatoSystem` are registered to the batch.
 //!
 //! Notice that none of these systems are directly depending on others.
-//! The SayHelloSystem is requesting the resources **TomatoStore** and
+//! The `SayHelloSystem` is requesting the resources `TomatoStore` and
 //! **PotatoStore**, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
