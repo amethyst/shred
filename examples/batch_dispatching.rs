@@ -14,7 +14,6 @@
 //! the batch and by the batch controller itself.
 //!
 //! This to demonstrate that the dispatcher is able to correctly organize, their
-//! execution.
 //!
 //! Is also showed how to use a custom BatchControllerSystem.
 //! Check the **CustomBatchControllerSystem** which execute its inner Systems
