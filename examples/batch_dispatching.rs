@@ -111,7 +111,7 @@ impl<'a, 'b> BatchController<'a, 'b> for CustomBatchControllerSystem<'a, 'b> {
     // type BatchSystemData = ();
     type BatchSystemData = (Read<'a, TomatoStore>);
 
-    fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
+    unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
         CustomBatchControllerSystem {
             accessor,
             dispatcher,

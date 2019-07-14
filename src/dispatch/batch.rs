@@ -57,16 +57,33 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 pub trait BatchController<'a, 'b> {
     /// Here you must set all the `Resource` types that you want to use directly
     /// inside the `BatchControllerSystem`.
-    ///
-    /// Remember to drop the references to the fetcher `Resource` before to
+    /// 
+    /// These have to be specified here, instead of `SystemData` (as
+    /// a normal `System` does) because there is a direct dependecy with the sub `System`s
+    /// `Resource`.
+    /// 
+    /// Since the sub `System`s will use the same `Resource' of the `BatchControllerSystem`
+    /// is necessary to drop the references to the fetched `Resource` before to
     /// dispatch the inner `Dispatcher`.
+    /// 
+    /// Now is easy to understand that specify the `BatchControllerSystem` `Resource`
+    /// in the `SystemData` doesn't allow to drop the reference before the sub dispatching
+    /// resulting in `Panic`.
+    /// 
+    /// So this mechanism allow you to specify the `Resource` that you will use in the `BatchControllerSystem`
+    /// then is safe to fetch them directly from the world (As the example  "examples/batch_dispatching.rs" show).
     ///
-    /// It's not required to specify the sub systems resources here because they
+    /// Note that it's not required to specify the sub systems resources here because they
     /// are handled automatically.
     type BatchSystemData: SystemData<'a>;
 
-    /// Create the instance of the BatchControllerSystem
-    fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
+    /// Create the instance of the `BatchControllerSystem`
+    /// 
+    /// This function is unsafe because it depends from the `BatchAccessor` that 
+    /// if created wrongly can Panics.
+    /// Usually this function is called internally by the `DispatcherBuilder` which
+    /// create the `BatchAccessor` correctly.
+    unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
 }
 
 /// The `DefaultBatchControllerSystem` is a simple implementation that will
@@ -85,7 +102,7 @@ pub struct DefaultBatchControllerSystem<'a, 'b> {
 impl<'a, 'b> BatchController<'a, 'b> for DefaultBatchControllerSystem<'a, 'b> {
     type BatchSystemData = ();
 
-    fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
+    unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
         DefaultBatchControllerSystem {
             accessor,
             dispatcher,
@@ -400,7 +417,7 @@ mod tests {
     impl<'a, 'b> BatchController<'a, 'b> for CustomBatchControllerSystem<'a, 'b> {
         type BatchSystemData = ();
 
-        fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
+        unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
             CustomBatchControllerSystem {
                 accessor,
                 dispatcher,

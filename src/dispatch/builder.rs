@@ -250,7 +250,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         let accessor = BatchAccessor::new(reads, writes);
         let dispatcher = dispatcher_builder.build();
 
-        let batch_system = T::create(accessor, dispatcher);
+        let batch_system = unsafe{ T::create(accessor, dispatcher) };
 
         self.add(batch_system, name, dep);
     }
@@ -355,7 +355,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
             .write()
             .unwrap()
             .0
-            .get_or_insert(Self::create_thread_pool());
+            .get_or_insert_with(|| Self::create_thread_pool());
 
         #[cfg(feature = "parallel")]
         let d = new_dispatcher(
@@ -406,7 +406,7 @@ impl<'b> DispatcherBuilder<'static, 'b> {
             .write()
             .unwrap()
             .0
-            .get_or_insert(Self::create_thread_pool());
+            .get_or_insert_with(|| Self::create_thread_pool());
 
         new_async(
             world,
