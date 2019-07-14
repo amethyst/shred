@@ -72,7 +72,7 @@ impl<'a> System<'a> for SayHelloSystem {
     }
 }
 
-// BuyPotatoSystem
+/// System that says "Buy Potato"
 
 pub struct BuyPotatoSystem;
 
