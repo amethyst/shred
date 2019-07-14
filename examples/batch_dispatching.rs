@@ -84,7 +84,7 @@ impl<'a> System<'a> for BuyPotatoSystem {
     }
 }
 
-// Buy Tomato System
+/// System that says "Buy Tomato"
 
 pub struct BuyTomatoSystem;
 
