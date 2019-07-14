@@ -250,7 +250,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         let accessor = BatchAccessor::new(reads, writes);
         let dispatcher = dispatcher_builder.build();
 
-        let batch_system = unsafe{ T::create(accessor, dispatcher) };
+        let batch_system = unsafe { T::create(accessor, dispatcher) };
 
         self.add(batch_system, name, dep);
     }
@@ -332,7 +332,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// and use that instead of creating one.
     #[cfg(feature = "parallel")]
     pub fn add_pool(&mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) {
-        self.thread_pool.write().unwrap().0 = Some(pool);
+        *self.thread_pool.write().unwrap() = Some(pool);
     }
 
     /// Prints the equivalent system graph
@@ -354,7 +354,6 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.thread_pool
             .write()
             .unwrap()
-            .0
             .get_or_insert_with(|| Self::create_thread_pool());
 
         #[cfg(feature = "parallel")]
@@ -405,7 +404,6 @@ impl<'b> DispatcherBuilder<'static, 'b> {
         self.thread_pool
             .write()
             .unwrap()
-            .0
             .get_or_insert_with(|| Self::create_thread_pool());
 
         new_async(

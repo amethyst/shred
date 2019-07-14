@@ -4,8 +4,7 @@ use crate::{dispatch::stage::Stage, system::RunNow, world::World};
 
 /// This wrapper is used to share a replaceable ThreadPool with other
 /// dispatchers. Useful with batch dispatchers.
-#[derive(Debug, Default)]
-pub struct ThreadPoolWrapper(pub Option<::std::sync::Arc<::rayon::ThreadPool>>);
+pub type ThreadPoolWrapper = Option<::std::sync::Arc<::rayon::ThreadPool>>;
 
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
@@ -82,7 +81,6 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
         self.thread_pool
             .read()
             .unwrap()
-            .0
             .as_ref()
             .unwrap()
             .install(move || {

@@ -66,7 +66,6 @@ where
         self.thread_pool
             .read()
             .unwrap()
-            .0
             .as_ref()
             .unwrap()
             .spawn(move || {
