@@ -13,7 +13,7 @@
 //! `PotatoStore`, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
-//! This to demonstrate that the dispatcher is able to correctly organize, their
+//! This example demonstrates that the batch dispatcher is able to affect on how the systems inside the batch are executed
 //!
 //! Is also showed how to use a custom BatchControllerSystem.
 //! Check the **CustomBatchControllerSystem** which execute its inner Systems
