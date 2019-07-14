@@ -58,20 +58,19 @@ pub trait BatchController<'a, 'b> {
     /// This associated type has to contain all resources batch controller uses directly.
     ///
     /// These have to be specified here, instead of `SystemData` (as
-    /// a normal `System` does) because there is a direct dependecy with the sub
-    /// `System`s `Resource`.
+    /// a normal `System` does) because the sub `System`s can use the same `Resource`s
+    /// of the `BatchController`.
+    /// This make necessary to drop the references to the
+    /// fetched `Resource`s in the batch controller before dispatching
+    /// the sub `System`s.
     ///
-    /// Since the sub `System`s can use the same `Resource's as the
-    /// `BatchController` it's necessary to drop the references to the
-    /// fetched `Resource`s before dispatching the inner `System`s.
-    ///
-    /// Now is easy to understand that specify the `BatchControllerSystem`
+    /// Now is easy to understand that specify the `BatchController`
     /// `Resource` in the `SystemData` doesn't allow to drop the reference
-    /// before the sub dispatching resulting in `Panic`.
+    /// before the sub dispatching; resulting in `Panic`.
     ///
-    /// So this mechanism allow you to specify the `Resource` that you will use
-    /// in the `BatchControllerSystem` then is safe to fetch them directly
-    /// from the world (As the example  "examples/batch_dispatching.rs" show).
+    /// So this mechanism allow you to fetch safelly the specified `Resource`
+    /// in the `BatchController`.
+    /// The example "examples/batch_dispatching.rs" show how to.
     ///
     /// Note that it's not required to specify the sub systems resources here
     /// because they are handled automatically.
