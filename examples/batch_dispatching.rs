@@ -1,6 +1,6 @@
 //! This example shows how to use and define a batch dispatcher.
 //!
-//! The Batch is a feature that allow to control the dispatching of a group of
+//! The batch feature allows to control the dispatching of a group of
 //! systems.
 //!
 //! Specifically here we have three Systems
