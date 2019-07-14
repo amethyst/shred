@@ -105,7 +105,7 @@ pub struct CustomBatchControllerSystem<'a, 'b> {
 
 impl<'a, 'b> BatchController<'a, 'b> for CustomBatchControllerSystem<'a, 'b> {
     // Using this `BatchBuilderData = ()` make the dispatcher to panic since the run
-    // function will fetch the TomatoStore like the SayHelloSystem does.
+    // function will fetch the `TomatoStore` like the `SayHelloSystem` does.
     // type BatchSystemData = ();
     type BatchSystemData = (Read<'a, TomatoStore>);
 
