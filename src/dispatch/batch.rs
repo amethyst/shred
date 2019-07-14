@@ -78,7 +78,7 @@ pub trait BatchController<'a, 'b> {
     /// because they are handled automatically.
     type BatchSystemData: SystemData<'a>;
 
-    /// Create the instance of the `BatchControllerSystem`
+    /// Creates an instance of the `BatchControllerSystem`
     ///
     /// This function is unsafe because it depends from the `BatchAccessor` that
     /// if created wrongly can Panics.
