@@ -47,7 +47,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 }
 
 /// The `BatchController` is the additional trait that a normal System must
-/// implement in order to be used as `BatchControllerSystem`.
+/// implement in order to be used as a system controlling the execution of a batch.
 ///
 /// Note that the `System` must also implement `Send` because the `Dispatcher`
 /// is by default un-send.
