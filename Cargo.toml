@@ -69,3 +69,8 @@ name = "seq_dispatch"
 
 [[example]]
 name = "thread_local"
+
+[[example]]
+name = "batch_dispatching"
+required-features = ["parallel"]
+

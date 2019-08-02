@@ -72,7 +72,10 @@ pub use crate::dispatch::AsyncDispatcher;
 #[cfg(feature = "parallel")]
 pub use crate::dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use crate::{
-    dispatch::{Dispatcher, DispatcherBuilder},
+    dispatch::{
+        BatchAccessor, BatchController, BatchUncheckedWorld, DefaultBatchControllerSystem,
+        Dispatcher, DispatcherBuilder,
+    },
     meta::{CastFrom, MetaIter, MetaIterMut, MetaTable},
     system::{
         Accessor, AccessorCow, DynamicSystemData, RunNow, RunningTime, StaticAccessor, System,

@@ -1,12 +1,13 @@
 use std::{
     borrow::Borrow,
-    sync::{mpsc, Arc},
+    sync::{mpsc, Arc, RwLock},
 };
 
-use rayon::ThreadPool;
-
 use crate::{
-    dispatch::{dispatcher::ThreadLocal, stage::Stage},
+    dispatch::{
+        dispatcher::{ThreadLocal, ThreadPoolWrapper},
+        stage::Stage,
+    },
     world::World,
 };
 use std::borrow::BorrowMut;
@@ -15,7 +16,7 @@ pub fn new_async<'a, R>(
     world: R,
     stages: Vec<Stage<'static>>,
     thread_local: ThreadLocal<'a>,
-    thread_pool: Arc<ThreadPool>,
+    thread_pool: Arc<RwLock<ThreadPoolWrapper>>,
 ) -> AsyncDispatcher<'a, R> {
     AsyncDispatcher {
         data: Data::Inner(Inner { world, stages }),
@@ -28,7 +29,7 @@ pub fn new_async<'a, R>(
 pub struct AsyncDispatcher<'a, R> {
     data: Data<R>,
     thread_local: ThreadLocal<'a>,
-    thread_pool: Arc<ThreadPool>,
+    thread_pool: Arc<RwLock<ThreadPoolWrapper>>,
 }
 
 impl<'a, R> AsyncDispatcher<'a, R>
@@ -62,17 +63,20 @@ where
     pub fn dispatch(&mut self) {
         let (snd, mut inner) = self.data.sender();
 
-        self.thread_pool.spawn(move || {
-            {
+        self.thread_pool
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .spawn(move || {
                 let world: &World = inner.world.borrow();
 
                 for stage in &mut inner.stages {
                     stage.execute(world);
                 }
-            }
 
-            let _ = snd.send(inner);
-        });
+                let _ = snd.send(inner);
+            });
     }
 
     /// Waits for all the asynchronously dispatched systems to finish

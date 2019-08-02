@@ -4,11 +4,11 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
-        dispatcher::{SystemId, ThreadLocal},
+        dispatcher::{SystemId, ThreadLocal, ThreadPoolWrapper},
         stage::StagesBuilder,
-        Dispatcher,
+        BatchAccessor, BatchController, Dispatcher,
     },
-    system::{RunNow, System},
+    system::{RunNow, System, SystemData},
 };
 
 /// Builder for the [`Dispatcher`].
@@ -93,10 +93,10 @@ use crate::{
 pub struct DispatcherBuilder<'a, 'b> {
     current_id: usize,
     map: HashMap<String, SystemId>,
-    stages_builder: StagesBuilder<'a>,
+    pub(crate) stages_builder: StagesBuilder<'a>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
-    thread_pool: Option<::std::sync::Arc<::rayon::ThreadPool>>,
+    thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 }
 
 impl<'a, 'b> DispatcherBuilder<'a, 'b> {
@@ -177,6 +177,84 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.stages_builder.insert(dependencies, id, system);
     }
 
+    /// The `Batch` is a `System` which contains a `Dispatcher`.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution
+    /// of a whole group of system, without sacrificing parallelism or
+    /// conciseness.
+    ///
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type
+    /// of the `System` that will drive the execution of the internal
+    /// dispatcher.
+    ///
+    /// Note that depending on the dependencies of the SubSystems the Batch
+    /// can run in parallel with other Systems.
+    /// In addition the Sub Systems can run in parallel within the Batch.
+    ///
+    /// The `Dispatcher` created for this `Batch` is completelly separate,
+    /// from the parent `Dispatcher`.
+    /// This mean that the dependencies, the `System` names, etc.. specified on
+    /// the `Batch` `Dispatcher` are not visible on the parent, and is not
+    /// allowed to specify cross dependencies.
+    pub fn with_batch<T>(
+        mut self,
+        dispatcher_builder: DispatcherBuilder<'a, 'b>,
+        name: &str,
+        dep: &[&str],
+    ) -> Self
+    where
+        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+    {
+        self.add_batch::<T>(dispatcher_builder, name, dep);
+
+        self
+    }
+
+    /// The `Batch` is a `System` which contains a `Dispatcher`.
+    /// By wrapping a `Dispatcher` inside a system, we can control the execution
+    /// of a whole group of system, without sacrificing parallelism or
+    /// conciseness.
+    ///
+    /// This function accepts the `DispatcherBuilder` as parameter, and the type
+    /// of the `System` that will drive the execution of the internal
+    /// dispatcher.
+    ///
+    /// Note that depending on the dependencies of the SubSystems the Batch
+    /// can run in parallel with other Systems.
+    /// In addition the Sub Systems can run in parallel within the Batch.
+    ///
+    /// The `Dispatcher` created for this `Batch` is completelly separate,
+    /// from the parent `Dispatcher`.
+    /// This mean that the dependencies, the `System` names, etc.. specified on
+    /// the `Batch` `Dispatcher` are not visible on the parent, and is not
+    /// allowed to specify cross dependencies.
+    pub fn add_batch<T>(
+        &mut self,
+        mut dispatcher_builder: DispatcherBuilder<'a, 'b>,
+        name: &str,
+        dep: &[&str],
+    ) where
+        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+    {
+        dispatcher_builder.thread_pool = self.thread_pool.clone();
+
+        let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
+        reads.extend(<T::BatchSystemData as SystemData>::reads());
+        reads.sort();
+        reads.dedup();
+
+        let mut writes = dispatcher_builder.stages_builder.fetch_all_writes();
+        writes.extend(<T::BatchSystemData as SystemData>::reads());
+        writes.sort();
+        writes.dedup();
+
+        let accessor = BatchAccessor::new(reads, writes);
+        let dispatcher = dispatcher_builder.build();
+
+        let batch_system = unsafe { T::create(accessor, dispatcher) };
+
+        self.add(batch_system, name, dep);
+    }
+
     /// Adds a new thread local system.
     ///
     /// Please only use this if your struct is not `Send` and `Sync`.
@@ -254,7 +332,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// and use that instead of creating one.
     #[cfg(feature = "parallel")]
     pub fn add_pool(&mut self, pool: ::std::sync::Arc<::rayon::ThreadPool>) {
-        self.thread_pool = Some(pool);
+        *self.thread_pool.write().unwrap() = Some(pool);
     }
 
     /// Prints the equivalent system graph
@@ -273,10 +351,16 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         use crate::dispatch::dispatcher::new_dispatcher;
 
         #[cfg(feature = "parallel")]
+        self.thread_pool
+            .write()
+            .unwrap()
+            .get_or_insert_with(|| Self::create_thread_pool());
+
+        #[cfg(feature = "parallel")]
         let d = new_dispatcher(
             self.stages_builder.build(),
             self.thread_local,
-            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+            self.thread_pool,
         );
 
         #[cfg(not(feature = "parallel"))]
@@ -317,11 +401,16 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     ) -> crate::dispatch::async_dispatcher::AsyncDispatcher<'b, R> {
         use crate::dispatch::async_dispatcher::new_async;
 
+        self.thread_pool
+            .write()
+            .unwrap()
+            .get_or_insert_with(|| Self::create_thread_pool());
+
         new_async(
             world,
             self.stages_builder.build(),
             self.thread_local,
-            self.thread_pool.unwrap_or_else(Self::create_thread_pool),
+            self.thread_pool,
         )
     }
 }

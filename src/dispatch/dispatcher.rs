@@ -2,13 +2,17 @@ use smallvec::SmallVec;
 
 use crate::{dispatch::stage::Stage, system::RunNow, world::World};
 
+/// This wrapper is used to share a replaceable ThreadPool with other
+/// dispatchers. Useful with batch dispatchers.
+pub type ThreadPoolWrapper = Option<::std::sync::Arc<::rayon::ThreadPool>>;
+
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
 pub struct Dispatcher<'a, 'b> {
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
     #[cfg(feature = "parallel")]
-    thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
+    thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
@@ -74,11 +78,16 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn dispatch_par(&mut self, world: &World) {
         let stages = &mut self.stages;
 
-        self.thread_pool.install(move || {
-            for stage in stages {
-                stage.execute(world);
-            }
-        });
+        self.thread_pool
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .install(move || {
+                for stage in stages {
+                    stage.execute(world);
+                }
+            });
     }
 
     /// Dispatches the systems (except thread local systems) sequentially.
@@ -141,7 +150,7 @@ pub type ThreadLocal<'a> = SmallVec<[Box<dyn for<'b> RunNow<'b> + 'a>; 4]>;
 pub fn new_dispatcher<'a, 'b>(
     stages: Vec<Stage<'a>>,
     thread_local: ThreadLocal<'b>,
-    thread_pool: ::std::sync::Arc<::rayon::ThreadPool>,
+    thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 ) -> Dispatcher<'a, 'b> {
     Dispatcher {
         stages,
