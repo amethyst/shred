@@ -54,7 +54,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// The safety of implementing `Send` is ensured by `BatchAccessor` which keeps
 /// tracks of all used resources and thus the `System` can be safely executed in
 /// with multiple threads.
-pub trait BatchController<'a, 'b> {
+pub trait BatchController<'a, 'b>: Send {
     /// This associated type has to contain all resources batch controller uses directly.
     ///
     /// These have to be specified here, instead of `SystemData` (as
@@ -68,9 +68,9 @@ pub trait BatchController<'a, 'b> {
     /// `Resource` in the `SystemData` doesn't allow to drop the reference
     /// before the sub dispatching; resulting in `Panic`.
     ///
-    /// So this mechanism allow you to fetch safelly the specified `Resource`
+    /// So this mechanism allows you to fetch safely the specified `Resource`
     /// in the `BatchController`.
-    /// The example "examples/batch_dispatching.rs" show how to.
+    /// The example "examples/batch_dispatching.rs" show how to us it.
     ///
     /// Note that it's not required to specify the sub systems resources here
     /// because they are handled automatically.
@@ -78,10 +78,13 @@ pub trait BatchController<'a, 'b> {
 
     /// Creates an instance of the `BatchControllerSystem`
     ///
-    /// This function is unsafe because it depends from the `BatchAccessor` that
-    /// if created wrongly can Panics.
+    /// This function is unsafe because an implementor of `BatchController` is expected
+    /// to uphold quarantees of `Send` only when it's created with
+    /// correctly constructed `BatchAccessor`.
+    /// `BatchAccessor` is meant for tracking which resourced are being used by the controller.
+    ///
     /// Usually this function is called internally by the `DispatcherBuilder`
-    /// which create the `BatchAccessor` correctly.
+    /// which creates the `BatchAccessor` correctly.
     unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
 }
 
