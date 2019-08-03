@@ -54,7 +54,7 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
 /// The safety of implementing `Send` is ensured by `BatchAccessor` which keeps
 /// tracks of all used resources and thus the `System` can be safely executed in
 /// with multiple threads.
-pub trait BatchController<'a, 'b>: Send {
+pub trait BatchController<'a, 'b> {
     /// This associated type has to contain all resources batch controller uses directly.
     ///
     /// These have to be specified here, instead of `SystemData` (as
@@ -70,7 +70,7 @@ pub trait BatchController<'a, 'b>: Send {
     ///
     /// So this mechanism allows you to fetch safely the specified `Resource`
     /// in the `BatchController`.
-    /// The example "examples/batch_dispatching.rs" show how to us it.
+    /// The example "examples/batch_dispatching.rs" show how to use it.
     ///
     /// Note that it's not required to specify the sub systems resources here
     /// because they are handled automatically.
