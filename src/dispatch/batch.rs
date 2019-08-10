@@ -76,15 +76,18 @@ pub trait BatchController<'a, 'b> {
     /// because they are handled automatically.
     type BatchSystemData: SystemData<'a>;
 
-    /// Creates an instance of the `BatchControllerSystem`
+    /// Creates an instance of the `BatchControllerSystem`.
+    ///
+    /// Usually this function is called internally by the `DispatcherBuilder`
+    /// which creates the `BatchAccessor` correctly.
+    /// The `Dispatcher` is constructed by the user elsewhere and passed to the
+    /// `DispatcherBuilder` through the functions `with_batch` or `add_batch` and
+    /// passed as argument to this function.
     ///
     /// This function is unsafe because an implementor of `BatchController` is expected
     /// to uphold quarantees of `Send` only when it's created with
     /// correctly constructed `BatchAccessor`.
     /// `BatchAccessor` is meant for tracking which resourced are being used by the controller.
-    ///
-    /// Usually this function is called internally by the `DispatcherBuilder`
-    /// which creates the `BatchAccessor` correctly.
     unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
 }
 
