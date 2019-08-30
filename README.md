@@ -24,7 +24,7 @@ shared and exclusive resource access, in parallel.
 ```rust
 extern crate shred;
 
-use shred::{DispatcherBuilder, Read, Resource, System, World, Write};
+use shred::{DispatcherBuilder, Read, Resource, ResourceId, System, SystemData, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -32,31 +32,29 @@ struct ResA;
 #[derive(Debug, Default)]
 struct ResB;
 
-struct PrintSystem;
+#[derive(SystemData)] // Provided with `shred-derive` feature
+struct Data<'a> {
+    a: Read<'a, ResA>,
+    b: Write<'a, ResB>,
+}
 
-// Systems should be generic over the
-// context if possible, so it's easy
-// to introduce one.
-impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Read<'a, ResA>, Write<'a, ResB>);
+struct EmptySystem;
 
-    fn run(&mut self, data: Self::SystemData) {
-        let (a, mut b) = data;
+impl<'a> System<'a> for EmptySystem {
+    type SystemData = Data<'a>;
 
-        println!("{:?}", &*a);
-        println!("{:?}", &*b);
-
-        *b = ResB; // We can mutate ResB here
-        // because it's `FetchMut`.
+    fn run(&mut self, bundle: Data<'a>) {
+        println!("{:?}", &*bundle.a);
+        println!("{:?}", &*bundle.b);
     }
 }
 
 fn main() {
-    let mut world = World::new();
+    let mut world = World::empty();
     let mut dispatcher = DispatcherBuilder::new()
-        .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
+        .with(EmptySystem, "empty", &[])
         .build();
-    //world.add(ResA); (We don't need to add `ResA`, a default value will be instantiated)
+    world.insert(ResA);
     world.insert(ResB);
 
     dispatcher.dispatch(&mut world);
