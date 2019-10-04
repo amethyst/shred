@@ -4,12 +4,15 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
-        dispatcher::{SystemId, ThreadLocal, ThreadPoolWrapper},
+        dispatcher::{SystemId, ThreadLocal},
         stage::StagesBuilder,
         BatchAccessor, BatchController, Dispatcher,
     },
     system::{RunNow, System, SystemData},
 };
+
+#[cfg(feature = "parallel")]
+use crate::dispatch::dispatcher::ThreadPoolWrapper;
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -227,6 +230,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// This mean that the dependencies, the `System` names, etc.. specified on
     /// the `Batch` `Dispatcher` are not visible on the parent, and is not
     /// allowed to specify cross dependencies.
+    #[allow(unused_mut)]
     pub fn add_batch<T>(
         &mut self,
         mut dispatcher_builder: DispatcherBuilder<'a, 'b>,
@@ -235,7 +239,15 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ) where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
     {
-        dispatcher_builder.thread_pool = self.thread_pool.clone();
+        match () {
+            #[cfg(feature = "parallel")]
+            () => {
+                dispatcher_builder.thread_pool = self.thread_pool.clone();
+            }
+            #[cfg(not(feature = "parallel"))]
+            () => {}
+        }
+
 
         let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
         reads.extend(<T::BatchSystemData as SystemData>::reads());
