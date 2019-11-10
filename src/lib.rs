@@ -49,7 +49,6 @@
 //! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
 //! virtual function calls.
 
-#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![deny(unused_must_use)]
 #![warn(missing_docs)]
 

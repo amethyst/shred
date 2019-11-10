@@ -9,24 +9,11 @@ use std::{
     usize,
 };
 
-#[cfg(feature = "nightly")]
 macro_rules! borrow_panic {
     ($s:expr) => {{
         panic!(
             "Tried to fetch data of type {:?}, but it was already borrowed{}.",
-            unsafe { ::std::intrinsics::type_name::<T>() },
-            $s,
-        )
-    }};
-}
-
-#[cfg(not(feature = "nightly"))]
-macro_rules! borrow_panic {
-    ($s:expr) => {{
-        panic!(
-            "Tried to fetch data, but it was already borrowed{}.\n\
-             You can get the type name of the incorrectly borrowed data by enabling `shred`'s \
-             `nightly` feature.",
+            ::std::any::type_name::<T>(),
             $s,
         )
     }};
