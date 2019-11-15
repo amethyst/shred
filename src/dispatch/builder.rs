@@ -4,12 +4,14 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
-        dispatcher::{SystemId, ThreadLocal, ThreadPoolWrapper},
+        dispatcher::{SystemId, ThreadLocal},
         stage::StagesBuilder,
         BatchAccessor, BatchController, Dispatcher,
     },
     system::{RunNow, System, SystemData},
 };
+#[cfg(feature = "parallel")]
+use crate::dispatch::dispatcher::ThreadPoolWrapper;
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -235,7 +237,10 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     ) where
         T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
     {
-        dispatcher_builder.thread_pool = self.thread_pool.clone();
+        #[cfg(feature = "parallel")]
+        {
+            dispatcher_builder.thread_pool = self.thread_pool.clone();
+        }
 
         let mut reads = dispatcher_builder.stages_builder.fetch_all_reads();
         reads.extend(<T::BatchSystemData as SystemData>::reads());
