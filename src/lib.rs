@@ -34,16 +34,14 @@
 //!     }
 //! }
 //!
-//! fn main() {
-//!     let mut world = World::empty();
-//!     let mut dispatcher = DispatcherBuilder::new()
-//!         .with(EmptySystem, "empty", &[])
-//!         .build();
-//!     world.insert(ResA);
-//!     world.insert(ResB);
+//! let mut world = World::empty();
+//! let mut dispatcher = DispatcherBuilder::new()
+//!     .with(EmptySystem, "empty", &[])
+//!     .build();
+//! world.insert(ResA);
+//! world.insert(ResB);
 //!
-//!     dispatcher.dispatch(&mut world);
-//! }
+//! dispatcher.dispatch(&mut world);
 //! ```
 //!
 //! Once you are more familiar with how system data and parallelization works,

@@ -84,6 +84,8 @@ pub trait BatchController<'a, 'b> {
     /// `DispatcherBuilder` through the functions `with_batch` or `add_batch` and
     /// passed as argument to this function.
     ///
+    /// # Safety
+    ///
     /// This function is unsafe because an implementor of `BatchController` is expected
     /// to uphold quarantees of `Send` only when it's created with
     /// correctly constructed `BatchAccessor`.

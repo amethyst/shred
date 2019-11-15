@@ -2,19 +2,21 @@
 //! words:
 //!
 //! 1) A *stage* is a part of the dispatching which contains work that can be
-//! done    in parallel
+//! done in parallel
 //!
 //! 2) In each stage, there's a *group*. A group is a list of systems, which are
-//! executed    in order. Thus, systems of a group may conflict with each other,
-//! but groups of    a stage may not.
+//! executed in order. Thus, systems of a group may conflict with each other,
+//! but groups of a stage may not.
 //!
 //! So the actual dispatching works like this (pseudo code):
 //!
+//! ```rust,ignore
 //! for stage in stages {
 //!     stage.for_each_group(|group| for system in group {
 //!         system.run(world);
 //!     });
 //! }
+//! ```
 //!
 //! As you can see, we execute stages sequentially, fork the stage to execute
 //! multiple groups at once, but execute the systems of each group sequentially
@@ -27,10 +29,9 @@
 //! say:
 //!
 //! > If a system only conflicts with one group of a stage, it gets executed
-//! after   all the other systems of this group, but only if by doing this, the
-//! running   times of the groups of this stage get closer to each other (called
-//! balanced   in code).
-//!
+//! after all the other systems of this group, but only if by doing this, the
+//! running times of the groups of this stage get closer to each other (called
+//! balanced in code).
 
 use std::fmt;
 
@@ -234,7 +235,7 @@ impl<'a> StagesBuilder<'a> {
                 for system in group {
                     let system: &SystemId = system;
 
-                    let mut name = map.get(system).unwrap().to_string();
+                    let mut name = (*map.get(system).unwrap()).to_string();
                     name = name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
 
                     writeln!(f, "\t\t\t{},", name)?;
@@ -377,7 +378,7 @@ impl<'a> StagesBuilder<'a> {
     /// Removes the ids of a given stage from the passed dependency list.
     fn remove_ids(&self, stage: usize, new_dep: &mut SmallVec<[SystemId; 4]>) {
         if !new_dep.is_empty() {
-            for id in self.ids[stage].iter().flat_map(|id_group| id_group) {
+            for id in self.ids[stage].iter().flatten() {
                 if let Some(index) = new_dep.iter().position(|x| *x == *id) {
                     new_dep.remove(index);
                 }
