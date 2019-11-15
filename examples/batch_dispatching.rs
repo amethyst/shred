@@ -77,7 +77,7 @@ impl<'a> System<'a> for SayHelloSystem {
 pub struct BuyPotatoSystem;
 
 impl<'a> System<'a> for BuyPotatoSystem {
-    type SystemData = (Write<'a, PotatoStore>);
+    type SystemData = Write<'a, PotatoStore>;
 
     fn run(&mut self, _data: Self::SystemData) {
         println!("Buy Potato")
@@ -89,7 +89,7 @@ impl<'a> System<'a> for BuyPotatoSystem {
 pub struct BuyTomatoSystem;
 
 impl<'a> System<'a> for BuyTomatoSystem {
-    type SystemData = (Write<'a, TomatoStore>);
+    type SystemData = Write<'a, TomatoStore>;
 
     fn run(&mut self, _data: Self::SystemData) {
         println!("Buy Tomato")
@@ -107,7 +107,7 @@ impl<'a, 'b> BatchController<'a, 'b> for CustomBatchControllerSystem<'a, 'b> {
     // Leaving `BatchBuilderData` to `()` would make the dispatcher to panic since the run
     // function will fetch the `TomatoStore` like the `SayHelloSystem` does.
     // type BatchSystemData = ();
-    type BatchSystemData = (Read<'a, TomatoStore>);
+    type BatchSystemData = Read<'a, TomatoStore>;
 
     unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
         CustomBatchControllerSystem {
