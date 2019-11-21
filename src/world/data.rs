@@ -170,15 +170,9 @@ where
 /// Allows to fetch a resource in a system immutably.
 /// **This will panic if the resource does not exist.**
 /// Usage of `Read` or `Option<Read>` is therefore recommended.
-///
-/// If the `nightly` feature of `shred` is enabled, this will print
-/// the type of the resource in case of a panic. That can help for debugging.
 pub type ReadExpect<'a, T> = Read<'a, T, PanicHandler>;
 
 /// Allows to fetch a resource in a system mutably.
 /// **This will panic if the resource does not exist.**
 /// Usage of `Write` or `Option<Write>` is therefore recommended.
-///
-/// If the `nightly` feature of `shred` is enabled, this will print
-/// the type of the resource in case of a panic. That can help for debugging.
 pub type WriteExpect<'a, T> = Write<'a, T, PanicHandler>;

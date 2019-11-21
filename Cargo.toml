@@ -36,7 +36,6 @@ shred-derive = { path = "shred-derive", version = "0.6.0" }
 [features]
 default = ["parallel", "shred-derive"]
 parallel = ["rayon"]
-nightly = []
 
 [[example]]
 name = "async"
