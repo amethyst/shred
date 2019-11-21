@@ -84,6 +84,8 @@ pub trait BatchController<'a, 'b> {
     /// `DispatcherBuilder` through the functions `with_batch` or `add_batch` and
     /// passed as argument to this function.
     ///
+    /// # Safety
+    ///
     /// This function is unsafe because an implementor of `BatchController` is expected
     /// to uphold quarantees of `Send` only when it's created with
     /// correctly constructed `BatchAccessor`.
@@ -367,7 +369,7 @@ mod tests {
     pub struct BuyPotatoSystem;
 
     impl<'a> System<'a> for BuyPotatoSystem {
-        type SystemData = (Write<'a, PotatoStore>);
+        type SystemData = Write<'a, PotatoStore>;
 
         fn run(&mut self, mut potato_store: Self::SystemData) {
             assert!(potato_store.is_store_open);
@@ -378,7 +380,7 @@ mod tests {
     pub struct BuyTomatoSystem;
 
     impl<'a> System<'a> for BuyTomatoSystem {
-        type SystemData = (Write<'a, TomatoStore>);
+        type SystemData = Write<'a, TomatoStore>;
 
         fn run(&mut self, mut tomato_store: Self::SystemData) {
             assert!(tomato_store.is_store_open);

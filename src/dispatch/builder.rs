@@ -359,7 +359,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.thread_pool
             .write()
             .unwrap()
-            .get_or_insert_with(|| Self::create_thread_pool());
+            .get_or_insert_with(Self::create_thread_pool);
 
         #[cfg(feature = "parallel")]
         let d = new_dispatcher(
@@ -409,7 +409,7 @@ impl<'b> DispatcherBuilder<'static, 'b> {
         self.thread_pool
             .write()
             .unwrap()
-            .get_or_insert_with(|| Self::create_thread_pool());
+            .get_or_insert_with(Self::create_thread_pool);
 
         new_async(
             world,

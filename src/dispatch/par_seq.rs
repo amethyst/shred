@@ -95,24 +95,27 @@ impl<H> Par<H, Nil> {
         H: for<'a> RunWithPool<'a>,
         T: for<'a> RunWithPool<'a>,
     {
-        debug_assert!(
-            {
-                let mut reads = Vec::new();
-                let mut writes = Vec::new();
-                self.head.reads(&mut reads);
-                self.head.writes(&mut writes);
+        if cfg!(debug_assertions) {
+            let mut reads = Vec::new();
+            let mut writes = Vec::new();
+            self.head.reads(&mut reads);
+            self.head.writes(&mut writes);
 
-                let mut sys_reads = Vec::new();
-                let mut sys_writes = Vec::new();
-                sys.reads(&mut sys_reads);
-                sys.writes(&mut sys_writes);
+            let mut sys_reads = Vec::new();
+            let mut sys_writes = Vec::new();
+            sys.reads(&mut sys_reads);
+            sys.writes(&mut sys_writes);
 
+            let read_write_intersections_safe =
                 !(check_intersection(writes.iter(), sys_reads.iter())
                     || check_intersection(writes.iter(), sys_writes.iter())
-                    || check_intersection(reads.iter(), sys_writes.iter()))
-            },
-            "Tried to add system with conflicting reads / writes"
-        );
+                    || check_intersection(reads.iter(), sys_writes.iter()));
+
+            debug_assert!(
+                read_write_intersections_safe,
+                "Tried to add system with conflicting reads / writes"
+            );
+        }
 
         Par {
             head: Par {
@@ -189,14 +192,7 @@ impl<H> Par<H, Nil> {
 ///
 /// let mut dispatcher = ParSeq::new(
 ///     seq![
-///         par![
-///             SysA,
-///             SysWithLifetime(&x),
-///             seq![
-///                 SysC,
-///                 SysD,
-///             ],
-///         ],
+///         par![SysA, SysWithLifetime(&x), seq![SysC, SysD,],],
 ///         SysB,
 ///         SysLocal(&x as *const u8),
 ///     ],

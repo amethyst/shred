@@ -8,7 +8,7 @@ and write access to others.
 """
 readme = "README.md"
 documentation = "https://docs.rs/shred"
-repository = "https://github.com/slide-rs/shred"
+repository = "https://github.com/amethyst/shred"
 keywords = ["parallel", "systems", "resources", "ecs"]
 categories = ["concurrency"]
 license = "MIT/Apache-2.0"
@@ -16,15 +16,15 @@ exclude = ["bors.toml", ".travis.yml"]
 edition = "2018"
 
 [badges]
-travis-ci = { repository = "slide-rs/shred" }
+travis-ci = { repository = "amethyst/shred" }
 
 [dependencies]
-arrayvec = "0.4"
-hashbrown = "0.6.0"
-mopa = "0.2"
-rayon = { version = "1.1", optional = true }
+arrayvec = "0.5.1"
+hashbrown = "0.6.3"
+mopa = "0.2.2"
+rayon = { version = "1.2.0", optional = true }
 shred-derive = { path = "shred-derive", version = "0.6.0", optional = true }
-smallvec = "0.6"
+smallvec = "1.0.0"
 
 [workspace]
 members = ["shred-derive"]
