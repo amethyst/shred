@@ -2,8 +2,8 @@
 
 [![Build Status][bi]][bl] [![Crates.io][ci]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl] ![LoC][lo]
 
-[bi]: https://travis-ci.org/slide-rs/shred.svg?branch=master
-[bl]: https://travis-ci.org/slide-rs/shred
+[bi]: https://travis-ci.org/amethyst/shred.svg?branch=master
+[bl]: https://travis-ci.org/amethyst/shred
 
 [ci]: https://img.shields.io/crates/v/shred.svg
 [cl]: https://crates.io/crates/shred/
@@ -13,7 +13,7 @@
 [di]: https://docs.rs/shred/badge.svg
 [dl]: https://docs.rs/shred/
 
-[lo]: https://tokei.rs/b1/github/slide-rs/shred?category=code
+[lo]: https://tokei.rs/b1/github/amethyst/shred?category=code
 
 This library allows to dispatch
 systems, which can have interdependencies,
