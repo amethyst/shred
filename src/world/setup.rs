@@ -12,7 +12,7 @@ macro_rules! fetch_panic {
             * Inserting it when the world is created: `world.insert(..)`.\n\
             * If the resource implements `Default`, include it in a system's `SystemData`, \
               and ensure the system is registered in the dispatcher.\n\
-            * If the resource does not implement `Default`, insert in the world during \
+            * If the resource does not implement `Default`, insert it in the world during \
               `System::setup`.\n\
 \n\
             [^1]: Full type name: `{resource_name_full}`\

@@ -12,7 +12,7 @@ You may ensure the resource exists through one of the following methods:
 
 * Inserting it when the world is created: `world.insert(..)`.
 * If the resource implements `Default`, include it in a system's `SystemData`, and ensure the system is registered in the dispatcher.
-* If the resource does not implement `Default`, insert in the world during `System::setup`.
+* If the resource does not implement `Default`, insert it in the world during `System::setup`.
 
 [^1]: Full type name: `fetch_panic::MyRes`"#
 )]
