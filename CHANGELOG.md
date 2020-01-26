@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Bump `tynm` to `0.1.3`. ([#187])
+
+[#187]: https://github.com/amethyst/shred/pulls/187
+
 ## 0.10.0 (2019-12-31)
 
 ### Changed
