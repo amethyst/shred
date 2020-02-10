@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-* Bump `tynm` to `0.1.3`. ([#187])
+### Changed
 
+* Bump `tynm` to `0.1.3`. ([#187])
+* Implement `Resource` for `!Send + !Sync` types when `"parallel"` feature is disabled. ([#186])
+
+[#186]: https://github.com/amethyst/shred/pull/186
 [#187]: https://github.com/amethyst/shred/pulls/187
 
 ## 0.10.0 (2019-12-31)
