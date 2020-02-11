@@ -218,19 +218,53 @@ pub trait System<'a> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
 /// use shred::{Read, ResourceId, SystemData, World, Write};
 ///
+/// #[derive(Default)]
 /// pub struct Clock;
+/// #[derive(Default)]
 /// pub struct Timer;
 ///
 /// // This will implement `SystemData` for `MySystemData`.
 /// // Please note that this will only work if `SystemData`, `World` and `ResourceId` are included.
+/// # #[cfg(feature = "shred-derive")]
 /// #[derive(SystemData)]
 /// pub struct MySystemData<'a> {
 ///     pub clock: Read<'a, Clock>,
 ///     pub timer: Write<'a, Timer>,
 /// }
+/// #
+/// # // The following is required for the snippet to compile without the `shred-derive` feature.
+/// #
+/// # #[cfg(not(feature = "shred-derive"))]
+/// # struct MySystemData<'a> {
+/// #     pub clock: Read<'a, Clock>,
+/// #     pub timer: Write<'a, Timer>,
+/// # }
+/// #
+/// # #[cfg(not(feature = "shred-derive"))]
+/// # impl<'a> SystemData<'a> for MySystemData<'a> {
+/// #     fn setup(world: &mut World) {
+/// #         Read::<'_, Clock>::setup(world);
+/// #         Write::<'_, Timer>::setup(world);
+/// #     }
+/// #
+/// #     fn fetch(world: &'a World) -> Self {
+/// #         Self {
+/// #             clock: Read::<'_, Clock>::fetch(world),
+/// #             timer: Write::<'_, Timer>::fetch(world),
+/// #         }
+/// #     }
+/// #
+/// #     fn reads() -> Vec<ResourceId> {
+/// #         Read::<'_, Clock>::reads()
+/// #     }
+/// #
+/// #     fn writes() -> Vec<ResourceId> {
+/// #         Write::<'_, Timer>::writes()
+/// #     }
+/// # }
 /// ```
 pub trait SystemData<'a> {
     /// Sets up the system data for fetching it from the `World`.
