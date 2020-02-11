@@ -97,6 +97,10 @@ where
 /// readers).
 #[cfg(feature = "parallel")]
 pub trait Resource: Any + Send + Sync + 'static {}
+
+/// A resource is a data slot which lives in the `World` can only be accessed
+/// according to Rust's typical borrowing model (one writer xor multiple
+/// readers).
 #[cfg(not(feature = "parallel"))]
 pub trait Resource: Any + 'static {}
 
