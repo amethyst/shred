@@ -17,6 +17,7 @@
 //! #[derive(Debug, Default)]
 //! struct ResB;
 //!
+//! # #[cfg(feature = "shred-derive")]
 //! #[derive(SystemData)] // Provided with `shred-derive` feature
 //! struct Data<'a> {
 //!     a: Read<'a, ResA>,
@@ -42,6 +43,37 @@
 //! world.insert(ResB);
 //!
 //! dispatcher.dispatch(&mut world);
+//! #
+//! # // The following is required for the snippet to compile without the `shred-derive` feature.
+//! #
+//! # #[cfg(not(feature = "shred-derive"))]
+//! # struct Data<'a> {
+//! #     a: Read<'a, ResA>,
+//! #     b: Write<'a, ResB>,
+//! # }
+//! #
+//! # #[cfg(not(feature = "shred-derive"))]
+//! # impl<'a> SystemData<'a> for Data<'a> {
+//! #     fn setup(world: &mut World) {
+//! #         Read::<'_, ResA>::setup(world);
+//! #         Write::<'_, ResB>::setup(world);
+//! #     }
+//! #
+//! #     fn fetch(world: &'a World) -> Self {
+//! #         Self {
+//! #             a: Read::<'_, ResA>::fetch(world),
+//! #             b: Write::<'_, ResB>::fetch(world),
+//! #         }
+//! #     }
+//! #
+//! #     fn reads() -> Vec<ResourceId> {
+//! #         Read::<'_, ResA>::reads()
+//! #     }
+//! #
+//! #     fn writes() -> Vec<ResourceId> {
+//! #         Write::<'_, ResB>::writes()
+//! #     }
+//! # }
 //! ```
 //!
 //! Once you are more familiar with how system data and parallelization works,

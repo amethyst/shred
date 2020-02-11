@@ -95,7 +95,10 @@ where
 /// A resource is a data slot which lives in the `World` can only be accessed
 /// according to Rust's typical borrowing model (one writer xor multiple
 /// readers).
+#[cfg(feature = "parallel")]
 pub trait Resource: Any + Send + Sync + 'static {}
+#[cfg(not(feature = "parallel"))]
+pub trait Resource: Any + 'static {}
 
 mod __resource_mopafy_scope {
     #![allow(clippy::all)]
@@ -107,7 +110,10 @@ mod __resource_mopafy_scope {
     mopafy!(Resource);
 }
 
+#[cfg(feature = "parallel")]
 impl<T> Resource for T where T: Any + Send + Sync {}
+#[cfg(not(feature = "parallel"))]
+impl<T> Resource for T where T: Any {}
 
 /// The id of a [`Resource`], which simply wraps a type id and a "dynamic ID".
 /// The "dynamic ID" is usually just left `0`, and, unless such documentation

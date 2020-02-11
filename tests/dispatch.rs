@@ -1,5 +1,3 @@
-extern crate shred;
-
 use shred::{
     Dispatcher, DispatcherBuilder, Read, ResourceId, RunningTime, System, SystemData, World, Write,
 };
@@ -15,14 +13,68 @@ struct Res;
 #[derive(Default)]
 struct ResB;
 
+#[cfg(feature = "shred-derive")]
 #[derive(SystemData)]
 struct DummyData<'a> {
     _res: Read<'a, Res>,
 }
 
+#[cfg(not(feature = "shred-derive"))]
+struct DummyData<'a> {
+    _res: Read<'a, Res>,
+}
+
+#[cfg(not(feature = "shred-derive"))]
+impl<'a> SystemData<'a> for DummyData<'a> {
+    fn setup(world: &mut World) {
+        Read::<'_, Res>::setup(world);
+    }
+
+    fn fetch(world: &'a World) -> Self {
+        Self {
+            _res: Read::<'_, Res>::fetch(world),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        Read::<'_, Res>::reads()
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        Read::<'_, Res>::writes()
+    }
+}
+
+#[cfg(feature = "shred-derive")]
 #[derive(SystemData)]
 struct DummyDataMut<'a> {
     _res: Write<'a, Res>,
+}
+
+#[cfg(not(feature = "shred-derive"))]
+struct DummyDataMut<'a> {
+    _res: Write<'a, Res>,
+}
+
+#[cfg(not(feature = "shred-derive"))]
+impl<'a> SystemData<'a> for DummyDataMut<'a> {
+    fn setup(world: &mut World) {
+        Write::<'_, Res>::setup(world);
+    }
+
+    fn fetch(world: &'a World) -> Self {
+        Self {
+            _res: Write::<'_, Res>::fetch(world),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        Write::<'_, Res>::reads()
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        Write::<'_, Res>::writes()
+    }
 }
 
 struct DummySys;
