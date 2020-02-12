@@ -45,7 +45,7 @@ fn impl_system_data(ast: &DeriveInput) -> proc_macro2::TokenStream {
         .lifetimes()
         .next()
         .expect("There has to be at least one lifetime");
-    let ref impl_fetch_lt = def_fetch_lt.lifetime;
+    let impl_fetch_lt = &def_fetch_lt.lifetime;
 
     {
         let where_clause = generics.make_where_clause();
