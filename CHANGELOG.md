@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.2 (2020-02-13)
+
+### Changed
+
+* Bumped dependency versions. ([#193])
+
+[#193]: https://github.com/amethyst/shred/pull/193
+
 ## 0.10.1 (2020-02-12)
 
 ### Changed
