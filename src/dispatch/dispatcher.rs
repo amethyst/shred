@@ -56,10 +56,12 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     pub fn dispatch(&mut self, world: &World) {
-        #[cfg(feature = "parallel")]
+        // FIXME parallel execution is disabled for wasm until main thread
+        // synchronisation problems are solved
+        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
         self.dispatch_par(world);
 
-        #[cfg(not(feature = "parallel"))]
+        #[cfg(any(not(feature = "parallel"), target_arch = "wasm32"))]
         self.dispatch_seq(world);
 
         self.dispatch_thread_local(world);
