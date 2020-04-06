@@ -46,121 +46,174 @@ impl<'a> DynamicSystemData<'a> for BatchUncheckedWorld<'a> {
     }
 }
 
-/// The `BatchController` is the additional trait that a normal System must
-/// implement in order to be used as a system controlling the execution of a batch.
+/// The `BatchController` describes things that allow one to control how batches of systems are
+/// executed.
 ///
-/// Note that the `System` must also implement `Send` because the `Dispatcher`
-/// is by default un-send.
-/// The safety of implementing `Send` is ensured by `BatchAccessor` which keeps
-/// tracks of all used resources and thus the `System` can be safely executed in
-/// with multiple threads.
-pub trait BatchController<'a, 'b> {
+/// A batch is a set of systems represented as a dispatcher (a sub-dispatcher, if you like).
+///
+/// It is registered with [`add_batch`][crate::DispatcherBuilder::add_batch], together with the
+/// corresponding sub-dispatcher.
+///
+/// See the
+/// [batch_dispatching](https://github.com/amethyst/shred/blob/master/examples/batch_dispatching.rs)
+/// example.
+///
+/// The [`MultiDispatcher`] may help with implementing this in most common cases.
+pub trait BatchController<'a, 'b, 'c> {
     /// This associated type has to contain all resources batch controller uses directly.
     ///
-    /// These have to be specified here, instead of `SystemData` (as
-    /// a normal `System` does) because the sub `System`s can use the same `Resource`s
-    /// of the `BatchController`.
-    /// This make necessary to drop the references to the
-    /// fetched `Resource`s in the batch controller before dispatching
-    /// the sub `System`s.
+    /// Note that these are not fetched automatically for the controller, as is the case with
+    /// ordinary [`System`]s. This is because the fetched references might need to be dropped
+    /// before actually dispatching the other systems to avoid collisions on them and it would not
+    /// be possible to perform using a parameter.
     ///
-    /// Now is easy to understand that specify the `BatchController`
-    /// `Resource` in the `SystemData` doesn't allow to drop the reference
-    /// before the sub dispatching; resulting in `Panic`.
-    ///
-    /// So this mechanism allows you to fetch safely the specified `Resource`
-    /// in the `BatchController`.
-    /// The example
-    /// [examples/batch_dispatching.rs](https://github.com/amethyst/shred/blob/master/examples/batch_dispatching.rs) show how to use it.
-    ///
-    /// Note that it's not required to specify the sub systems resources here
-    /// because they are handled automatically.
-    type BatchSystemData: SystemData<'a>;
+    /// Therefore, these are only *declared* here, but not automatically fetched. If the
+    /// declaration does not match reality, the scheduler might make suboptimal decisions (if this
+    /// declares more than is actually needed) or it may panic in runtime (in case it declares less
+    /// and there happens to be a collision).
+    type BatchSystemData: SystemData<'c>;
 
-    /// Creates an instance of the `BatchControllerSystem`.
+    /// The body of the controller.
     ///
-    /// Usually this function is called internally by the `DispatcherBuilder`
-    /// which creates the `BatchAccessor` correctly.
-    /// The `Dispatcher` is constructed by the user elsewhere and passed to the
-    /// `DispatcherBuilder` through the functions `with_batch` or `add_batch` and
-    /// passed as argument to this function.
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe because an implementor of `BatchController` is expected
-    /// to uphold quarantees of `Send` only when it's created with
-    /// correctly constructed `BatchAccessor`.
-    /// `BatchAccessor` is meant for tracking which resourced are being used by the controller.
-    ///
-    /// In particular, this is not to be called directly by a user code. The `DispatcherBuilder`
-    /// upholds all the guarantees internally. There's no requirement on *implementer* of this
-    /// method.
-    unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
+    /// It is allowed to fetch (manually) and examine its
+    /// [`BatchSystemData`][BatchController::BatchSystemData]. Then it shall drop all fetched
+    /// references and is free to call `dispatcher.dispatch(world)` as many time as it sees fit.
+    fn run(&mut self, world: &'c World, dispatcher: &mut Dispatcher<'a, 'b>);
+
+    /// Estimate how heavy the whole controller, including the sub-systems, is in terms of
+    /// computation costs.
+    fn running_time(&self) -> RunningTime {
+        RunningTime::VeryLong
+    }
 }
 
-/// The `DefaultBatchControllerSystem` is a simple implementation that will
-/// dispatch the inner dispatcher one time.
-///
-/// Usually you want to create your own `Dispatcher`.
-///
-/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
-/// tracks of all used resources and thus the `System` can be safely executed in
-/// multi thread.
-pub struct DefaultBatchControllerSystem<'a, 'b> {
+pub(crate) struct BatchControllerSystem<'a, 'b, C> {
     accessor: BatchAccessor,
+    controller: C,
     dispatcher: Dispatcher<'a, 'b>,
 }
 
-impl<'a, 'b> BatchController<'a, 'b> for DefaultBatchControllerSystem<'a, 'b> {
-    type BatchSystemData = ();
-
-    unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
-        DefaultBatchControllerSystem {
+impl<'a, 'b, 'c, C> BatchControllerSystem<'a, 'b, C>
+where
+    C: BatchController<'a, 'b, 'c>,
+{
+    pub(crate) unsafe fn create(accessor: BatchAccessor, controller: C, dispatcher: Dispatcher<'a, 'b>)
+        -> Self
+    {
+        Self {
             accessor,
+            controller,
             dispatcher,
         }
     }
 }
 
-impl<'a> System<'a> for DefaultBatchControllerSystem<'_, '_> {
-    type SystemData = BatchUncheckedWorld<'a>;
+impl<'a, 'b, 'c, C> System<'c> for BatchControllerSystem<'a, 'b, C>
+where
+    C: BatchController<'a, 'b, 'c>,
+{
+    type SystemData = BatchUncheckedWorld<'c>;
 
     fn run(&mut self, data: Self::SystemData) {
-        self.dispatcher.dispatch(data.0);
+        self.controller.run(data.0, &mut self.dispatcher);
     }
 
     fn running_time(&self) -> RunningTime {
-        RunningTime::VeryLong
+        self.controller.running_time()
     }
 
-    fn accessor<'c>(&'c self) -> AccessorCow<'a, 'c, Self> {
+    fn accessor<'s>(&'s self) -> AccessorCow<'c, 's, Self> {
         AccessorCow::Ref(&self.accessor)
     }
 
     fn setup(&mut self, world: &mut World) {
+        world.setup::<C::BatchSystemData>();
         self.dispatcher.setup(world);
     }
 }
 
-/// Is safe to implement `Send` and `Sync` because the `BatchAccessor` keep
-/// tracks of all used resources and thus the `System` can be safely executed in
-/// multi thread.
-unsafe impl<'a, 'b> Send for DefaultBatchControllerSystem<'a, 'b> {}
+unsafe impl<C: Send> Send for BatchControllerSystem<'_, '_, C> {}
+unsafe impl<C: Sync> Sync for BatchControllerSystem<'_, '_, C> {}
+
+/// The controlling parts of simplified [`BatchController`]s for running a batch fixed number of
+/// times.
+///
+/// If one needs to implement a [`BatchController`] that first examines some data and decides
+/// upfront how many times a set of sub-systems are to be dispatched, this can help with the
+/// implementation. This is less flexible (it can't examine things in-between iterations of
+/// dispatching, for example), but is often enough and more convenient as it avoids manual fetching
+/// of the resources.
+///
+/// A common example is pausing a game ‒ based on some resource, the game physics systems are run
+/// either 0 times or once.
+///
+/// A bigger example can be found in the
+/// [multi_batch_dispatching](https://github.com/amethyst/shred/blob/master/examples/multi_batch_dispatching.rs).
+///
+/// To be useful, pass the controller to the constructor of [`MultiDispatcher`] and register with
+/// [`add_batch`][crate::DispatcherBuilder::add_batch].
+pub trait MultiDispatchController<'a>: Send {
+    /// What data it needs to decide on how many times the subsystems should be run.
+    ///
+    /// This may overlap with system data used by the subsystems, but doesn't have to contain them.
+    type SystemData: SystemData<'a>;
+
+    /// Performs the decision.
+    ///
+    /// Returns the number of times the batch should be run and the [`MultiDispatcher`] will handle
+    /// the actual execution.
+    fn plan(&mut self, data: Self::SystemData) -> usize;
+}
+
+/// A bridge from [`MultiDispatchController`] to [`BatchController`].
+///
+/// This allows to turn a [`MultiDispatchController`] into a [`BatchController`] so it can be
+/// registered with [`add_batch`][crate::DispatcherBuilder::add_batch].
+pub struct MultiDispatcher<C> {
+    controller: C,
+}
+
+impl<C> MultiDispatcher<C> {
+    /// Constructor.
+    ///
+    /// The `controller` should implement [`MultiDispatchController`].
+    pub fn new(controller: C) -> Self {
+        Self {
+            controller
+        }
+    }
+}
+
+impl<'a, 'b, 'c, C> BatchController<'a, 'b, 'c> for MultiDispatcher<C>
+where
+    C: MultiDispatchController<'c>,
+{
+    type BatchSystemData = C::SystemData;
+
+    fn run(&mut self, world: &'c World, dispatcher: &mut Dispatcher<'a, 'b>) {
+        let n = {
+            let plan_data = world.system_data();
+            self.controller.plan(plan_data)
+        };
+
+        for _ in 0..n {
+            dispatcher.dispatch(world);
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        AccessorCow, BatchAccessor, BatchController, BatchUncheckedWorld, Dispatcher,
-        DispatcherBuilder, RunningTime, System, World, Write,
-    };
+    use crate::{BatchController, Dispatcher, DispatcherBuilder, System, World, Write};
 
     /// This test demonstrate that the batch system is able to correctly setup
     /// its resources to default datas.
     #[test]
     fn test_setup() {
         let mut dispatcher = DispatcherBuilder::new()
-            .with_batch::<CustomBatchControllerSystem>(
+            .with_batch(
+                CustomBatchControllerSystem,
                 DispatcherBuilder::new()
                     .with(BuyTomatoSystem, "buy_tomato_system", &[])
                     .with(BuyPotatoSystem, "buy_potato_system", &[]),
@@ -197,7 +250,8 @@ mod tests {
     fn test_parallel_batch_execution() {
         let mut dispatcher = DispatcherBuilder::new()
             .with(OpenStoresSystem, "open_stores_system", &[])
-            .with_batch::<CustomBatchControllerSystem>(
+            .with_batch(
+                CustomBatchControllerSystem,
                 DispatcherBuilder::new()
                     .with(BuyTomatoSystem, "buy_tomato_system", &[])
                     .with(BuyPotatoSystem, "buy_potato_system", &[]),
@@ -257,7 +311,8 @@ mod tests {
     fn test_sequence_batch_execution() {
         let mut dispatcher = DispatcherBuilder::new()
             .with(OpenStoresSystem, "open_stores_system", &[])
-            .with_batch::<CustomBatchControllerSystem>(
+            .with_batch(
+                CustomBatchControllerSystem,
                 DispatcherBuilder::new()
                     .with(BuyTomatoWalletSystem, "buy_tomato_system", &[])
                     .with(BuyPotatoWalletSystem, "buy_potato_system", &[]),
@@ -421,44 +476,15 @@ mod tests {
 
     // Custom Batch Controller which dispatch the systems three times
 
-    pub struct CustomBatchControllerSystem<'a, 'b> {
-        accessor: BatchAccessor,
-        dispatcher: Dispatcher<'a, 'b>,
-    }
+    pub struct CustomBatchControllerSystem;
 
-    impl<'a, 'b> BatchController<'a, 'b> for CustomBatchControllerSystem<'a, 'b> {
+    impl<'a, 'b> BatchController<'a, 'b, '_> for CustomBatchControllerSystem {
         type BatchSystemData = ();
 
-        unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self {
-            CustomBatchControllerSystem {
-                accessor,
-                dispatcher,
-            }
-        }
-    }
-
-    impl<'a> System<'a> for CustomBatchControllerSystem<'_, '_> {
-        type SystemData = BatchUncheckedWorld<'a>;
-
-        fn run(&mut self, data: Self::SystemData) {
+        fn run(&mut self, world: &World, dispatcher: &mut Dispatcher<'a, 'b>) {
             for _i in 0..3 {
-                self.dispatcher.dispatch(data.0);
+                dispatcher.dispatch(world);
             }
         }
-
-        fn running_time(&self) -> RunningTime {
-            RunningTime::VeryLong
-        }
-
-        fn accessor<'c>(&'c self) -> AccessorCow<'a, 'c, Self> {
-            AccessorCow::Ref(&self.accessor)
-        }
-
-        fn setup(&mut self, world: &mut World) {
-            self.dispatcher.setup(world);
-        }
     }
-
-    unsafe impl<'a, 'b> Send for CustomBatchControllerSystem<'a, 'b> {}
-
 }

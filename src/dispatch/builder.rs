@@ -4,6 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{
     dispatch::{
+        batch::BatchControllerSystem,
         dispatcher::{SystemId, ThreadLocal},
         stage::StagesBuilder,
         BatchAccessor, BatchController, Dispatcher,
@@ -199,14 +200,16 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// allowed to specify cross dependencies.
     pub fn with_batch<T>(
         mut self,
+        controller: T,
         dispatcher_builder: DispatcherBuilder<'a, 'b>,
         name: &str,
         dep: &[&str],
     ) -> Self
     where
-        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+        T: for<'c> BatchController<'a, 'b, 'c> + Send + 'a,
+        'b: 'a,
     {
-        self.add_batch::<T>(dispatcher_builder, name, dep);
+        self.add_batch::<T>(controller, dispatcher_builder, name, dep);
 
         self
     }
@@ -231,11 +234,13 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// allowed to specify cross dependencies.
     pub fn add_batch<T>(
         &mut self,
+        controller: T,
         mut dispatcher_builder: DispatcherBuilder<'a, 'b>,
         name: &str,
         dep: &[&str],
     ) where
-        T: for<'c> System<'c> + BatchController<'a, 'b> + Send + 'a,
+        T: for<'c> BatchController<'a, 'b, 'c> + Send + 'a,
+        'b: 'a,
     {
         #[cfg(feature = "parallel")]
         {
@@ -253,9 +258,11 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         writes.dedup();
 
         let accessor = BatchAccessor::new(reads, writes);
-        let dispatcher = dispatcher_builder.build();
+        let dispatcher: Dispatcher<'a, 'b> = dispatcher_builder.build();
 
-        let batch_system = unsafe { T::create(accessor, dispatcher) };
+        let batch_system = unsafe {
+            BatchControllerSystem::<'a, 'b, T>::create(accessor, controller, dispatcher)
+        };
 
         self.add(batch_system, name, dep);
     }
