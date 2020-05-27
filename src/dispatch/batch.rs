@@ -70,7 +70,8 @@ pub trait BatchController<'a, 'b> {
     ///
     /// So this mechanism allows you to fetch safely the specified `Resource`
     /// in the `BatchController`.
-    /// The example "examples/batch_dispatching.rs" show how to use it.
+    /// The example
+    /// [examples/batch_dispatching.rs](https://github.com/amethyst/shred/blob/master/examples/batch_dispatching.rs) show how to use it.
     ///
     /// Note that it's not required to specify the sub systems resources here
     /// because they are handled automatically.
@@ -90,6 +91,10 @@ pub trait BatchController<'a, 'b> {
     /// to uphold quarantees of `Send` only when it's created with
     /// correctly constructed `BatchAccessor`.
     /// `BatchAccessor` is meant for tracking which resourced are being used by the controller.
+    ///
+    /// In particular, this is not to be called directly by a user code. The `DispatcherBuilder`
+    /// upholds all the guarantees internally. There's no requirement on *implementer* of this
+    /// method.
     unsafe fn create(accessor: BatchAccessor, dispatcher: Dispatcher<'a, 'b>) -> Self;
 }
 
