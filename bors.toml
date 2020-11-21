@@ -1,1 +1,1 @@
-status = ["continuous-integration/travis-ci/push"]
+status = ["ci"] # links to `.github/workflows/ci.yml
