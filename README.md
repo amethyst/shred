@@ -1,11 +1,11 @@
 # shred - *Sh*ared *re*source *d*ispatcher
 
-[![Build Status][bi]][bl] [![Crates.io][ci]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl] ![LoC][lo]
+[![Build Status][https://github.com/amethyst/shred/workflows/CI/badge.svg]][bl] [![Crates.io][cr]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl] ![LoC][lo]
 
-[bi]: https://travis-ci.org/amethyst/shred.svg?branch=master
-[bl]: https://travis-ci.org/amethyst/shred
+[bi]: https://github.com/amethyst/shred/workflows/CI/badge.svg
+[bl]: https://github.com/amethyst/shred/actions?query=workflow%3ACI
 
-[ci]: https://img.shields.io/crates/v/shred.svg
+[cr]: https://img.shields.io/crates/v/shred.svg
 [cl]: https://crates.io/crates/shred/
 
 [li]: https://img.shields.io/badge/license-MIT%2FApache-blue.svg
