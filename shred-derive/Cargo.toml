@@ -9,9 +9,9 @@ keywords = ["parallel", "systems", "resources", "ecs", "derive"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
-syn = "1.0.14"
-quote = "1.0.2"
-proc-macro2 = "1.0.8"
+syn = "1.0.55"
+quote = "1.0.8"
+proc-macro2 = "1.0.24"
 
 [lib]
 proc-macro = true
