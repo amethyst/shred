@@ -1,7 +1,6 @@
-//! This example shows how to use and define a batch dispatcher.
+//! This example shows how to use and define a multi-batch dispatcher.
 //!
-//! The batch feature allows to control the dispatching of a group of
-//! systems.
+//! It allows to influence how many times a set of systems gets dispatched.
 //!
 //! Specifically here we have three Systems
 //! - `SayHelloSystem`: Which is directly registered under the main
@@ -13,14 +12,12 @@
 //! `PotatoStore`, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
-//! This example demonstrates that the batch dispatcher is able to affect on how the systems inside
-//! the batch are executed
-//!
-//! This is done by defining `CustomBatchControllerSystem` which executes its inner `System`s
-//! three times.
+//! This is done by defining `Run3Times` which decides that the inner systems should be run 3
+//! times. This is similar to the `batch_dispatching.rs` example, but that one uses a more flexible
+//! (but also more verbose) way of doing it.
 
 use shred::{
-    BatchController, Dispatcher, DispatcherBuilder, Read, System, World, Write,
+    DispatcherBuilder, Read, System, World, Write, MultiDispatchController, MultiDispatcher,
 };
 use std::{thread::sleep, time::Duration};
 
@@ -28,7 +25,7 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .with(SayHelloSystem, "say_hello_system", &[])
         .with_batch(
-            CustomBatchControllerSystem,
+            MultiDispatcher::new(Run3Times),
             DispatcherBuilder::new()
                 .with(BuyTomatoSystem, "buy_tomato_system", &[])
                 .with(BuyPotatoSystem, "buy_potato_system", &[]),
@@ -97,23 +94,13 @@ impl<'a> System<'a> for BuyTomatoSystem {
     }
 }
 
-/// Batch controller that customizes how inner systems are executed
-pub struct CustomBatchControllerSystem;
+#[derive(Default)]
+struct Run3Times;
 
-impl<'a, 'b, 'c> BatchController<'a, 'b, 'c> for CustomBatchControllerSystem {
-    // Leaving `BatchBuilderData` to `()` would make the dispatcher to panic since the run
-    // function will fetch the `TomatoStore` like the `SayHelloSystem` does.
-    // type BatchSystemData = ();
-    type BatchSystemData = Read<'c, TomatoStore>;
+impl<'a> MultiDispatchController<'a> for Run3Times {
+    type SystemData = Read<'a, TomatoStore>;
 
-    fn run(&mut self, world: &World, dispatcher: &mut Dispatcher<'a, 'b>) {
-        {
-            // The scope is used to unload the resource before dispatching inner systems.
-            let _ts = world.fetch::<TomatoStore>();
-        }
-        println!("Batch execution");
-        for _i in 0..3 {
-            dispatcher.dispatch(world);
-        }
+    fn plan(&mut self, _data: Self::SystemData) -> usize {
+        3
     }
 }

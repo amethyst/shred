@@ -353,7 +353,6 @@ fn assert_unsized<T: ?Sized>() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use World;
 
     trait Object {
         fn method1(&self) -> i32;
