@@ -1,0 +1,53 @@
+on:
+  push:
+    branches:
+      - staging
+      - trying
+      - master
+  pull_request:
+    branches:
+      - '**'
+
+name: CI
+
+jobs:
+  build_and_test:
+    name: Build and Test (Linux)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - nightly
+          - beta
+          - stable
+          - 1.38.0  # MSRV
+
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --no-default-features
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose --no-default-features
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose

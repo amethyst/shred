@@ -1,1 +1,7 @@
-status = ["continuous-integration/travis-ci/push"]
+# links to `.github/workflows/ci.yml `build_and_test` job
+status = [
+  "Build and Test (Linux) (nightly)",
+  "Build and Test (Linux) (beta)",
+  "Build and Test (Linux) (stable)",
+  "Build and Test (Linux) (1.38.0)",
+]
