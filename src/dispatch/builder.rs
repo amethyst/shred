@@ -2,6 +2,8 @@ use std::fmt;
 
 use hashbrown::HashMap;
 
+#[cfg(feature = "parallel")]
+use crate::dispatch::dispatcher::ThreadPoolWrapper;
 use crate::{
     dispatch::{
         batch::BatchControllerSystem,
@@ -11,8 +13,6 @@ use crate::{
     },
     system::{RunNow, System, SystemData},
 };
-#[cfg(feature = "parallel")]
-use crate::dispatch::dispatcher::ThreadPoolWrapper;
 
 /// Builder for the [`Dispatcher`].
 ///
@@ -166,7 +166,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
             })
             .collect();
 
-        if name != "" {
+        if !name.is_empty() {
             if let Entry::Vacant(e) = self.map.entry(name.to_owned()) {
                 e.insert(id);
             } else {
@@ -260,9 +260,8 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         let accessor = BatchAccessor::new(reads, writes);
         let dispatcher: Dispatcher<'a, 'b> = dispatcher_builder.build();
 
-        let batch_system = unsafe {
-            BatchControllerSystem::<'a, 'b, T>::create(accessor, controller, dispatcher)
-        };
+        let batch_system =
+            unsafe { BatchControllerSystem::<'a, 'b, T>::create(accessor, controller, dispatcher) };
 
         self.add(batch_system, name, dep);
     }
