@@ -1,7 +1,14 @@
 # Changelog
 
-* Batch dispatching ergonomics (getting rid of unsafe on the user side)
-  ([#197]).
+## 0.11.0 (2020-12-21)
+
+* Batch dispatching ergonomics -- remove `unsafe` on the user side. ([#197], [#198]).
+* Bumped dependency versions. ([#203], [#204])
+
+[#197]: https://github.com/amethyst/shred/issues/197
+[#198]: https://github.com/amethyst/shred/pull/198
+[#203]: https://github.com/amethyst/shred/issues/203
+[#204]: https://github.com/amethyst/shred/pull/204
 
 ## 0.10.2 (2020-02-13)
 
@@ -19,7 +26,7 @@
 * Implement `Resource` for `!Send + !Sync` types when `"parallel"` feature is disabled. ([#186])
 
 [#186]: https://github.com/amethyst/shred/pull/186
-[#187]: https://github.com/amethyst/shred/pulls/187
+[#187]: https://github.com/amethyst/shred/pull/187
 
 ## 0.10.0 (2019-12-31)
 
