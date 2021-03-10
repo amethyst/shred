@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.11.0"
+version = "0.11.1"
 authors = ["torkleyy <torkleyy@gmail.com>"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -24,7 +24,7 @@ hashbrown = "0.9.1"
 mopa = "0.2.2"
 rayon = { version = "1.5.0", optional = true }
 shred-derive = { path = "shred-derive", version = "0.6.3", optional = true }
-smallvec = "1.5.1"
+smallvec = "1.6.1"
 tynm = "0.1.6"
 
 [workspace]
