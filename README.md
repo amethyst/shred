@@ -1,9 +1,9 @@
 # shred - *Sh*ared *re*source *d*ispatcher
 
-[![Build Status][https://github.com/amethyst/shred/workflows/CI/badge.svg]][bl] [![Crates.io][cr]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl] ![LoC][lo]
+[![Build Status][bi]][bl] [![Crates.io][cr]][cl] ![MIT/Apache][li] [![Docs.rs][di]][dl] ![LoC][lo]
 
-[bi]: https://github.com/amethyst/shred/workflows/CI/badge.svg
-[bl]: https://github.com/amethyst/shred/actions?query=workflow%3ACI
+[bi]: https://github.com/amethyst/shred/actions/workflows/ci.yml/badge.svg
+[bl]: https://github.com/amethyst/shred/actions/workflows/ci.yml
 
 [cr]: https://img.shields.io/crates/v/shred.svg
 [cl]: https://crates.io/crates/shred/
