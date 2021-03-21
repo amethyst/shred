@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 (2021-03-21)
+
+* Bumped depenceny of hashbrown to 0.11
+
+## 0.11.1 (2021-03-10)
+
+* Bumped depenceny of smallvec as there was an open RUSTSEC issue 
+
 ## 0.11.0 (2020-12-21)
 
 * Batch dispatching ergonomics -- remove `unsafe` on the user side. ([#197], [#198]).
