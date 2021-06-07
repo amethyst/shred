@@ -78,7 +78,7 @@ enum InsertionTarget {
 
 #[derive(Default)]
 pub struct Stage<'a> {
-    groups: GroupVec<ArrayVec<[SystemExecSend<'a>; MAX_SYSTEMS_PER_GROUP]>>,
+    groups: GroupVec<ArrayVec<SystemExecSend<'a>, MAX_SYSTEMS_PER_GROUP>>,
 }
 
 impl<'a> Stage<'a> {
@@ -132,7 +132,7 @@ impl<'a> Stage<'a> {
 #[derive(Default)]
 pub struct StagesBuilder<'a> {
     barrier: usize,
-    ids: Vec<GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>>,
+    ids: Vec<GroupVec<ArrayVec<SystemId, MAX_SYSTEMS_PER_GROUP>>>,
     reads: Vec<GroupVec<SmallVec<[ResourceId; 12]>>>,
     running_time: Vec<GroupVec<u8>>,
     stages: Vec<Stage<'a>>,
@@ -323,7 +323,7 @@ impl<'a> StagesBuilder<'a> {
     /// Returns an enum indicating which kind of conflict a system has
     /// with a stage.
     fn find_conflict<'rw, R, W>(
-        ids: &[GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>],
+        ids: &[GroupVec<ArrayVec<SystemId, MAX_SYSTEMS_PER_GROUP>>],
         reads: &[GroupVec<SmallVec<[ResourceId; 12]>>],
         writes: &[GroupVec<SmallVec<[ResourceId; 10]>>],
         stage: usize,
@@ -391,9 +391,7 @@ impl<'a> StagesBuilder<'a> {
 mod tests {
     use super::*;
 
-    fn create_ids(
-        ids: &[&[&[usize]]],
-    ) -> Vec<GroupVec<ArrayVec<[SystemId; MAX_SYSTEMS_PER_GROUP]>>> {
+    fn create_ids(ids: &[&[&[usize]]]) -> Vec<GroupVec<ArrayVec<SystemId, MAX_SYSTEMS_PER_GROUP>>> {
         ids.iter()
             .map(|groups| {
                 groups
