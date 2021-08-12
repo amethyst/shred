@@ -219,7 +219,7 @@ impl<'a> StagesBuilder<'a> {
 
     pub fn write_par_seq(
         &self,
-        f: &mut fmt::Formatter,
+        f: &mut fmt::Formatter<'_>,
         map: &HashMap<String, SystemId>,
     ) -> fmt::Result {
         let map: HashMap<_, _> = map
@@ -541,7 +541,7 @@ mod tests {
         // To balance the stage SysA and SysB are in, we execute SysC
         // *after* SysB, so in the same group.
 
-        let mut builder: StagesBuilder = Default::default();
+        let mut builder: StagesBuilder<'_> = Default::default();
 
         builder.insert(SmallVec::new(), SystemId(0), SysA);
         builder.insert(SmallVec::new(), SystemId(1), SysB);
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_chained_dependency() {
-        let mut builder: StagesBuilder = Default::default();
+        let mut builder: StagesBuilder<'_> = Default::default();
 
         struct Sys;
 

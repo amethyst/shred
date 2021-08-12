@@ -16,7 +16,7 @@ use crate::{
 ///
 /// * `T`: The type of the resource
 /// * `F`: The setup handler (default: `DefaultProvider`)
-pub struct Read<'a, T: 'a, F = DefaultProvider> {
+pub struct Read<'a, T, F = DefaultProvider> {
     inner: Fetch<'a, T>,
     phantom: PhantomData<F>,
 }
@@ -71,7 +71,7 @@ where
 ///
 /// * `T`: The type of the resource
 /// * `F`: The setup handler (default: `DefaultProvider`)
-pub struct Write<'a, T: 'a, F = DefaultProvider> {
+pub struct Write<'a, T, F = DefaultProvider> {
     inner: FetchMut<'a, T>,
     phantom: PhantomData<F>,
 }

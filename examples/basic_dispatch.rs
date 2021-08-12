@@ -21,8 +21,9 @@ impl<'a> System<'a> for PrintSystem {
         println!("{:?}", &*a);
         println!("{:?}", &*b);
 
-        *b = ResB; // We can mutate ResB here
-                   // because it's `Write`.
+        // We can mutate ResB here
+        // because it's `Write`.
+        *b = ResB;
     }
 }
 

@@ -81,8 +81,14 @@
 //! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
 //! virtual function calls.
 
-#![deny(unused_must_use)]
-#![warn(missing_docs)]
+#![deny(
+    missing_docs,
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    future_incompatible,
+    unused,
+    nonstandard_style
+)]
 
 pub mod cell;
 

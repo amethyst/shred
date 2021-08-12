@@ -2,7 +2,6 @@
 
 extern crate cgmath;
 extern crate shred;
-#[macro_use]
 extern crate shred_derive;
 extern crate test;
 
@@ -204,7 +203,7 @@ fn basic(b: &mut Bencher) {
     res.insert(force);
     res.insert(spring);
 
-    b.iter(|| dispatcher.dispatch(&mut res));
+    b.iter(|| dispatcher.dispatch(&res));
 }
 
 #[bench]

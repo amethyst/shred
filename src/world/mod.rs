@@ -34,7 +34,7 @@ mod setup;
 /// # Type parameters
 ///
 /// * `T`: The type of the resource
-pub struct Fetch<'a, T: 'a> {
+pub struct Fetch<'a, T> {
     inner: Ref<'a, dyn Resource>,
     phantom: PhantomData<&'a T>,
 }
@@ -67,7 +67,7 @@ impl<'a, T> Clone for Fetch<'a, T> {
 /// # Type parameters
 ///
 /// * `T`: The type of the resource
-pub struct FetchMut<'a, T: 'a> {
+pub struct FetchMut<'a, T> {
     inner: RefMut<'a, dyn Resource>,
     phantom: PhantomData<&'a mut T>,
 }
@@ -272,7 +272,7 @@ impl World {
     }
 
     /// Returns an entry for the resource with type `R`.
-    pub fn entry<R>(&mut self) -> Entry<R>
+    pub fn entry<R>(&mut self) -> Entry<'_, R>
     where
         R: Resource,
     {
@@ -305,7 +305,7 @@ impl World {
     where
         T: SystemData<'a>,
     {
-        SystemData::fetch(&self)
+        SystemData::fetch(self)
     }
 
     /// Sets up system data `T` for fetching afterwards.
@@ -415,7 +415,7 @@ impl World {
     ///
     /// Panics if the resource doesn't exist.
     /// Panics if the resource is being accessed mutably.
-    pub fn fetch<T>(&self) -> Fetch<T>
+    pub fn fetch<T>(&self) -> Fetch<'_, T>
     where
         T: Resource,
     {
@@ -433,7 +433,7 @@ impl World {
 
     /// Like `fetch`, but returns an `Option` instead of inserting a default
     /// value in case the resource does not exist.
-    pub fn try_fetch<T>(&self) -> Option<Fetch<T>>
+    pub fn try_fetch<T>(&self) -> Option<Fetch<'_, T>>
     where
         T: Resource,
     {
@@ -454,7 +454,7 @@ impl World {
     /// # Panics
     ///
     /// This method panics if `id` refers to a different type ID than `T`.
-    pub fn try_fetch_by_id<T>(&self, id: ResourceId) -> Option<Fetch<T>>
+    pub fn try_fetch_by_id<T>(&self, id: ResourceId) -> Option<Fetch<'_, T>>
     where
         T: Resource,
     {
@@ -474,7 +474,7 @@ impl World {
     ///
     /// Panics if the resource doesn't exist.
     /// Panics if the resource is already being accessed.
-    pub fn fetch_mut<T>(&self) -> FetchMut<T>
+    pub fn fetch_mut<T>(&self) -> FetchMut<'_, T>
     where
         T: Resource,
     {
@@ -483,7 +483,7 @@ impl World {
 
     /// Like `fetch_mut`, but returns an `Option` instead of inserting a default
     /// value in case the resource does not exist.
-    pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<T>>
+    pub fn try_fetch_mut<T>(&self) -> Option<FetchMut<'_, T>>
     where
         T: Resource,
     {
@@ -504,7 +504,7 @@ impl World {
     /// # Panics
     ///
     /// This method panics if `id` refers to a different type ID than `T`.
-    pub fn try_fetch_mut_by_id<T>(&self, id: ResourceId) -> Option<FetchMut<T>>
+    pub fn try_fetch_mut_by_id<T>(&self, id: ResourceId) -> Option<FetchMut<'_, T>>
     where
         T: Resource,
     {
@@ -596,7 +596,7 @@ mod tests {
 
         let mut world = World::empty();
         world.insert(Res);
-        <Read<Res> as SystemData>::fetch(&world);
+        <Read<'_, Res> as SystemData>::fetch(&world);
     }
 
     #[test]
@@ -606,7 +606,7 @@ mod tests {
 
         let mut world = World::empty();
         world.insert(Res);
-        <Write<Res> as SystemData>::fetch(&world);
+        <Write<'_, Res> as SystemData>::fetch(&world);
     }
 
     #[test]
@@ -644,7 +644,7 @@ mod tests {
         let mut world = World::empty();
 
         world.insert(5u32);
-        let x = *world.system_data::<Read<u32>>();
+        let x = *world.system_data::<Read<'_, u32>>();
         assert_eq!(x, 5);
     }
 
@@ -653,13 +653,13 @@ mod tests {
         let mut world = World::empty();
 
         world.insert(5u32);
-        world.setup::<Read<u32>>();
-        let x = *world.system_data::<Read<u32>>();
+        world.setup::<Read<'_, u32>>();
+        let x = *world.system_data::<Read<'_, u32>>();
         assert_eq!(x, 5);
 
         world.remove::<u32>();
-        world.setup::<Read<u32>>();
-        let x = *world.system_data::<Read<u32>>();
+        world.setup::<Read<'_, u32>>();
+        let x = *world.system_data::<Read<'_, u32>>();
         assert_eq!(x, 0);
     }
 
@@ -669,19 +669,21 @@ mod tests {
 
         let mut world = World::empty();
 
-        world.exec(|(float, boolean): (Read<f32>, Read<bool>)| {
+        world.exec(|(float, boolean): (Read<'_, f32>, Read<'_, bool>)| {
             assert_eq!(*float, 0.0);
-            assert_eq!(*boolean, false);
+            assert!(!*boolean);
         });
 
-        world.exec(|(mut float, mut boolean): (Write<f32>, Write<bool>)| {
-            *float = 4.3;
-            *boolean = true;
-        });
+        world.exec(
+            |(mut float, mut boolean): (Write<'_, f32>, Write<'_, bool>)| {
+                *float = 4.3;
+                *boolean = true;
+            },
+        );
 
-        world.exec(|(float, boolean): (Read<f32>, ReadExpect<bool>)| {
+        world.exec(|(float, boolean): (Read<'_, f32>, ReadExpect<'_, bool>)| {
             assert_eq!(*float, 4.3);
-            assert_eq!(*boolean, true);
+            assert!(*boolean);
         });
     }
 
@@ -690,7 +692,7 @@ mod tests {
     fn exec_panic() {
         let mut world = World::empty();
 
-        world.exec(|(_float, _boolean): (Write<f32>, Write<bool>)| {
+        world.exec(|(_float, _boolean): (Write<'_, f32>, Write<'_, bool>)| {
             panic!();
         });
     }
@@ -733,8 +735,8 @@ mod tests {
         let mut world = World::empty();
         world.insert(Res);
 
-        let read: Fetch<Res> = world.fetch();
-        let write: FetchMut<Res> = world.fetch_mut();
+        let read: Fetch<'_, Res> = world.fetch();
+        let write: FetchMut<'_, Res> = world.fetch_mut();
     }
 
     #[allow(unused)]
@@ -744,8 +746,8 @@ mod tests {
         let mut world = World::empty();
         world.insert(Res);
 
-        let write: FetchMut<Res> = world.fetch_mut();
-        let read: Fetch<Res> = world.fetch();
+        let write: FetchMut<'_, Res> = world.fetch_mut();
+        let read: Fetch<'_, Res> = world.fetch();
     }
 
     #[test]

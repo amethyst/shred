@@ -115,7 +115,7 @@ impl ScriptingResAccessor {
 
         ScriptingResAccessor {
             reads: reads
-                .into_iter()
+                .iter()
                 .flat_map(|&name| interface.resource_id(name))
                 .collect(),
         }

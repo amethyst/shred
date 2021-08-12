@@ -3,8 +3,7 @@
 //! It allows to influence how many times a set of systems gets dispatched.
 //!
 //! Specifically here we have three Systems
-//! - `SayHelloSystem`: Which is directly registered under the main
-//!   dispatcher.
+//! - `SayHelloSystem`: Which is directly registered under the main dispatcher.
 //! - `BuyTomatoSystem` and `BuyPotatoSystem` are registered to the batch.
 //!
 //! Notice that none of these systems are directly depending on others.
@@ -12,12 +11,13 @@
 //! `PotatoStore`, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
-//! This is done by defining `Run3Times` which decides that the inner systems should be run 3
-//! times. This is similar to the `batch_dispatching.rs` example, but that one uses a more flexible
-//! (but also more verbose) way of doing it.
+//! This is done by defining `Run3Times` which decides that the inner systems
+//! should be run 3 times. This is similar to the `batch_dispatching.rs`
+//! example, but that one uses a more flexible (but also more verbose) way of
+//! doing it.
 
 use shred::{
-    DispatcherBuilder, Read, System, World, Write, MultiDispatchController, MultiDispatcher,
+    DispatcherBuilder, MultiDispatchController, MultiDispatcher, Read, System, World, Write,
 };
 use std::{thread::sleep, time::Duration};
 

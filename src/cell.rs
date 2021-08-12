@@ -24,7 +24,7 @@ macro_rules! borrow_panic {
 pub struct InvalidBorrow;
 
 impl Display for InvalidBorrow {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatError> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), FormatError> {
         write!(f, "Tried to borrow when it was illegal")
     }
 }
@@ -40,7 +40,7 @@ impl Error for InvalidBorrow {
 ///
 /// Access the value via `std::ops::Deref` (e.g. `*val`)
 #[derive(Debug)]
-pub struct Ref<'a, T: ?Sized + 'a> {
+pub struct Ref<'a, T: ?Sized> {
     flag: &'a AtomicUsize,
     value: &'a T,
 }
@@ -140,7 +140,7 @@ impl<'a, T: ?Sized> Clone for Ref<'a, T> {
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
 #[derive(Debug)]
-pub struct RefMut<'a, T: ?Sized + 'a> {
+pub struct RefMut<'a, T: ?Sized> {
     flag: &'a AtomicUsize,
     value: &'a mut T,
 }
@@ -263,7 +263,7 @@ impl<T> TrustCell<T> {
     ///
     /// This function will panic if there is a mutable reference to the data
     /// already in use.
-    pub fn borrow(&self) -> Ref<T> {
+    pub fn borrow(&self) -> Ref<'_, T> {
         self.check_flag_read()
             .unwrap_or_else(|_| borrow_panic!(" mutably"));
 
@@ -277,7 +277,7 @@ impl<T> TrustCell<T> {
     ///
     /// Absence of write accesses is checked at run-time. If access is not
     /// possible, an error is returned.
-    pub fn try_borrow(&self) -> Result<Ref<T>, InvalidBorrow> {
+    pub fn try_borrow(&self) -> Result<Ref<'_, T>, InvalidBorrow> {
         self.check_flag_read()?;
 
         Ok(Ref {
@@ -294,7 +294,7 @@ impl<T> TrustCell<T> {
     ///
     /// This function will panic if there are any references to the data already
     /// in use.
-    pub fn borrow_mut(&self) -> RefMut<T> {
+    pub fn borrow_mut(&self) -> RefMut<'_, T> {
         self.check_flag_write()
             .unwrap_or_else(|_| borrow_panic!(""));
 
@@ -308,7 +308,7 @@ impl<T> TrustCell<T> {
     ///
     /// Exclusive access is checked at run-time. If access is not possible, an
     /// error is returned.
-    pub fn try_borrow_mut(&self) -> Result<RefMut<T>, InvalidBorrow> {
+    pub fn try_borrow_mut(&self) -> Result<RefMut<'_, T>, InvalidBorrow> {
         self.check_flag_write()?;
 
         Ok(RefMut {

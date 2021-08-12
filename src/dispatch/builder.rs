@@ -232,6 +232,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     /// This mean that the dependencies, the `System` names, etc.. specified on
     /// the `Batch` `Dispatcher` are not visible on the parent, and is not
     /// allowed to specify cross dependencies.
+    #[allow(unused_mut)]
     pub fn add_batch<T>(
         &mut self,
         controller: T,
@@ -427,7 +428,7 @@ impl<'b> DispatcherBuilder<'static, 'b> {
 }
 
 impl<'a, 'b> fmt::Debug for DispatcherBuilder<'a, 'b> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.stages_builder.write_par_seq(f, &self.map)
     }
 }

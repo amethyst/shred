@@ -1,7 +1,15 @@
-#![recursion_limit = "256"]
+//! A crate that derive a few trait
 
-extern crate proc_macro;
-extern crate proc_macro2;
+#![recursion_limit = "256"]
+#![deny(
+    missing_docs,
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    future_incompatible,
+    unused,
+    nonstandard_style
+)]
+
 #[macro_use]
 extern crate quote;
 #[macro_use]
