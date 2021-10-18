@@ -3,5 +3,5 @@ status = [
   "Build and Test (Linux) (nightly)",
   "Build and Test (Linux) (beta)",
   "Build and Test (Linux) (stable)",
-  "Build and Test (Linux) (1.38.0)",
+  "Build and Test (Linux) (1.40.0)",
 ]
