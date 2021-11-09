@@ -180,8 +180,8 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         self.stages_builder.insert(dependencies, id, system);
     }
 
-    /// Returns `true` if a system with the given name has been added to the `BispatcherBuilder`,
-    /// otherwise, returns false.
+    /// Returns `true` if a system with the given name has been added to the
+    /// `BispatcherBuilder`, otherwise, returns false.
     pub fn contains(&self, name: &str) -> bool {
         self.map.contains_key(name)
     }

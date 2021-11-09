@@ -4,8 +4,7 @@
 //! systems.
 //!
 //! Specifically here we have three Systems
-//! - `SayHelloSystem`: Which is directly registered under the main
-//!   dispatcher.
+//! - `SayHelloSystem`: Which is directly registered under the main dispatcher.
 //! - `BuyTomatoSystem` and `BuyPotatoSystem` are registered to the batch.
 //!
 //! Notice that none of these systems are directly depending on others.
@@ -13,15 +12,13 @@
 //! `PotatoStore`, which are also requested by the other two systems inside
 //! the batch and by the batch controller itself.
 //!
-//! This example demonstrates that the batch dispatcher is able to affect on how the systems inside
-//! the batch are executed
+//! This example demonstrates that the batch dispatcher is able to affect on how
+//! the systems inside the batch are executed
 //!
-//! This is done by defining `CustomBatchControllerSystem` which executes its inner `System`s
-//! three times.
+//! This is done by defining `CustomBatchControllerSystem` which executes its
+//! inner `System`s three times.
 
-use shred::{
-    BatchController, Dispatcher, DispatcherBuilder, Read, System, World, Write,
-};
+use shred::{BatchController, Dispatcher, DispatcherBuilder, Read, System, World, Write};
 use std::{thread::sleep, time::Duration};
 
 fn main() {
@@ -101,9 +98,9 @@ impl<'a> System<'a> for BuyTomatoSystem {
 pub struct CustomBatchControllerSystem;
 
 impl<'a, 'b, 'c> BatchController<'a, 'b, 'c> for CustomBatchControllerSystem {
-    // Leaving `BatchBuilderData` to `()` would make the dispatcher to panic since the run
-    // function will fetch the `TomatoStore` like the `SayHelloSystem` does.
-    // type BatchSystemData = ();
+    // Leaving `BatchBuilderData` to `()` would make the dispatcher to panic since
+    // the run function will fetch the `TomatoStore` like the `SayHelloSystem`
+    // does. type BatchSystemData = ();
     type BatchSystemData = Read<'c, TomatoStore>;
 
     fn run(&mut self, world: &World, dispatcher: &mut Dispatcher<'a, 'b>) {

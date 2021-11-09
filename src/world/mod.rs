@@ -305,7 +305,7 @@ impl World {
     where
         T: SystemData<'a>,
     {
-        SystemData::fetch(&self)
+        SystemData::fetch(self)
     }
 
     /// Sets up system data `T` for fetching afterwards.
