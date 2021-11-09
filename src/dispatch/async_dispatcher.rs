@@ -109,7 +109,7 @@ where
     /// Renamed to `self.world()`.
     #[deprecated(since = "0.8.0", note = "renamed to `world`")]
     pub fn res(&mut self) -> &R {
-        &self.world()
+        self.world()
     }
 
     /// Returns the `World`.
