@@ -112,6 +112,23 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         Default::default()
     }
 
+    /// Returns whether or not any system has been added to the builder
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
+    /// Returns the number of systems added to the builder
+    pub fn num_systems(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Returns whether or not a specific system has been added to the builder
+    /// This is useful as [`add()`](struct.DispatcherBuilder.html#method.add) will throw if a dependency does not exist
+    /// So you can use this function to check if dependencies are satisfied
+    pub fn has_system(&self, system: &str) -> bool {
+        self.map.contains_key(system)
+    }
+
     /// Adds a new system with a given name and a list of dependencies.
     /// Please note that the dependency should be added before
     /// you add the depending system.
