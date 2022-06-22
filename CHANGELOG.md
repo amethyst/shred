@@ -5,7 +5,7 @@
 * Bumped dependency of `hashbrown` to `0.12`
 * Bumped dependency of `arrayvec` to `0.7.2`.
 * Add getters to DispatcherBuilder
-* increase minimal rust version to `1.40`
+* increase minimal rust version to `1.56.1`
 * improve performance by switching to `compare_exchange_weak`
 
 ## 0.12.0 (2021-03-21)
