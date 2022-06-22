@@ -123,8 +123,9 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     }
 
     /// Returns whether or not a specific system has been added to the builder
-    /// This is useful as [`add()`](struct.DispatcherBuilder.html#method.add) will throw if a dependency does not exist
-    /// So you can use this function to check if dependencies are satisfied
+    /// This is useful as [`add()`](struct.DispatcherBuilder.html#method.add)
+    /// will throw if a dependency does not exist So you can use this
+    /// function to check if dependencies are satisfied
     pub fn has_system(&self, system: &str) -> bool {
         self.map.contains_key(system)
     }

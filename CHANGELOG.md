@@ -1,12 +1,20 @@
 # Changelog
 
+## 0.13.0 (2022-06-22)
+
+* Bumped dependency of `hashbrown` to `0.12`
+* Bumped dependency of `arrayvec` to `0.7.2`.
+* Add getters to DispatcherBuilder
+* increase minimal rust version to `1.56.1`
+* improve performance by switching to `compare_exchange_weak`
+
 ## 0.12.0 (2021-03-21)
 
-* Bumped depenceny of hashbrown to 0.11
+* Bumped dependency of `hashbrown` to `0.11`
 
 ## 0.11.1 (2021-03-10)
 
-* Bumped depenceny of smallvec as there was an open RUSTSEC issue 
+* Bumped dependency of smallvec as there was an open RUSTSEC issue
 
 ## 0.11.0 (2020-12-21)
 

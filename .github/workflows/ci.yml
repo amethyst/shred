@@ -20,7 +20,7 @@ jobs:
           - nightly
           - beta
           - stable
-          - 1.40.0  # MSRV
+          - 1.56.1  # MSRV
 
     timeout-minutes: 10
 
