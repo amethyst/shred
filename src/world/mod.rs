@@ -8,11 +8,10 @@ pub use self::{
 
 use std::{
     any::{Any, TypeId},
+    collections::HashMap,
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
-
-use hashbrown::HashMap;
 
 use crate::{
     cell::{Ref, RefMut, TrustCell},

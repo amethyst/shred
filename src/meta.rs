@@ -1,6 +1,8 @@
-use std::{any::TypeId, marker::PhantomData};
-
-use hashbrown::HashMap;
+use std::{
+    any::TypeId,
+    collections::{hash_map::Entry, HashMap},
+    marker::PhantomData,
+};
 
 use crate::{Resource, ResourceId, World};
 
@@ -252,8 +254,6 @@ impl<T: ?Sized> MetaTable<T> {
         R: Resource,
         T: CastFrom<R> + 'static,
     {
-        use hashbrown::hash_map::Entry;
-
         let thin_ptr = r as *const R as usize;
         let casted_ptr = <T as CastFrom<R>>::cast(r);
         let thin_casted_ptr = casted_ptr as *const T as *const () as usize;

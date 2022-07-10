@@ -5,8 +5,7 @@ use crate::{
     world::{FetchMut, Resource, ResourceId},
 };
 
-type StdEntry<'a, K, V> =
-    hashbrown::hash_map::Entry<'a, K, V, hashbrown::hash_map::DefaultHashBuilder>;
+type StdEntry<'a, K, V> = std::collections::hash_map::Entry<'a, K, V>;
 
 /// An entry to a resource of the `World` struct.
 /// This is similar to the Entry API found in the standard library.
