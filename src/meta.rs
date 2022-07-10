@@ -1,7 +1,6 @@
 use std::{any::TypeId, marker::PhantomData};
 
 use hashbrown::HashMap;
-use mopa::Any;
 
 use crate::{Resource, ResourceId, World};
 
@@ -291,7 +290,7 @@ impl<T: ?Sized> MetaTable<T> {
     pub fn get<'a>(&self, res: &'a dyn Resource) -> Option<&'a T> {
         unsafe {
             self.indices
-                .get(&Any::get_type_id(res))
+                .get(&res.type_id())
                 .map(move |&ind| &*self.fat[ind].create_ptr(res as *const _ as *const ()))
         }
     }
@@ -301,7 +300,7 @@ impl<T: ?Sized> MetaTable<T> {
     /// registered), this will return `None`.
     pub fn get_mut<'a>(&self, res: &'a dyn Resource) -> Option<&'a mut T> {
         unsafe {
-            self.indices.get(&Any::get_type_id(res)).map(move |&ind| {
+            self.indices.get(&res.type_id()).map(move |&ind| {
                 &mut *(self.fat[ind].create_ptr::<T>(res as *const _ as *const ()) as *mut T)
             })
         }

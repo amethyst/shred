@@ -7,13 +7,12 @@ pub use self::{
 };
 
 use std::{
-    any::TypeId,
+    any::{Any, TypeId},
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
 
 use hashbrown::HashMap;
-use mopa::Any;
 
 use crate::{
     cell::{Ref, RefMut, TrustCell},
@@ -24,6 +23,7 @@ use self::entry::create_entry;
 
 mod data;
 mod entry;
+mod res_downcast;
 #[macro_use]
 mod setup;
 
@@ -103,16 +103,6 @@ pub trait Resource: Any + Send + Sync + 'static {}
 /// readers).
 #[cfg(not(feature = "parallel"))]
 pub trait Resource: Any + 'static {}
-
-mod __resource_mopafy_scope {
-    #![allow(clippy::all)]
-
-    use mopa::mopafy;
-
-    use super::Resource;
-
-    mopafy!(Resource);
-}
 
 #[cfg(feature = "parallel")]
 impl<T> Resource for T where T: Any + Send + Sync {}
