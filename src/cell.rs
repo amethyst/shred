@@ -93,22 +93,14 @@ impl<'a, T: ?Sized> Ref<'a, T> {
         F: FnOnce(&T) -> &U,
         U: ?Sized,
     {
-        // Extract the values from the `Ref` through a pointer so that we do not run
-        // `Drop`. Because the returned `Ref` has the same lifetime `'a` as the
-        // given `Ref`, the lifetime we created through turning the pointer into
-        // a ref is valid.
-        let flag = unsafe { &*(self.flag as *const _) };
-        let value = unsafe { &*(self.value as *const _) };
+        let val = Ref {
+            flag: self.flag,
+            value: f(self.value),
+        };
 
-        // We have to forget self so that we do not run `Drop`. Further it's safe
-        // because we are creating a new `Ref`, with the same flag, which will
-        // run the cleanup when it's dropped.
         std::mem::forget(self);
 
-        Ref {
-            flag,
-            value: f(value),
-        }
+        val
     }
 }
 
@@ -199,7 +191,7 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
         // `Drop`. Because the returned `RefMut` has the same lifetime `'a` as
         // the given `RefMut`, the lifetime we created through turning the
         // pointer into a ref is valid.
-        let flag = unsafe { &*(self.flag as *const _) };
+        let flag = self.flag;
         let value = unsafe { &mut *(self.value as *mut _) };
 
         // We have to forget self so that we do not run `Drop`. Further it's safe
