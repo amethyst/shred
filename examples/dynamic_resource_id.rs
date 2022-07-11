@@ -13,7 +13,8 @@
 //! make it easier to understand. Make sure you understood a step before you go
 //! to the next.
 
-use hashbrown::HashMap;
+use std::collections::HashMap;
+
 use shred::{Accessor, AccessorCow, DynamicSystemData, Fetch, ResourceId, RunNow, System, World};
 
 // -- Step 1 - Define your resource type and an interface for registering it --

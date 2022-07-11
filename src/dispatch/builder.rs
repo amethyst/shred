@@ -1,6 +1,7 @@
-use std::fmt;
-
-use hashbrown::HashMap;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fmt,
+};
 
 #[cfg(feature = "parallel")]
 use crate::dispatch::dispatcher::ThreadPoolWrapper;
@@ -170,8 +171,6 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
     where
         T: for<'c> System<'c> + Send + 'a,
     {
-        use hashbrown::hash_map::Entry;
-
         let id = self.next_id();
 
         let dependencies = dep

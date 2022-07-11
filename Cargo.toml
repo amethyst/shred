@@ -1,6 +1,6 @@
 [package]
 name = "shred"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["torkleyy <torkleyy@gmail.com>"]
 description = """
 Dispatches systems in parallel which need read access to some resources,
@@ -16,13 +16,8 @@ exclude = ["bors.toml", ".travis.yml"]
 edition = "2021"
 rust-version = "1.56.1"
 
-[badges]
-travis-ci = { repository = "amethyst/shred" }
-
 [dependencies]
 arrayvec = "0.7.2"
-hashbrown = "0.12"
-mopa = "0.2.2"
 rayon = { version = "1.5.0", optional = true }
 shred-derive = { path = "shred-derive", version = "0.6.3", optional = true }
 smallvec = "1.6.1"
