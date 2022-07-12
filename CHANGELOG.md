@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0 (2022-07-12)
+
+* Removed dependency `hashbrown` since it is part of `std` since Rust 1.36
+* Removed dependency `mopa` since it is unmaintained and has a potential vulnerability
+
 ## 0.13.0 (2022-06-22)
 
 * Bumped dependency of `hashbrown` to `0.12`
