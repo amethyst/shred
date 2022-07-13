@@ -1,8 +1,6 @@
-use std::{
-    any::TypeId,
-    collections::{hash_map::Entry, HashMap},
-    marker::PhantomData,
-};
+use std::{any::TypeId, collections::hash_map::Entry, marker::PhantomData};
+
+use ahash::AHashMap as HashMap;
 
 use crate::{Resource, ResourceId, World};
 

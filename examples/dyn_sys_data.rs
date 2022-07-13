@@ -7,8 +7,8 @@
 
 extern crate shred;
 
-// in a real application you would use `fnv`
-use std::collections::HashMap;
+// faster alternative to std's HashMap
+use ahash::AHashMap as HashMap;
 
 use shred::{
     cell::{Ref, RefMut},
@@ -283,7 +283,5 @@ fn main() {
     loop {
         dispatcher.dispatch(&res);
         scripts.dispatch(&res);
-
-        break;
     }
 }

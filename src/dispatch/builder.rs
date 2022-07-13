@@ -1,7 +1,6 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    fmt,
-};
+use std::{collections::hash_map::Entry, fmt};
+
+use ahash::AHashMap as HashMap;
 
 #[cfg(feature = "parallel")]
 use crate::dispatch::dispatcher::ThreadPoolWrapper;

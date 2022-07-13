@@ -33,8 +33,9 @@
 //! running times of the groups of this stage get closer to each other (called
 //! balanced in code).
 
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
+use ahash::AHashMap as HashMap;
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
