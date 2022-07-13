@@ -6,7 +6,7 @@ on:
       - master
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 name: CI
 
@@ -20,7 +20,7 @@ jobs:
           - nightly
           - beta
           - stable
-          - 1.56.1  # MSRV
+          - 1.56.1 # MSRV
 
     timeout-minutes: 10
 
@@ -36,6 +36,13 @@ jobs:
         with:
           command: build
           args: --verbose --no-default-features
+
+      - name: Clippy lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --tests -- -D warnings
+        if: matrix.rust == 'stable'
 
       - uses: actions-rs/cargo@v1
         with:
