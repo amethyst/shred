@@ -23,7 +23,12 @@ impl dyn Resource {
     }
 
     /// Returns the boxed value, blindly assuming it to be of type `T`.
+    ///
+    /// # Safety
+    ///
     /// If you are not *absolutely certain* of `T`, you *must not* call this.
+    /// Using anything other than the correct type `T` for this `Resource`
+    /// will result in UB.
     #[inline]
     pub unsafe fn downcast_unchecked<T: Resource>(self: Box<Self>) -> Box<T> {
         Box::from_raw(Box::into_raw(self) as *mut T)
@@ -47,8 +52,13 @@ impl dyn Resource {
     }
 
     /// Returns a reference to the boxed value, blindly assuming it to be of
-    /// type `T`. If you are not *absolutely certain* of `T`, you *must not*
-    /// call this.
+    /// type `T`.
+    ///
+    /// # Safety
+    ///
+    /// If you are not *absolutely certain* of `T`, you *must not* call this.
+    /// Using anything other than the correct type `T` for this `Resource`
+    /// will result in UB.
     #[inline]
     pub unsafe fn downcast_ref_unchecked<T: Resource>(&self) -> &T {
         &*(self as *const Self as *const T)
@@ -66,8 +76,13 @@ impl dyn Resource {
     }
 
     /// Returns a mutable reference to the boxed value, blindly assuming it to
-    /// be of type `T`. If you are not *absolutely certain* of `T`, you
-    /// *must not* call this.
+    /// be of type `T`.
+    ///
+    /// # Safety
+    ///
+    /// If you are not *absolutely certain* of `T`, you *must not* call this.
+    /// Using anything other than the correct type `T` for this `Resource`
+    /// will result in UB.
     #[inline]
     pub unsafe fn downcast_mut_unchecked<T: Resource>(&mut self) -> &mut T {
         &mut *(self as *mut Self as *mut T)

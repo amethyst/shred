@@ -28,7 +28,7 @@ where
     type Target = T;
 
     fn deref(&self) -> &T {
-        &*self.inner
+        &self.inner
     }
 }
 
@@ -83,7 +83,7 @@ where
     type Target = T;
 
     fn deref(&self) -> &T {
-        &*self.inner
+        &self.inner
     }
 }
 
@@ -92,7 +92,7 @@ where
     T: Resource,
 {
     fn deref_mut(&mut self) -> &mut T {
-        &mut *self.inner
+        &mut self.inner
     }
 }
 

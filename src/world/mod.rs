@@ -661,7 +661,7 @@ mod tests {
 
         world.exec(|(float, boolean): (Read<f32>, Read<bool>)| {
             assert_eq!(*float, 0.0);
-            assert_eq!(*boolean, false);
+            assert!(!*boolean);
         });
 
         world.exec(|(mut float, mut boolean): (Write<f32>, Write<bool>)| {
@@ -671,7 +671,7 @@ mod tests {
 
         world.exec(|(float, boolean): (Read<f32>, ReadExpect<bool>)| {
             assert_eq!(*float, 4.3);
-            assert_eq!(*boolean, true);
+            assert!(*boolean);
         });
     }
 

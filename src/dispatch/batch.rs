@@ -298,8 +298,8 @@ mod tests {
             let tomato_store = world.fetch::<TomatoStore>();
             assert!(!potato_store.is_store_open);
             assert!(!tomato_store.is_store_open);
-            assert_eq!(potato_store.potato_count, 50 - (1 * 3 * 10));
-            assert_eq!(tomato_store.tomato_count, 50 - (1 * 3 * 10));
+            assert_eq!(potato_store.potato_count, 50 - (3 * 10));
+            assert_eq!(tomato_store.tomato_count, 50 - (3 * 10));
         }
     }
 
@@ -362,8 +362,8 @@ mod tests {
             let customer_wallet = world.fetch::<CustomerWallet>();
             assert!(!potato_store.is_store_open);
             assert!(!tomato_store.is_store_open);
-            assert_eq!(potato_store.potato_count, 50 - (1 * 3 * 10));
-            assert_eq!(tomato_store.tomato_count, 50 - (1 * 3 * 10));
+            assert_eq!(potato_store.potato_count, 50 - (3 * 10));
+            assert_eq!(tomato_store.tomato_count, 50 - (3 * 10));
             assert_eq!(customer_wallet.cents_count, 2000 - ((50 + 150) * 3 * 10));
         }
     }
