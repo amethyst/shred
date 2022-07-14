@@ -13,7 +13,8 @@
 //! make it easier to understand. Make sure you understood a step before you go
 //! to the next.
 
-use std::collections::HashMap;
+// alternative hasher that's faster than std's
+use ahash::AHashMap as HashMap;
 
 use shred::{Accessor, AccessorCow, DynamicSystemData, Fetch, ResourceId, RunNow, System, World};
 
@@ -30,13 +31,19 @@ pub struct ScriptingInterface {
     type_map: HashMap<String, u64>,
 }
 
-impl ScriptingInterface {
-    pub fn new() -> Self {
+impl Default for ScriptingInterface {
+    fn default() -> Self {
         ScriptingInterface {
             id_alloc: 1, /* Start with `1` so systems don't fetch it accidentally (via
                           * `Fetch<ScriptingResource>`) */
             type_map: HashMap::new(),
         }
+    }
+}
+
+impl ScriptingInterface {
+    pub fn new() -> Self {
+        Default::default()
     }
 
     /// Registers a run-time resource as `name` and adds it to `world`.
@@ -116,7 +123,7 @@ impl ScriptingResAccessor {
 
         ScriptingResAccessor {
             reads: reads
-                .into_iter()
+                .iter()
                 .flat_map(|&name| interface.resource_id(name))
                 .collect(),
         }

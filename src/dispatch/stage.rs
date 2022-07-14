@@ -33,8 +33,9 @@
 //! running times of the groups of this stage get closer to each other (called
 //! balanced in code).
 
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
+use ahash::AHashMap as HashMap;
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
@@ -281,9 +282,9 @@ impl<'a> StagesBuilder<'a> {
         (self.barrier..self.stages.len())
             .map(|stage| {
                 let conflict = Self::find_conflict(
-                    &*self.ids,
-                    &*self.reads,
-                    &*self.writes,
+                    &self.ids,
+                    &self.reads,
+                    &self.writes,
                     stage,
                     new_reads.clone(),
                     new_writes.clone(),
@@ -434,7 +435,7 @@ mod tests {
 
     #[test]
     fn check_intersection_basic() {
-        assert!(check_intersection((&[1, 5]).iter(), (&[2, 5]).iter()));
+        assert!(check_intersection([1, 5].iter(), [2, 5].iter()));
     }
 
     #[test]

@@ -7,8 +7,8 @@
 
 extern crate shred;
 
-// in a real application you would use `fnv`
-use std::collections::HashMap;
+// faster alternative to std's HashMap
+use ahash::AHashMap as HashMap;
 
 use shred::{
     cell::{Ref, RefMut},
@@ -253,14 +253,14 @@ fn main() {
     let mut res = World::empty();
 
     {
-        let mut table = res.entry().or_insert_with(|| ReflectionTable::new());
+        let mut table = res.entry().or_insert_with(ReflectionTable::new);
 
         table.register(&Foo);
         table.register(&Bar);
     }
 
     {
-        let mut table = res.entry().or_insert_with(|| ResourceTable::new());
+        let mut table = res.entry().or_insert_with(ResourceTable::new);
         table.register::<Foo>("Foo");
         table.register::<Bar>("Bar");
     }
@@ -283,7 +283,5 @@ fn main() {
     loop {
         dispatcher.dispatch(&res);
         scripts.dispatch(&res);
-
-        break;
     }
 }

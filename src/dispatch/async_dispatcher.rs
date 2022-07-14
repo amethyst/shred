@@ -144,17 +144,10 @@ enum Data<R> {
 
 impl<R> Data<R> {
     fn inner(&mut self) -> &mut Inner<R> {
-        let new_self;
-
-        match *self {
-            Data::Inner(ref mut inner) => return inner,
-            Data::Rx(ref mut rx) => {
-                let inner = rx.recv().expect("Sender dropped");
-                new_self = Data::Inner(inner);
-            }
-        }
-
-        *self = new_self;
+        *self = match self {
+            Data::Inner(inner) => return inner,
+            Data::Rx(rx) => Data::Inner(rx.recv().expect("Sender dropped")),
+        };
 
         self.inner()
     }

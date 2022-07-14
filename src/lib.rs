@@ -81,7 +81,7 @@
 //! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
 //! virtual function calls.
 
-#![deny(unused_must_use)]
+#![deny(unused_must_use, clippy::disallowed_types)]
 #![warn(missing_docs)]
 
 pub mod cell;

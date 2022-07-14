@@ -97,8 +97,8 @@ where
     type Target = AccessorTy<'a, T>;
 
     fn deref(&self) -> &AccessorTy<'a, T> {
-        match *self {
-            AccessorCow::Ref(r) => &*r,
+        match self {
+            AccessorCow::Ref(r) => r,
             AccessorCow::Owned(ref o) => o,
         }
     }

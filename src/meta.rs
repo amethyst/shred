@@ -1,8 +1,6 @@
-use std::{
-    any::TypeId,
-    collections::{hash_map::Entry, HashMap},
-    marker::PhantomData,
-};
+use std::{any::TypeId, collections::hash_map::Entry, marker::PhantomData};
+
+use ahash::AHashMap as HashMap;
 
 use crate::{Resource, ResourceId, World};
 
@@ -19,10 +17,10 @@ unsafe impl<T> Sync for Invariant<T> where T: ?Sized {}
 /// This trait is required to be implemented for a trait to be compatible with
 /// the meta table.
 ///
-/// # Memory safety
+/// # Safety
 ///
-/// Not casting `self` but e.g. a field to the trait object can result in severe
-/// memory safety issues.
+/// Not casting `self` but e.g. a field to the trait object will result in
+/// Undefined Bahavior.
 ///
 /// # Examples
 ///
