@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.1 (2022-07-14)
+
+* Undo performance regression from removing `hashbrown` by using `ahash` hasher
+
 ## 0.14.0 (2022-07-12)
 
 * Removed dependency `hashbrown` since it is part of `std` since Rust 1.36
