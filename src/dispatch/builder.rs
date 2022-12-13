@@ -275,7 +275,7 @@ impl<'a, 'b> DispatcherBuilder<'a, 'b> {
         reads.dedup();
 
         let mut writes = dispatcher_builder.stages_builder.fetch_all_writes();
-        writes.extend(<T::BatchSystemData as SystemData>::reads());
+        writes.extend(<T::BatchSystemData as SystemData>::writes());
         writes.sort();
         writes.dedup();
 
