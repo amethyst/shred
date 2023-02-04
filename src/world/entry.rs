@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    cell::{RefMut, TrustCell},
+    cell::{AtomicRefCell, AtomicRefMut},
     world::{FetchMut, Resource, ResourceId},
 };
 
@@ -24,7 +24,7 @@ type StdEntry<'a, K, V> = std::collections::hash_map::Entry<'a, K, V>;
 /// println!("{:?}", value.0 * 2);
 /// ```
 pub struct Entry<'a, T: 'a> {
-    inner: StdEntry<'a, ResourceId, TrustCell<Box<dyn Resource>>>,
+    inner: StdEntry<'a, ResourceId, AtomicRefCell<Box<dyn Resource>>>,
     marker: PhantomData<T>,
 }
 
@@ -48,8 +48,8 @@ where
     {
         let value = self
             .inner
-            .or_insert_with(move || TrustCell::new(Box::new(f())));
-        let inner = RefMut::map(value.borrow_mut(), Box::as_mut);
+            .or_insert_with(move || AtomicRefCell::new(Box::new(f())));
+        let inner = AtomicRefMut::map(value.borrow_mut(), Box::as_mut);
 
         FetchMut {
             inner,
@@ -58,7 +58,9 @@ where
     }
 }
 
-pub(super) fn create_entry<T>(e: StdEntry<ResourceId, TrustCell<Box<dyn Resource>>>) -> Entry<T> {
+pub(super) fn create_entry<T>(
+    e: StdEntry<ResourceId, AtomicRefCell<Box<dyn Resource>>>,
+) -> Entry<T> {
     Entry {
         inner: e,
         marker: PhantomData,

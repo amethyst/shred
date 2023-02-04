@@ -14,10 +14,8 @@ use std::{
 
 use ahash::AHashMap as HashMap;
 
-use crate::{
-    cell::{Ref, RefMut, TrustCell},
-    SystemData,
-};
+use crate::cell::{AtomicRef, AtomicRefCell, AtomicRefMut};
+use crate::SystemData;
 
 use self::entry::create_entry;
 
@@ -35,7 +33,7 @@ mod setup;
 ///
 /// * `T`: The type of the resource
 pub struct Fetch<'a, T: 'a> {
-    inner: Ref<'a, dyn Resource>,
+    inner: AtomicRef<'a, dyn Resource>,
     phantom: PhantomData<&'a T>,
 }
 
@@ -53,7 +51,7 @@ where
 impl<'a, T> Clone for Fetch<'a, T> {
     fn clone(&self) -> Self {
         Fetch {
-            inner: Ref::clone(&self.inner),
+            inner: AtomicRef::clone(&self.inner),
             phantom: PhantomData,
         }
     }
@@ -68,7 +66,7 @@ impl<'a, T> Clone for Fetch<'a, T> {
 ///
 /// * `T`: The type of the resource
 pub struct FetchMut<'a, T: 'a> {
-    inner: RefMut<'a, dyn Resource>,
+    inner: AtomicRefMut<'a, dyn Resource>,
     phantom: PhantomData<&'a mut T>,
 }
 
@@ -193,7 +191,7 @@ impl ResourceId {
 /// Resources are identified by `ResourceId`s, which consist of a `TypeId`.
 #[derive(Default)]
 pub struct World {
-    resources: HashMap<ResourceId, TrustCell<Box<dyn Resource>>>,
+    resources: HashMap<ResourceId, AtomicRefCell<Box<dyn Resource>>>,
 }
 
 impl World {
@@ -430,7 +428,7 @@ impl World {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| Fetch {
-            inner: Ref::map(r.borrow(), Box::as_ref),
+            inner: AtomicRef::map(r.borrow(), Box::as_ref),
             phantom: PhantomData,
         })
     }
@@ -451,7 +449,7 @@ impl World {
         id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| Fetch {
-            inner: Ref::map(r.borrow(), Box::as_ref),
+            inner: AtomicRef::map(r.borrow(), Box::as_ref),
             phantom: PhantomData,
         })
     }
@@ -480,7 +478,7 @@ impl World {
         let res_id = ResourceId::new::<T>();
 
         self.resources.get(&res_id).map(|r| FetchMut {
-            inner: RefMut::map(r.borrow_mut(), Box::as_mut),
+            inner: AtomicRefMut::map(r.borrow_mut(), Box::as_mut),
             phantom: PhantomData,
         })
     }
@@ -501,7 +499,7 @@ impl World {
         id.assert_same_type_id::<T>();
 
         self.resources.get(&id).map(|r| FetchMut {
-            inner: RefMut::map(r.borrow_mut(), Box::as_mut),
+            inner: AtomicRefMut::map(r.borrow_mut(), Box::as_mut),
             phantom: PhantomData,
         })
     }
@@ -520,7 +518,7 @@ impl World {
     {
         id.assert_same_type_id::<R>();
 
-        self.resources.insert(id, TrustCell::new(Box::new(r)));
+        self.resources.insert(id, AtomicRefCell::new(Box::new(r)));
     }
 
     /// Internal function for removing resources, should only be used if you
@@ -542,7 +540,7 @@ impl World {
 
         self.resources
             .remove(&id)
-            .map(TrustCell::into_inner)
+            .map(AtomicRefCell::into_inner)
             .map(|x: Box<dyn Resource>| x.downcast())
             .map(|x: Result<Box<R>, _>| x.ok().unwrap())
             .map(|x| *x)
@@ -558,7 +556,7 @@ impl World {
     pub unsafe fn try_fetch_internal(
         &self,
         id: ResourceId,
-    ) -> Option<&TrustCell<Box<dyn Resource>>> {
+    ) -> Option<&AtomicRefCell<Box<dyn Resource>>> {
         self.resources.get(&id)
     }
 
@@ -574,7 +572,7 @@ impl World {
     pub fn get_mut_raw(&mut self, id: ResourceId) -> Option<&mut dyn Resource> {
         self.resources
             .get_mut(&id)
-            .map(TrustCell::get_mut)
+            .map(AtomicRefCell::get_mut)
             .map(Box::as_mut)
     }
 }

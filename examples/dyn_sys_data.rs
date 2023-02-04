@@ -11,7 +11,7 @@ extern crate shred;
 use ahash::AHashMap as HashMap;
 
 use shred::{
-    cell::{Ref, RefMut},
+    cell::{AtomicRef, AtomicRefMut},
     Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read,
     Resource, ResourceId, System, SystemData, World,
 };
@@ -134,8 +134,8 @@ struct ScriptInput<'a> {
 
 struct ScriptSystemData<'a> {
     meta_table: Read<'a, ReflectionTable>,
-    reads: Vec<Ref<'a, dyn Resource + 'static>>,
-    writes: Vec<RefMut<'a, dyn Resource + 'static>>,
+    reads: Vec<AtomicRef<'a, dyn Resource + 'static>>,
+    writes: Vec<AtomicRefMut<'a, dyn Resource + 'static>>,
 }
 
 impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
@@ -151,7 +151,7 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
                 let id = id.clone();
                 // SAFETY: We don't expose mutable reference to the Box or swap it out.
                 let res = unsafe { world.try_fetch_internal(id) };
-                Ref::map(
+                AtomicRef::map(
                     res.expect("bug: the requested resource does not exist")
                         .borrow(),
                     Box::as_ref,
@@ -165,7 +165,7 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
                 let id = id.clone();
                 // SAFETY: We don't expose mutable reference to the Box or swap it out.
                 let res = unsafe { world.try_fetch_internal(id) };
-                RefMut::map(
+                AtomicRefMut::map(
                     res.expect("bug: the requested resource does not exist")
                         .borrow_mut(),
                     Box::as_mut,
