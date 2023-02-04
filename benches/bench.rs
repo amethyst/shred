@@ -245,8 +245,10 @@ fn bench_indirection_refs(b: &mut Bencher) {
     use std::ops::Deref;
 
     let cell = AtomicRefCell::new(Box::new(10));
-    let refs: Vec<AtomicRef<'_, Box<usize>>> =
-        std::iter::repeat(cell.borrow()).take(10000).collect();
+    let borrow = cell.borrow();
+    let refs: Vec<AtomicRef<'_, Box<usize>>> = std::iter::repeat_with(|| AtomicRef::clone(&borrow))
+        .take(10000)
+        .collect();
 
     b.iter(|| {
         let sum: usize = refs.iter().map(|v| v.deref().deref()).sum();
@@ -260,9 +262,11 @@ fn bench_direct_refs(b: &mut Bencher) {
     use std::ops::Deref;
 
     let cell = AtomicRefCell::new(Box::new(10));
-    let refs: Vec<AtomicRef<'_, usize>> = std::iter::repeat(cell.borrow().map(Box::as_ref))
-        .take(10000)
-        .collect();
+    let mapped_borrow = AtomicRef::map(cell.borrow(), Box::as_ref);
+    let refs: Vec<AtomicRef<'_, usize>> =
+        std::iter::repeat_with(|| AtomicRef::clone(&mapped_borrow))
+            .take(10000)
+            .collect();
 
     b.iter(|| {
         let sum: usize = refs.iter().map(|v| v.deref()).sum();
