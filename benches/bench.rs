@@ -232,9 +232,9 @@ fn bench_fetching(b: &mut Bencher) {
 
     b.iter(|| {
         for _ in 0..100 {
-            world.fetch::<DeltaTime>();
-            world.fetch::<VecStorage<Pos>>();
-            world.fetch::<VecStorage<Spring>>();
+            black_box(world.fetch::<DeltaTime>());
+            black_box(world.fetch::<VecStorage<Pos>>());
+            black_box(world.fetch::<VecStorage<Spring>>());
         }
     })
 }
