@@ -58,7 +58,7 @@ where
     }
 }
 
-pub fn create_entry<T>(e: StdEntry<ResourceId, TrustCell<Box<dyn Resource>>>) -> Entry<T> {
+pub(super) fn create_entry<T>(e: StdEntry<ResourceId, TrustCell<Box<dyn Resource>>>) -> Entry<T> {
     Entry {
         inner: e,
         marker: PhantomData,

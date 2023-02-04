@@ -54,33 +54,17 @@ impl<'a> System<'a> for DynamicSystem {
         let reads: Vec<&dyn Reflection> = data
             .reads
             .iter()
-            .map(|resource| {
-                // explicitly use the type because we're dealing with `&Resource` which is
-                // implemented by a lot of types; we don't want to accidentally
-                // get a `&Box<Resource>` and cast it to a `&Resource`.
-                let res = Box::as_ref(resource);
-
-                meta.get(res).expect("Not registered in meta table")
-            })
+            .map(|resource| meta.get(&**resource).expect("Not registered in meta table"))
             .collect();
 
         let writes: Vec<&mut dyn Reflection> = data
             .writes
             .iter_mut()
             .map(|resource| {
-                // explicitly use the type because we're dealing with `&mut Resource` which is
-                // implemented by a lot of types; we don't want to accidentally get a
-                // `&mut Box<Resource>` and cast it to a `&mut Resource`.
-                let res = Box::as_mut(resource);
-
-                // For some reason this needs a type ascription, otherwise Rust will think it's
-                // a `&mut (Reflection + '_)` (as opposed to `&mut (Reflection + 'static)`.
-                let res: &mut dyn Reflection = meta.get_mut(res).expect(
+                meta.get_mut(&mut **resource).expect(
                     "Not registered in meta \
                      table",
-                );
-
-                res
+                )
             })
             .collect();
 
@@ -150,8 +134,8 @@ struct ScriptInput<'a> {
 
 struct ScriptSystemData<'a> {
     meta_table: Read<'a, ReflectionTable>,
-    reads: Vec<Ref<'a, Box<dyn Resource + 'static>>>,
-    writes: Vec<RefMut<'a, Box<dyn Resource + 'static>>>,
+    reads: Vec<Ref<'a, dyn Resource + 'static>>,
+    writes: Vec<RefMut<'a, dyn Resource + 'static>>,
 }
 
 impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
@@ -159,28 +143,38 @@ impl<'a> DynamicSystemData<'a> for ScriptSystemData<'a> {
 
     fn setup(_accessor: &Dependencies, _res: &mut World) {}
 
-    fn fetch(access: &Dependencies, res: &'a World) -> Self {
+    fn fetch(access: &Dependencies, world: &'a World) -> Self {
         let reads = access
             .reads
             .iter()
             .map(|id| {
-                res.try_fetch_internal(id.clone())
-                    .expect("bug: the requested resource does not exist")
-                    .borrow()
+                let id = id.clone();
+                // SAFETY: We don't expose mutable reference to the Box or swap it out.
+                let res = unsafe { world.try_fetch_internal(id) };
+                Ref::map(
+                    res.expect("bug: the requested resource does not exist")
+                        .borrow(),
+                    Box::as_ref,
+                )
             })
             .collect();
         let writes = access
             .writes
             .iter()
             .map(|id| {
-                res.try_fetch_internal(id.clone())
-                    .expect("bug: the requested resource does not exist")
-                    .borrow_mut()
+                let id = id.clone();
+                // SAFETY: We don't expose mutable reference to the Box or swap it out.
+                let res = unsafe { world.try_fetch_internal(id) };
+                RefMut::map(
+                    res.expect("bug: the requested resource does not exist")
+                        .borrow_mut(),
+                    Box::as_mut,
+                )
             })
             .collect();
 
         ScriptSystemData {
-            meta_table: SystemData::fetch(res),
+            meta_table: SystemData::fetch(world),
             reads,
             writes,
         }

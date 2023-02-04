@@ -53,7 +53,7 @@ where
 impl<'a, T> Clone for Fetch<'a, T> {
     fn clone(&self) -> Self {
         Fetch {
-            inner: self.inner.clone(),
+            inner: Ref::clone(&self.inner),
             phantom: PhantomData,
         }
     }
@@ -550,7 +550,15 @@ impl World {
 
     /// Internal function for fetching resources, should only be used if you
     /// know what you're doing.
-    pub fn try_fetch_internal(&self, id: ResourceId) -> Option<&TrustCell<Box<dyn Resource>>> {
+    ///
+    /// # Safety
+    ///
+    /// If this is used to replace the `Box<dyn Resource>` with a different one, the new one must
+    /// have a `TypeId` that matches the one in the `ResourceId` provided here.
+    pub unsafe fn try_fetch_internal(
+        &self,
+        id: ResourceId,
+    ) -> Option<&TrustCell<Box<dyn Resource>>> {
         self.resources.get(&id)
     }
 
