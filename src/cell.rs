@@ -1,5 +1,7 @@
 //! Helper module for some internals, most users don't need to interact with it.
 
+use core::marker::PhantomData;
+use core::ptr::NonNull;
 use std::{
     cell::UnsafeCell,
     error::Error,
@@ -42,7 +44,7 @@ impl Error for InvalidBorrow {
 #[derive(Debug)]
 pub struct Ref<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
-    value: &'a T,
+    value: NonNull<T>,
 }
 
 impl<'a, T: ?Sized> Ref<'a, T> {
@@ -95,7 +97,7 @@ impl<'a, T: ?Sized> Ref<'a, T> {
     {
         let val = Ref {
             flag: self.flag,
-            value: f(self.value),
+            value: NonNull::from(f(&*self)),
         };
 
         std::mem::forget(self);
@@ -108,7 +110,8 @@ impl<'a, T: ?Sized> Deref for Ref<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        self.value
+        // SAFETY: `Ref` holds a shared borrow of the value.
+        unsafe { self.value.as_ref() }
     }
 }
 
@@ -134,7 +137,10 @@ impl<'a, T: ?Sized> Clone for Ref<'a, T> {
 #[derive(Debug)]
 pub struct RefMut<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
-    value: &'a mut T,
+    value: NonNull<T>,
+    // `NonNull<T>` is covariant over `T` but we use it in the place of a mutable reference so we need to be
+    // invariant over `T`.
+    marker: PhantomData<&'a mut T>,
 }
 
 impl<'a, T: ?Sized> RefMut<'a, T> {
@@ -182,7 +188,7 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
     /// let b2: RefMut<'_, u32> = RefMut::map(b1, |t| &mut t.0);
     /// assert_eq!(*b2, 5);
     /// ```
-    pub fn map<U, F>(self, f: F) -> RefMut<'a, U>
+    pub fn map<U, F>(mut self, f: F) -> RefMut<'a, U>
     where
         F: FnOnce(&mut T) -> &mut U,
         U: ?Sized,
@@ -192,7 +198,7 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
         // the given `RefMut`, the lifetime we created through turning the
         // pointer into a ref is valid.
         let flag = self.flag;
-        let value = unsafe { &mut *(self.value as *mut _) };
+        let value = NonNull::from(f(&mut *self));
 
         // We have to forget self so that we do not run `Drop`. Further it's safe
         // because we are creating a new `RefMut`, with the same flag, which
@@ -201,7 +207,8 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
 
         RefMut {
             flag,
-            value: f(value),
+            value,
+            marker: PhantomData,
         }
     }
 }
@@ -210,13 +217,17 @@ impl<'a, T: ?Sized> Deref for RefMut<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        self.value
+        // SAFETY: `RefMut` holds an exclusive borrow of the value and we have a shared borrow of
+        // `RefMut` here.
+        unsafe { self.value.as_ref() }
     }
 }
 
 impl<'a, T: ?Sized> DerefMut for RefMut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        self.value
+        // SAFETY: `RefMut` holds an exclusive borrow of the value and we have an exclusive borrow
+        // of `RefMut` here.
+        unsafe { self.value.as_mut() }
     }
 }
 
@@ -261,7 +272,7 @@ impl<T> TrustCell<T> {
 
         Ref {
             flag: &self.flag,
-            value: unsafe { &*self.inner.get() },
+            value: unsafe { NonNull::new_unchecked(self.inner.get()) },
         }
     }
 
@@ -274,7 +285,7 @@ impl<T> TrustCell<T> {
 
         Ok(Ref {
             flag: &self.flag,
-            value: unsafe { &*self.inner.get() },
+            value: unsafe { NonNull::new_unchecked(self.inner.get()) },
         })
     }
 
@@ -292,7 +303,8 @@ impl<T> TrustCell<T> {
 
         RefMut {
             flag: &self.flag,
-            value: unsafe { &mut *self.inner.get() },
+            value: unsafe { NonNull::new_unchecked(self.inner.get()) },
+            marker: PhantomData,
         }
     }
 
@@ -305,7 +317,8 @@ impl<T> TrustCell<T> {
 
         Ok(RefMut {
             flag: &self.flag,
-            value: unsafe { &mut *self.inner.get() },
+            value: unsafe { NonNull::new_unchecked(self.inner.get()) },
+            marker: PhantomData,
         })
     }
 
@@ -471,22 +484,27 @@ mod tests {
         assert!(cell.try_borrow_mut().is_err());
     }
 
+    fn make_ref<'a, T: ?Sized>(flag: &'a AtomicUsize, value: &'a T) -> Ref<'a, T> {
+        Ref {
+            flag,
+            value: NonNull::from(value),
+        }
+    }
+
     #[test]
     fn ref_with_non_sized() {
-        let r: Ref<'_, [i32]> = Ref {
-            flag: &AtomicUsize::new(1),
-            value: &[2, 3, 4, 5][..],
-        };
+        let value = &[2, 3, 4, 5][..];
+        let flag = AtomicUsize::new(1);
+        let r: Ref<'_, [i32]> = make_ref(&flag, value);
 
         assert_eq!(&*r, &[2, 3, 4, 5][..]);
     }
 
     #[test]
     fn ref_with_non_sized_clone() {
-        let r: Ref<'_, [i32]> = Ref {
-            flag: &AtomicUsize::new(1),
-            value: &[2, 3, 4, 5][..],
-        };
+        let value = &[2, 3, 4, 5][..];
+        let flag = AtomicUsize::new(1);
+        let r: Ref<'_, [i32]> = make_ref(&flag, value);
         let rr = r.clone();
 
         assert_eq!(&*r, &[2, 3, 4, 5][..]);
@@ -498,30 +516,35 @@ mod tests {
 
     #[test]
     fn ref_with_trait_obj() {
-        let ra: Ref<'_, dyn std::any::Any> = Ref {
-            flag: &AtomicUsize::new(1),
-            value: &2i32,
-        };
+        let value = &2i32;
+        let flag = AtomicUsize::new(1);
+        let ra: Ref<'_, dyn std::any::Any> = make_ref(&flag, value);
 
         assert_eq!(ra.downcast_ref::<i32>().unwrap(), &2i32);
     }
 
+    fn make_ref_mut<'a, T: ?Sized>(flag: &'a AtomicUsize, value: &'a mut T) -> RefMut<'a, T> {
+        RefMut {
+            flag,
+            value: NonNull::from(value),
+            marker: PhantomData,
+        }
+    }
+
     #[test]
     fn ref_mut_with_non_sized() {
-        let mut r: RefMut<'_, [i32]> = RefMut {
-            flag: &AtomicUsize::new(1),
-            value: &mut [2, 3, 4, 5][..],
-        };
+        let value: &mut [i32] = &mut [2, 3, 4, 5][..];
+        let flag = AtomicUsize::new(1);
+        let mut r: RefMut<'_, [i32]> = make_ref_mut(&flag, value);
 
         assert_eq!(&mut *r, &mut [2, 3, 4, 5][..]);
     }
 
     #[test]
     fn ref_mut_with_trait_obj() {
-        let mut ra: RefMut<'_, dyn std::any::Any> = RefMut {
-            flag: &AtomicUsize::new(1),
-            value: &mut 2i32,
-        };
+        let value = &mut 2i32;
+        let flag = AtomicUsize::new(1);
+        let mut ra: RefMut<'_, dyn std::any::Any> = make_ref_mut(&flag, value);
 
         assert_eq!(ra.downcast_mut::<i32>().unwrap(), &mut 2i32);
     }
@@ -612,5 +635,19 @@ mod tests {
         assert_eq!(cell.flag.load(Ordering::SeqCst), std::usize::MAX);
         drop(r);
         assert_eq!(cell.flag.load(Ordering::SeqCst), 0);
+    }
+
+    // Test intended to allow Miri to catch bugs like this scenario:
+    // https://github.com/rust-lang/rust/issues/63787
+    #[test]
+    fn drop_and_borrow_in_fn_call() {
+        fn drop_and_borrow(cell: &TrustCell<u8>, borrow: Ref<'_, u8>) {
+            drop(borrow);
+            *cell.borrow_mut() = 7u8;
+        }
+
+        let a = TrustCell::new(4u8);
+        let borrow = a.borrow();
+        drop_and_borrow(&a, borrow);
     }
 }
