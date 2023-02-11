@@ -47,6 +47,10 @@ pub struct Ref<'a, T: ?Sized + 'a> {
     value: NonNull<T>,
 }
 
+// SAFETY: `Ref<'_, T> acts as a reference.
+unsafe impl<'a, T: ?Sized + 'a> Sync for Ref<'a, T> where for<'b> &'b T: Sync {}
+unsafe impl<'a, T: ?Sized + 'a> Send for Ref<'a, T> where for<'b> &'b T: Send {}
+
 impl<'a, T: ?Sized> Ref<'a, T> {
     /// Makes a new `Ref` for a component of the borrowed data which preserves
     /// the existing borrow.
@@ -142,6 +146,10 @@ pub struct RefMut<'a, T: ?Sized + 'a> {
     // invariant over `T`.
     marker: PhantomData<&'a mut T>,
 }
+
+// SAFETY: `RefMut<'_, T> acts as a mutable reference.
+unsafe impl<'a, T: ?Sized + 'a> Sync for RefMut<'a, T> where for<'b> &'b mut T: Sync {}
+unsafe impl<'a, T: ?Sized + 'a> Send for RefMut<'a, T> where for<'b> &'b mut T: Send {}
 
 impl<'a, T: ?Sized> RefMut<'a, T> {
     /// Makes a new `RefMut` for a component of the borrowed data which
