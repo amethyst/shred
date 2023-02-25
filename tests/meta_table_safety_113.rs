@@ -18,13 +18,12 @@ struct MultipleData {
 }
 
 unsafe impl CastFrom<MultipleData> for dyn PointsToU64 {
-    fn cast(t: &MultipleData) -> &Self {
-        // this is wrong and will cause a panic
-        &t.pointer
-    }
+    fn cast(t: *mut MultipleData) -> *mut Self {
+        // note, this also assumes the pointer is non-null and probably other things which we can't
+        // assume in an implementation of `CastFrom`.
 
-    fn cast_mut(t: &mut MultipleData) -> &mut Self {
-        &mut t.pointer
+        // this is wrong and will cause a panic
+        unsafe { core::ptr::addr_of_mut!((*t).pointer) }
     }
 }
 
@@ -36,7 +35,7 @@ fn test_panics() {
         _number: 0x0, // this will be casted to a pointer, then dereferenced
         pointer: Box::new(42),
     };
-    table.register(&md);
+    table.register::<MultipleData>();
     if let Some(t) = table.get(&md) {
         println!("{}", t.get_u64());
     }

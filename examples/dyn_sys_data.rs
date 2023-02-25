@@ -99,11 +99,7 @@ unsafe impl<T> CastFrom<T> for dyn Reflection
 where
     T: Reflection + 'static,
 {
-    fn cast(t: &T) -> &Self {
-        t
-    }
-
-    fn cast_mut(t: &mut T) -> &mut Self {
+    fn cast(t: *mut T) -> *mut Self {
         t
     }
 }
@@ -253,8 +249,8 @@ fn main() {
     {
         let mut table = res.entry().or_insert_with(ReflectionTable::new);
 
-        table.register(&Foo);
-        table.register(&Bar);
+        table.register::<Foo>();
+        table.register::<Bar>();
     }
 
     {
