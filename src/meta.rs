@@ -64,6 +64,7 @@ where
 {
     type Item = AtomicRef<'a, T>;
 
+    #[allow(clippy::borrowed_box)] // variant of https://github.com/rust-lang/rust-clippy/issues/5770
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         loop {
             let resource_id = match self.tys.get(self.index) {
