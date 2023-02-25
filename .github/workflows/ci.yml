@@ -71,4 +71,7 @@ jobs:
           rustup override set nightly
           cargo miri setup
       - name: Test with Miri
-        run: cargo miri test
+        # Miri currently reports leaks in some tests so we disable that check
+        # here (might be due to ptr-int-ptr in crossbeam-epoch so might be
+        # resolved in future versions of that crate).
+        run: MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test
