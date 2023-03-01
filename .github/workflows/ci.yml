@@ -62,7 +62,6 @@ jobs:
   miri:
     name: "Miri"
     runs-on: ubuntu-latest
-    continue-on-error: true # Needed until all Miri errors are fixed
     steps:
       - uses: actions/checkout@v3
       - name: Install Miri
