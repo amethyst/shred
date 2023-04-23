@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* Increase MSRV to 1.59.0 because of `rayon-core v1.11.0`.
+
 ## 0.14.1 (2022-07-14)
 
 * Undo performance regression from removing `hashbrown` by using `ahash` hasher
