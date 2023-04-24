@@ -724,7 +724,7 @@ mod tests {
 
     #[allow(unused)]
     #[test]
-    #[should_panic(expected = "but it was already borrowed")]
+    #[should_panic(expected = "already immutably borrowed")]
     fn read_write_fails() {
         let mut world = World::empty();
         world.insert(Res);
@@ -735,7 +735,7 @@ mod tests {
 
     #[allow(unused)]
     #[test]
-    #[should_panic(expected = "but it was already borrowed mutably")]
+    #[should_panic(expected = "already mutably borrowed")]
     fn write_read_fails() {
         let mut world = World::empty();
         world.insert(Res);
