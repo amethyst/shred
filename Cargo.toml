@@ -14,7 +14,7 @@ categories = ["concurrency"]
 license = "MIT OR Apache-2.0"
 exclude = ["bors.toml", ".travis.yml"]
 edition = "2021"
-rust-version = "1.56.1"
+rust-version = "1.59.0"
 
 [dependencies]
 ahash = "0.7.6"

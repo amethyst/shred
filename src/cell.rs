@@ -5,7 +5,7 @@ use core::ptr::NonNull;
 use std::{
     cell::UnsafeCell,
     error::Error,
-    fmt::{Display, Error as FormatError, Formatter},
+    fmt::{Debug, Display, Error as FormatError, Formatter},
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicUsize, Ordering},
     usize,
@@ -41,7 +41,6 @@ impl Error for InvalidBorrow {
 /// An immutable reference to data in a `TrustCell`.
 ///
 /// Access the value via `std::ops::Deref` (e.g. `*val`)
-#[derive(Debug)]
 pub struct Ref<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
     value: NonNull<T>,
@@ -135,10 +134,15 @@ impl<'a, T: ?Sized> Clone for Ref<'a, T> {
     }
 }
 
+impl<'a, T: ?Sized + Debug> Debug for Ref<'a, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), FormatError> {
+        <T as Debug>::fmt(self, f)
+    }
+}
+
 /// A mutable reference to data in a `TrustCell`.
 ///
 /// Access the value via `std::ops::DerefMut` (e.g. `*val`)
-#[derive(Debug)]
 pub struct RefMut<'a, T: ?Sized + 'a> {
     flag: &'a AtomicUsize,
     value: NonNull<T>,
@@ -242,6 +246,12 @@ impl<'a, T: ?Sized> DerefMut for RefMut<'a, T> {
 impl<'a, T: ?Sized> Drop for RefMut<'a, T> {
     fn drop(&mut self) {
         self.flag.store(0, Ordering::Release)
+    }
+}
+
+impl<'a, T: ?Sized + Debug> Debug for RefMut<'a, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), FormatError> {
+        <T as Debug>::fmt(self, f)
     }
 }
 
