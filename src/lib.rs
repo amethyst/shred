@@ -84,7 +84,12 @@
 #![deny(unused_must_use, clippy::disallowed_types)]
 #![warn(missing_docs)]
 
-pub mod cell;
+/// Re-exports from [`atomic_refcell`]
+///
+/// Mainly for internals, most users don't need to interact with this.
+pub mod cell {
+    pub use atomic_refcell::*;
+}
 
 mod dispatch;
 mod meta;
