@@ -76,6 +76,7 @@ where
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
             self.world
+                // SAFETY: We just read the value and don't replace it.
                 .try_fetch_internal(match self.tys.get(index) {
                     Some(&x) => ResourceId::from_type_id(x),
                     None => return None,
@@ -141,6 +142,7 @@ where
         // Ugly hack that works due to `UnsafeCell` and distinct resources.
         unsafe {
             self.world
+                // SAFETY: We don't swap out the Box or expose a mutable reference to it.
                 .try_fetch_internal(match self.tys.get(index) {
                     Some(&x) => ResourceId::from_type_id(x),
                     None => return None,
