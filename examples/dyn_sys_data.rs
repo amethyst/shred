@@ -61,10 +61,14 @@ impl<'a> System<'a> for DynamicSystem {
             .writes
             .iter_mut()
             .map(|resource| {
-                meta.get_mut(&mut **resource).expect(
+                // For some reason this needs a type ascription, otherwise Rust will think it's
+                // a `&mut (Reflaction + '_)` (as opposed to `&mut (Reflection + 'static)`. (Note this
+                // isn't needed in newer rust version but fails on the MSRV of 1.59.0).
+                let res: &mut dyn Reflection = meta.get_mut(&mut **resource).expect(
                     "Not registered in meta \
                      table",
-                )
+                );
+                res
             })
             .collect();
 
