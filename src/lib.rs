@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "nightly", feature(ptr_metadata, strict_provenance))]
 //! **Sh**ared **re**source **d**ispatcher
 //!
 //! This library allows to dispatch

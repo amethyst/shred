@@ -5,6 +5,9 @@ use ahash::AHashMap as HashMap;
 use crate::cell::{AtomicRef, AtomicRefMut};
 use crate::{Resource, ResourceId, World};
 
+#[cfg(feature = "nightly")]
+use core::ptr::{DynMetadata, Pointee};
+
 /// This implements `Send` and `Sync` unconditionally.
 /// (the trait itself doesn't need to have these bounds and the
 /// resources are already guaranteed to fulfill it).
@@ -50,7 +53,10 @@ pub unsafe trait CastFrom<T> {
 
 /// An iterator for the `MetaTable`.
 pub struct MetaIter<'a, T: ?Sized + 'a> {
+    #[cfg(not(feature = "nightly"))]
     vtable_fns: &'a [fn(*mut ()) -> *mut T],
+    #[cfg(feature = "nightly")]
+    vtables: &'a [DynMetadata<T>],
     index: usize,
     tys: &'a [TypeId],
     // `MetaIter` is invariant over `T`
@@ -58,6 +64,7 @@ pub struct MetaIter<'a, T: ?Sized + 'a> {
     world: &'a World,
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<'a, T> Iterator for MetaIter<'a, T>
 where
     T: ?Sized + 'a,
@@ -97,9 +104,53 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
+impl<'a, T> Iterator for MetaIter<'a, T>
+where
+    T: ?Sized + 'a,
+    T: Pointee<Metadata = DynMetadata<T>>,
+{
+    type Item = AtomicRef<'a, T>;
+
+    #[allow(clippy::borrowed_box)] // variant of https://github.com/rust-lang/rust-clippy/issues/5770
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        loop {
+            let resource_id = match self.tys.get(self.index) {
+                Some(&x) => ResourceId::from_type_id(x),
+                None => return None,
+            };
+
+            let index = self.index;
+            self.index += 1;
+
+            // SAFETY: We just read the value and don't replace it.
+            if let Some(res) = unsafe { self.world.try_fetch_internal(resource_id) } {
+                let vtable = self.vtables[index];
+                let trait_object = AtomicRef::map(res.borrow(), |res: &Box<dyn Resource>| {
+                    let ptr: *const dyn Resource = Box::as_ref(res);
+                    let trait_ptr = core::ptr::from_raw_parts(ptr.cast::<()>(), vtable);
+                    // SAFETY: For a particular index we store a corresponding
+                    // TypeId and vtable in tys and vtables respectively.
+                    // We rely on `try_fetch_interal` returning a trait object
+                    // with a concrete type that has the provided TypeId. The
+                    // signature of the closure parameter of `AtomicRef::map`
+                    // should ensure we aren't accidentally extending the
+                    // lifetime here. Also see safety note in `MetaTable::get`.
+                    unsafe { &*trait_ptr }
+                });
+
+                return Some(trait_object);
+            }
+        }
+    }
+}
+
 /// A mutable iterator for the `MetaTable`.
 pub struct MetaIterMut<'a, T: ?Sized + 'a> {
+    #[cfg(not(feature = "nightly"))]
     vtable_fns: &'a [fn(*mut ()) -> *mut T],
+    #[cfg(feature = "nightly")]
+    vtables: &'a [DynMetadata<T>],
     index: usize,
     tys: &'a [TypeId],
     // `MetaIterMut` is invariant over `T`
@@ -107,6 +158,7 @@ pub struct MetaIterMut<'a, T: ?Sized + 'a> {
     world: &'a World,
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<'a, T> Iterator for MetaIterMut<'a, T>
 where
     T: ?Sized + 'a,
@@ -149,6 +201,50 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
+impl<'a, T> Iterator for MetaIterMut<'a, T>
+where
+    T: ?Sized + 'a,
+    T: Pointee<Metadata = DynMetadata<T>>,
+{
+    type Item = AtomicRefMut<'a, T>;
+
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        loop {
+            let resource_id = match self.tys.get(self.index) {
+                Some(&x) => ResourceId::from_type_id(x),
+                None => return None,
+            };
+
+            let index = self.index;
+            self.index += 1;
+
+            // Note: this relies on implementation details of
+            // try_fetch_internal!
+            // SAFETY: We don't swap out the Box or expose a mutable reference to it.
+            if let Some(res) = unsafe { self.world.try_fetch_internal(resource_id) } {
+                let vtable = self.vtables[index];
+                let trait_object =
+                    AtomicRefMut::map(res.borrow_mut(), |res: &mut Box<dyn Resource>| {
+                        let ptr: *mut dyn Resource = Box::as_mut(res);
+                        let trait_ptr = core::ptr::from_raw_parts_mut(ptr.cast::<()>(), vtable);
+                        // SAFETY: For a particular index we store a corresponding
+                        // TypeId and vtable in tys and vtables respectively.
+                        // We rely on `try_fetch_interal` returning a trait object
+                        // with a concrete type that has the provided TypeId. The
+                        // signature of the closure parameter of `AtomicRefMut::map`
+                        // should ensure we aren't accidentally extending the
+                        // lifetime here. Also see safety note in
+                        // `MetaTable::get_mut`.
+                        unsafe { &mut *trait_ptr }
+                    });
+
+                return Some(trait_object);
+            }
+        }
+    }
+}
+
 /// Given an address and provenance, produces a pointer to a trait object for
 /// which `CastFrom<T>` is implemented.
 ///
@@ -159,6 +255,7 @@ where
 ///
 /// We exclusively operate on pointers here so we only need a single function
 /// pointer in the meta-table for both `&T` and `&mut T` cases.
+#[cfg(not(feature = "nightly"))]
 fn attach_vtable<TraitObject: ?Sized, T>(value: *mut ()) -> *mut TraitObject
 where
     TraitObject: CastFrom<T> + 'static,
@@ -245,10 +342,10 @@ where
 /// }
 /// ```
 pub struct MetaTable<T: ?Sized> {
-    // TODO: When `ptr_metadata` is stabilized we can use that to implement this
-    // without a function call (and without trying to make assumptions about the
-    // layout of trait object pointers). https://github.com/rust-lang/rust/issues/81513
+    #[cfg(not(feature = "nightly"))]
     vtable_fns: Vec<fn(*mut ()) -> *mut T>,
+    #[cfg(feature = "nightly")]
+    vtables: Vec<DynMetadata<T>>,
     indices: HashMap<TypeId, usize>,
     tys: Vec<TypeId>,
     // `MetaTable` is invariant over `T`
@@ -258,12 +355,15 @@ pub struct MetaTable<T: ?Sized> {
 impl<T: ?Sized> MetaTable<T> {
     /// Creates a new `MetaTable`.
     pub fn new() -> Self {
+        // TODO: when ptr_metadata is stablilized this can just be a trait bound: Pointee<Metadata
+        // = DynMetadata<T>>
         assert_unsized::<T>();
 
         Default::default()
     }
 
     /// Registers a resource `R` that implements the trait `T`.
+    #[cfg(not(feature = "nightly"))]
     pub fn register<R>(&mut self)
     where
         R: Resource,
@@ -289,9 +389,47 @@ impl<T: ?Sized> MetaTable<T> {
         }
     }
 
+    /// Registers a resource `R` that implements the trait `T`.
+    #[cfg(feature = "nightly")]
+    pub fn register<R>(&mut self)
+    where
+        R: Resource,
+        T: CastFrom<R> + 'static,
+        T: Pointee<Metadata = DynMetadata<T>>,
+    {
+        let ty_id = TypeId::of::<R>();
+        // use self.addr() for unpredictable address to use for checking consistency below
+        let invalid_ptr = core::ptr::invalid_mut::<R>((self as *mut Self).addr());
+        let trait_ptr = <T as CastFrom<R>>::cast(invalid_ptr);
+        // assert that address not changed (to catch some mistakes in CastFrom impl)
+        assert_eq!(
+            invalid_ptr.addr(),
+            trait_ptr.addr(),
+            "Bug: `CastFrom` did not cast `self`"
+        );
+        let vtable = core::ptr::metadata(trait_ptr);
+
+        // Important: ensure no entry exists twice!
+        let len = self.indices.len();
+        match self.indices.entry(ty_id) {
+            Entry::Occupied(occ) => {
+                let ind = *occ.get();
+
+                self.vtables[ind] = vtable;
+            }
+            Entry::Vacant(vac) => {
+                vac.insert(len);
+
+                self.vtables.push(vtable);
+                self.tys.push(ty_id);
+            }
+        }
+    }
+
     /// Tries to convert `world` to a trait object of type `&T`.
     /// If `world` doesn't have an implementation for `T` (or it wasn't
     /// registered), this will return `None`.
+    #[cfg(not(feature = "nightly"))]
     pub fn get<'a>(&self, res: &'a dyn Resource) -> Option<&'a T> {
         self.indices.get(&res.type_id()).map(|&ind| {
             let vtable_fn = self.vtable_fns[ind];
@@ -307,9 +445,31 @@ impl<T: ?Sized> MetaTable<T> {
         })
     }
 
+    /// Tries to convert `world` to a trait object of type `&T`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't
+    /// registered), this will return `None`.
+    #[cfg(feature = "nightly")]
+    pub fn get<'a>(&self, res: &'a dyn Resource) -> Option<&'a T>
+    where
+        T: Pointee<Metadata = DynMetadata<T>>,
+    {
+        self.indices.get(&res.type_id()).map(|&ind| {
+            let vtable = self.vtables[ind];
+            let ptr = <*const dyn Resource>::cast::<()>(res);
+            let trait_ptr = core::ptr::from_raw_parts(ptr, vtable);
+            // SAFETY: We retrieved the `vtable` via TypeId so it will be a
+            // vtable that corresponds with the erased type that the TypeId
+            // refers to. `from_raw_parts` will also preserve the provenance and
+            // address (so we can safely produce a shared reference since we
+            // started with one).
+            unsafe { &*trait_ptr }
+        })
+    }
+
     /// Tries to convert `world` to a trait object of type `&mut T`.
     /// If `world` doesn't have an implementation for `T` (or it wasn't
     /// registered), this will return `None`.
+    #[cfg(not(feature = "nightly"))]
     pub fn get_mut<'a>(&self, res: &'a mut dyn Resource) -> Option<&'a mut T> {
         self.indices.get(&res.type_id()).map(|&ind| {
             let vtable_fn = self.vtable_fns[ind];
@@ -324,10 +484,34 @@ impl<T: ?Sized> MetaTable<T> {
         })
     }
 
+    /// Tries to convert `world` to a trait object of type `&mut T`.
+    /// If `world` doesn't have an implementation for `T` (or it wasn't
+    /// registered), this will return `None`.
+    #[cfg(feature = "nightly")]
+    pub fn get_mut<'a>(&self, res: &'a mut dyn Resource) -> Option<&'a mut T>
+    where
+        T: Pointee<Metadata = DynMetadata<T>>,
+    {
+        self.indices.get(&res.type_id()).map(|&ind| {
+            let vtable = self.vtables[ind];
+            let ptr = <*mut dyn Resource>::cast::<()>(res);
+            let trait_ptr = core::ptr::from_raw_parts_mut(ptr, vtable);
+            // SAFETY: We retrieved the `vtable` via TypeId so it will be a
+            // vtable that corresponds with the erased type that the TypeId
+            // refers to. `from_raw_parts_mut` will also preserve the provenance
+            // and address (so we can safely produce a mutable reference since
+            // we started with one).
+            unsafe { &mut *trait_ptr }
+        })
+    }
+
     /// Iterates all resources that implement `T` and were registered.
     pub fn iter<'a>(&'a self, res: &'a World) -> MetaIter<'a, T> {
         MetaIter {
+            #[cfg(not(feature = "nightly"))]
             vtable_fns: &self.vtable_fns,
+            #[cfg(feature = "nightly")]
+            vtables: &self.vtables,
             index: 0,
             world: res,
             tys: &self.tys,
@@ -338,7 +522,10 @@ impl<T: ?Sized> MetaTable<T> {
     /// Iterates all resources that implement `T` and were registered mutably.
     pub fn iter_mut<'a>(&'a self, res: &'a World) -> MetaIterMut<'a, T> {
         MetaIterMut {
+            #[cfg(not(feature = "nightly"))]
             vtable_fns: &self.vtable_fns,
+            #[cfg(feature = "nightly")]
+            vtables: &self.vtables,
             index: 0,
             world: res,
             tys: &self.tys,
@@ -353,7 +540,10 @@ where
 {
     fn default() -> Self {
         MetaTable {
+            #[cfg(not(feature = "nightly"))]
             vtable_fns: Default::default(),
+            #[cfg(feature = "nightly")]
+            vtables: Default::default(),
             indices: Default::default(),
             tys: Default::default(),
             marker: Default::default(),
@@ -362,7 +552,7 @@ where
 }
 
 fn assert_unsized<T: ?Sized>() {
-    use std::mem::size_of;
+    use core::mem::size_of;
 
     assert_eq!(size_of::<&T>(), 2 * size_of::<usize>());
 }
