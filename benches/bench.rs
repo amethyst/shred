@@ -1,9 +1,5 @@
 #![feature(test)]
 
-extern crate cgmath;
-extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 extern crate test;
 
 use std::ops::{Index, IndexMut};

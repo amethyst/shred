@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "nightly", feature(ptr_metadata, strict_provenance))]
 //! **Sh**ared **re**source **d**ispatcher
 //!
 //! This library allows to dispatch
@@ -82,6 +83,7 @@
 //! virtual function calls.
 
 #![deny(unused_must_use, clippy::disallowed_types)]
+#![deny(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
 
 /// Re-exports from [`atomic_refcell`]

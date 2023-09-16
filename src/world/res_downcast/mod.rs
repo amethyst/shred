@@ -16,6 +16,7 @@ impl dyn Resource {
     #[inline]
     pub fn downcast<T: Resource>(self: Box<Self>) -> Result<Box<T>, Box<Self>> {
         if self.is::<T>() {
+            // SAFETY: We just checked that the type is `T`.
             unsafe { Ok(self.downcast_unchecked()) }
         } else {
             Err(self)
@@ -31,7 +32,8 @@ impl dyn Resource {
     /// will result in UB.
     #[inline]
     pub unsafe fn downcast_unchecked<T: Resource>(self: Box<Self>) -> Box<T> {
-        Box::from_raw(Box::into_raw(self) as *mut T)
+        // SAFETY: Caller promises the concrete type is `T`.
+        unsafe { Box::from_raw(Box::into_raw(self) as *mut T) }
     }
 
     /// Returns true if the boxed type is the same as `T`
@@ -45,6 +47,7 @@ impl dyn Resource {
     #[inline]
     pub fn downcast_ref<T: Resource>(&self) -> Option<&T> {
         if self.is::<T>() {
+            // SAFETY: We just checked that the type is `T`.
             unsafe { Some(self.downcast_ref_unchecked()) }
         } else {
             Option::None
@@ -61,7 +64,8 @@ impl dyn Resource {
     /// will result in UB.
     #[inline]
     pub unsafe fn downcast_ref_unchecked<T: Resource>(&self) -> &T {
-        &*(self as *const Self as *const T)
+        // SAFETY: Caller promises the concrete type is `T`.
+        unsafe { &*(self as *const Self as *const T) }
     }
 
     /// Returns some mutable reference to the boxed value if it is of type `T`,
@@ -69,6 +73,7 @@ impl dyn Resource {
     #[inline]
     pub fn downcast_mut<T: Resource>(&mut self) -> Option<&mut T> {
         if self.is::<T>() {
+            // SAFETY: We just checked that the type is `T`.
             unsafe { Some(self.downcast_mut_unchecked()) }
         } else {
             Option::None
@@ -85,6 +90,7 @@ impl dyn Resource {
     /// will result in UB.
     #[inline]
     pub unsafe fn downcast_mut_unchecked<T: Resource>(&mut self) -> &mut T {
-        &mut *(self as *mut Self as *mut T)
+        // SAFETY: Caller promises the concrete type is `T`.
+        unsafe { &mut *(self as *mut Self as *mut T) }
     }
 }

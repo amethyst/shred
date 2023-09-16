@@ -20,7 +20,7 @@ jobs:
           - nightly
           - beta
           - stable
-          - 1.59.0 # MSRV
+          - 1.65.0 # MSRV
 
     timeout-minutes: 10
 
@@ -62,7 +62,6 @@ jobs:
   miri:
     name: "Miri"
     runs-on: ubuntu-latest
-    continue-on-error: true # Needed until all Miri errors are fixed
     steps:
       - uses: actions/checkout@v3
       - name: Install Miri
@@ -71,4 +70,7 @@ jobs:
           rustup override set nightly
           cargo miri setup
       - name: Test with Miri
-        run: cargo miri test
+        # Miri currently reports leaks in some tests so we disable that check
+        # here (might be due to ptr-int-ptr in crossbeam-epoch so might be
+        # resolved in future versions of that crate).
+        run: MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test
