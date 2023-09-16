@@ -2,7 +2,24 @@
 
 ## Unreleased
 
-* Increase MSRV to 1.59.0 because of `rayon-core v1.11.0`.
+## 0.15.0 (2023-09-16)
+
+* Have `DispatcherBuilder::add_batch()` use the correct access. ([#221], [#222])
+* Replace custom `TrustCell` type with `atomic_refcell::AtomicCell`. This reduces unsafe
+  code in `shred` and uses less atomic operations. ([#224])
+* Mark `World::try_fetch_internal` as `unsafe` since it can be misused to break invariants.
+  ([#224])
+* Increase MSRV to 1.65.0 ([#226])
+* Rewrite `MetaTable` to avoid UB issues detected by Miri. ([#226])
+    * `CastFrom` trait now now uses a single method that operates on pointers instead of separate
+      cases for `&T` and `&mut T`.
+    * New implementation is slower, so a `nightly` feature was added to use the unstable
+      `ptr_metadata` feature for a more efficient implementation.
+ 
+[#221]: https://github.com/amethyst/shred/issues/221
+[#222]: https://github.com/amethyst/shred/pull/222
+[#224]: https://github.com/amethyst/shred/pull/224
+[#226]: https://github.com/amethyst/shred/pull/226
 
 ## 0.14.1 (2022-07-14)
 
