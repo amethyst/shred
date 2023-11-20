@@ -1,6 +1,4 @@
-use shred::{
-    Dispatcher, DispatcherBuilder, Read, ResourceId, RunningTime, System, SystemData, World, Write,
-};
+use shred::{Dispatcher, DispatcherBuilder, Read, RunningTime, System, SystemData, World, Write};
 
 fn sleep_short() {
     use std::{thread::sleep, time::Duration};

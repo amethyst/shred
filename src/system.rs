@@ -284,6 +284,11 @@ pub trait SystemData<'a> {
     ///
     /// Please note that returning wrong dependencies can lead to a panic.
     fn writes() -> Vec<ResourceId>;
+
+    /// Returns names of retrieved resources.
+    fn resource_names() -> Vec<&'static str> {
+        vec![std::any::type_name::<Self>()]
+    }
 }
 
 impl<'a, T> DynamicSystemData<'a> for T
@@ -427,6 +432,19 @@ macro_rules! impl_data {
                     $( {
                         let mut writes = <$ty as SystemData>::writes();
                         r.append(&mut writes);
+                    } )*
+
+                    r
+                }
+
+                fn resource_names() -> Vec<&'static str> {
+                    #![allow(unused_mut)]
+
+                    let mut r = Vec::new();
+
+                    $( {
+                        let mut names = <$ty as SystemData>::resource_names();
+                        r.append(&mut names);
                     } )*
 
                     r
