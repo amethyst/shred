@@ -1,4 +1,4 @@
-use shred::{DispatcherBuilder, Read, System, SystemData, World, Write};
+use shred::{DispatcherBuilder, Read, ResourceId, System, SystemData, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
