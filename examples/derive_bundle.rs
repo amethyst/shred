@@ -1,3 +1,5 @@
+#[cfg(not(feature = "shred-derive"))]
+use shred::ResourceId;
 use shred::{Read, SystemData, World, Write};
 
 #[derive(Debug, Default)]
