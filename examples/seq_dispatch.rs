@@ -1,4 +1,6 @@
-use shred::{DispatcherBuilder, Read, ResourceId, System, SystemData, World, Write};
+#[cfg(not(feature = "shred-derive"))]
+use shred::ResourceId;
+use shred::{DispatcherBuilder, Read, System, SystemData, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;

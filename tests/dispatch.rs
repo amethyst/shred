@@ -1,6 +1,6 @@
-use shred::{
-    Dispatcher, DispatcherBuilder, Read, ResourceId, RunningTime, System, SystemData, World, Write,
-};
+#[cfg(not(feature = "shred-derive"))]
+use shred::ResourceId;
+use shred::{Dispatcher, DispatcherBuilder, Read, RunningTime, System, SystemData, World, Write};
 
 fn sleep_short() {
     use std::{thread::sleep, time::Duration};
