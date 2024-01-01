@@ -1,6 +1,10 @@
 use smallvec::SmallVec;
 
-use crate::{dispatch::stage::Stage, system::RunNow, world::World};
+use crate::{
+    dispatch::{stage::Stage, SendDispatcher},
+    system::RunNow,
+    world::World,
+};
 
 /// This wrapper is used to share a replaceable ThreadPool with other
 /// dispatchers. Useful with batch dispatchers.
@@ -111,6 +115,33 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     pub fn dispatch_thread_local(&mut self, world: &World) {
         for sys in &mut self.thread_local {
             sys.run_now(world);
+        }
+    }
+
+    /// Converts this to a [`SendDispatcher`].
+    ///
+    /// Fails and returns the original distpatcher if it contains thread local systems.
+    pub fn try_into_sendable(self) -> Result<SendDispatcher<'a>, Self> {
+        let Dispatcher {
+            stages,
+            thread_local,
+            #[cfg(feature = "parallel")]
+            thread_pool,
+        } = self;
+
+        if thread_local.is_empty() {
+            Ok(SendDispatcher {
+                stages,
+                #[cfg(feature = "parallel")]
+                thread_pool,
+            })
+        } else {
+            Err(Dispatcher {
+                stages,
+                thread_local,
+                #[cfg(feature = "parallel")]
+                thread_pool,
+            })
         }
     }
 

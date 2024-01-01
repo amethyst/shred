@@ -110,7 +110,7 @@ pub use crate::dispatch::{Par, ParSeq, RunWithPool, Seq};
 pub use crate::{
     dispatch::{
         BatchAccessor, BatchController, BatchUncheckedWorld, Dispatcher, DispatcherBuilder,
-        MultiDispatchController, MultiDispatcher,
+        MultiDispatchController, MultiDispatcher, SendDispatcher,
     },
     meta::{CastFrom, MetaIter, MetaIterMut, MetaTable},
     system::{
