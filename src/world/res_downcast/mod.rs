@@ -1,4 +1,4 @@
-//! Code is based on https://github.com/chris-morgan/mopa
+//! Code is based on <https://github.com/chris-morgan/mopa>
 //! with the macro inlined for `Resource`. License files can be found in the
 //! directory of this source file, see COPYRIGHT, LICENSE-APACHE and
 //! LICENSE-MIT.

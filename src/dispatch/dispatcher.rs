@@ -1,6 +1,10 @@
 use smallvec::SmallVec;
 
-use crate::{dispatch::stage::Stage, system::RunNow, world::World};
+use crate::{
+    dispatch::{stage::Stage, SendDispatcher},
+    system::RunNow,
+    world::World,
+};
 
 /// This wrapper is used to share a replaceable ThreadPool with other
 /// dispatchers. Useful with batch dispatchers.
@@ -10,19 +14,15 @@ pub type ThreadPoolWrapper = Option<::std::sync::Arc<::rayon::ThreadPool>>;
 /// The dispatcher struct, allowing
 /// systems to be executed in parallel.
 pub struct Dispatcher<'a, 'b> {
-    stages: Vec<Stage<'a>>,
+    inner: SendDispatcher<'a>,
     thread_local: ThreadLocal<'b>,
-    #[cfg(feature = "parallel")]
-    thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 }
 
 impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
     pub fn setup(&mut self, world: &mut World) {
-        for stage in &mut self.stages {
-            stage.setup(world);
-        }
+        self.inner.setup(world);
 
         for sys in &mut self.thread_local {
             sys.setup(world);
@@ -34,9 +34,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// / or resources from the `World` which are associated with external
     /// resources.
     pub fn dispose(self, world: &mut World) {
-        for stage in self.stages {
-            stage.dispose(world);
-        }
+        self.inner.dispose(world);
 
         for sys in self.thread_local {
             sys.dispose(world);
@@ -56,12 +54,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     pub fn dispatch(&mut self, world: &World) {
-        #[cfg(feature = "parallel")]
-        self.dispatch_par(world);
-
-        #[cfg(not(feature = "parallel"))]
-        self.dispatch_seq(world);
-
+        self.inner.dispatch(world);
         self.dispatch_thread_local(world);
     }
 
@@ -77,18 +70,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// is currently borrowed. If that's the case, it panics.
     #[cfg(feature = "parallel")]
     pub fn dispatch_par(&mut self, world: &World) {
-        let stages = &mut self.stages;
-
-        self.thread_pool
-            .read()
-            .unwrap()
-            .as_ref()
-            .unwrap()
-            .install(move || {
-                for stage in stages {
-                    stage.execute(world);
-                }
-            });
+        self.inner.dispatch_par(world);
     }
 
     /// Dispatches the systems (except thread local systems) sequentially.
@@ -99,9 +81,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     /// Please note that this method assumes that no resource
     /// is currently borrowed. If that's the case, it panics.
     pub fn dispatch_seq(&mut self, world: &World) {
-        for stage in &mut self.stages {
-            stage.execute_seq(world);
-        }
+        self.inner.dispatch_seq(world);
     }
 
     /// Dispatch only thread local systems sequentially.
@@ -114,16 +94,28 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
         }
     }
 
+    /// Converts this to a [`SendDispatcher`].
+    ///
+    /// Fails and returns the original distpatcher if it contains thread local systems.
+    pub fn try_into_sendable(self) -> Result<SendDispatcher<'a>, Self> {
+        let Dispatcher {
+            inner: _,
+            thread_local,
+        } = &self;
+
+        if thread_local.is_empty() {
+            Ok(self.inner)
+        } else {
+            Err(self)
+        }
+    }
+
     /// This method returns the largest amount of threads this dispatcher
     /// can make use of. This is mainly for debugging purposes so you can see
     /// how well your systems can make use of multi-threading.
     #[cfg(feature = "parallel")]
     pub fn max_threads(&self) -> usize {
-        self.stages
-            .iter()
-            .map(Stage::max_threads)
-            .max()
-            .unwrap_or(0)
+        self.inner.max_threads()
     }
 }
 
@@ -154,9 +146,11 @@ pub fn new_dispatcher<'a, 'b>(
     thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 ) -> Dispatcher<'a, 'b> {
     Dispatcher {
-        stages,
+        inner: SendDispatcher {
+            stages,
+            thread_pool,
+        },
         thread_local,
-        thread_pool,
     }
 }
 
@@ -166,7 +160,7 @@ pub fn new_dispatcher<'a, 'b>(
     thread_local: ThreadLocal<'b>,
 ) -> Dispatcher<'a, 'b> {
     Dispatcher {
-        stages,
+        inner: SendDispatcher { stages },
         thread_local,
     }
 }

@@ -73,4 +73,6 @@ jobs:
         # Miri currently reports leaks in some tests so we disable that check
         # here (might be due to ptr-int-ptr in crossbeam-epoch so might be
         # resolved in future versions of that crate).
-        run: MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test
+        #
+        # crossbeam-epoch doesn't pass with stacked borrows https://github.com/crossbeam-rs/crossbeam/issues/545
+        run: MIRIFLAGS="-Zmiri-ignore-leaks -Zmiri-tree-borrows" cargo miri test

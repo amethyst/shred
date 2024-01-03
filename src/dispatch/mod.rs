@@ -9,6 +9,7 @@ pub use self::{
     },
     builder::DispatcherBuilder,
     dispatcher::Dispatcher,
+    send_dispatcher::SendDispatcher,
 };
 
 #[cfg(feature = "parallel")]
@@ -18,5 +19,6 @@ mod builder;
 mod dispatcher;
 #[cfg(feature = "parallel")]
 mod par_seq;
+mod send_dispatcher;
 mod stage;
 mod util;
