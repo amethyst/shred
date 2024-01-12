@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.16.0 / 0.7.0 shred-derive (2024-01-11) 
+
+* Updated `ahash` from `0.7.6` to `0.8.5`. ([#231])
+* `shred-derive`: prepend `shred::` to type paths so that `World`, `SystemData`, and `ResourceId`
+  don't need to be in scope when using `SystemData` derive. `shred` does need to be in scope now
+  though, so if you are using the derive through `specs`, a `use specs::shred;` is neccessary. ([#232])
+* Add `SendDispatcher` for cases where thread local systems are not used and you need a `Send`able
+  dispatcher. ([#234])
+
+[#231]: https://github.com/amethyst/shred/pull/231
+[#232]: https://github.com/amethyst/shred/pull/232
+[#234]: https://github.com/amethyst/shred/pull/234
+
 ## 0.15.0 (2023-09-16)
 
 * Have `DispatcherBuilder::add_batch()` use the correct access. ([#221], [#222])
