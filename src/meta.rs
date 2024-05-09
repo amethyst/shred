@@ -256,9 +256,9 @@ where
 /// We exclusively operate on pointers here so we only need a single function
 /// pointer in the meta-table for both `&T` and `&mut T` cases.
 #[cfg(not(feature = "nightly"))]
-fn attach_vtable<TraitObject: ?Sized, T>(value: *mut ()) -> *mut TraitObject
+fn attach_vtable<TraitObject, T>(value: *mut ()) -> *mut TraitObject
 where
-    TraitObject: CastFrom<T> + 'static,
+    TraitObject: CastFrom<T> + 'static + ?Sized,
     T: core::any::Any,
 {
     // NOTE: This should be equivalent to `Any::downcast_ref_unchecked` except
