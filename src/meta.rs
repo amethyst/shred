@@ -256,9 +256,9 @@ where
 /// We exclusively operate on pointers here so we only need a single function
 /// pointer in the meta-table for both `&T` and `&mut T` cases.
 #[cfg(not(feature = "nightly"))]
-fn attach_vtable<TraitObject: ?Sized, T>(value: *mut ()) -> *mut TraitObject
+fn attach_vtable<TraitObject, T>(value: *mut ()) -> *mut TraitObject
 where
-    TraitObject: CastFrom<T> + 'static,
+    TraitObject: CastFrom<T> + 'static + ?Sized,
     T: core::any::Any,
 {
     // NOTE: This should be equivalent to `Any::downcast_ref_unchecked` except
@@ -399,7 +399,7 @@ impl<T: ?Sized> MetaTable<T> {
     {
         let ty_id = TypeId::of::<R>();
         // use self.addr() for unpredictable address to use for checking consistency below
-        let invalid_ptr = core::ptr::invalid_mut::<R>((self as *mut Self).addr());
+        let invalid_ptr = core::ptr::without_provenance_mut::<R>((self as *mut Self).addr());
         let trait_ptr = <T as CastFrom<R>>::cast(invalid_ptr);
         // assert that address not changed (to catch some mistakes in CastFrom impl)
         assert_eq!(
