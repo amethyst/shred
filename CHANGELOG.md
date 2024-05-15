@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.16.1 (2024-05-15)
+
+* Replace `ptr::invalid_mut` usage with `ptr::without_provenance_mut` so the `nightly` feature can compile on the latest nightly toolchain. ([#236])
+* Updated `ahash` to a version that no longer has licencing issues with the `zerocopy` dependency. ([#237])
+* Update `tynm` to resolve future incompatibility warning from the `nom` dependency. ([#237])
+
+[#236]: https://github.com/amethyst/shred/pull/236
+[#237]: https://github.com/amethyst/shred/pull/237
+
 ## 0.16.0 / 0.7.0 shred-derive (2024-01-11) 
 
 * Updated `ahash` from `0.7.6` to `0.8.5`. ([#231])
