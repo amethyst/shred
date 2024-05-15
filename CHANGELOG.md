@@ -4,9 +4,9 @@
 
 ## 0.16.1 (2024-05-15)
 
-* Updated `ahash` to a version that no longer has licencing issues with the `zerocopy` dependency ([#237])
-* use `without_provenance_mut` which works on newer toolchains ([#236])
-* update `tynm` because of the `nom` dependency ([#237])
+* Replace `ptr::invalid_mut` usage with `ptr::without_provenance_mut` so the `nightly` feature can compile on the latest nightly toolchain. ([#236])
+* Updated `ahash` to a version that no longer has licencing issues with the `zerocopy` dependency. ([#237])
+* Update `tynm` to resolve future incompatibility warning from the `nom` dependency. ([#237])
 
 [#236]: https://github.com/amethyst/shred/pull/236
 [#237]: https://github.com/amethyst/shred/pull/237
