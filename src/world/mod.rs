@@ -426,9 +426,15 @@ impl World {
         T: Resource,
     {
         let res_id = ResourceId::new::<T>();
+        let resource = self.resources.get(&res_id)?;
 
-        self.resources.get(&res_id).map(|r| Fetch {
-            inner: AtomicRef::map(r.borrow(), Box::as_ref),
+        let borrow = match resource.try_borrow() {
+            Ok(res) => res,
+            Err(e) => panic!("{}: {e}", std::any::type_name::<T>())
+        };
+
+        Some(Fetch {
+            inner: AtomicRef::map(borrow, Box::as_ref),
             phantom: PhantomData,
         })
     }
