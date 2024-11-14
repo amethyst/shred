@@ -476,9 +476,14 @@ impl World {
         T: Resource,
     {
         let res_id = ResourceId::new::<T>();
+        let resource = self.resources.get(&res_id)?;
 
-        self.resources.get(&res_id).map(|r| FetchMut {
-            inner: AtomicRefMut::map(r.borrow_mut(), Box::as_mut),
+        let borrowed_res = match resource.try_borrow_mut() {
+            Ok(v) => v,
+            Err(e) => panic!("{}: {e}", std::any::type_name::<T>())
+        };
+        Some(FetchMut {
+            inner: AtomicRefMut::map(borrowed_res, Box::as_mut),
             phantom: PhantomData,
         })
     }
