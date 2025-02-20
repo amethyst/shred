@@ -14,6 +14,7 @@ struct Data<'a> {
     b: Write<'a, ResB>,
 }
 
+#[allow(dead_code)]
 struct EmptySystem(*mut i8); // System is not thread-safe
 
 impl<'a> System<'a> for EmptySystem {

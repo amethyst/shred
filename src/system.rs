@@ -371,7 +371,7 @@ pub trait DynamicSystemData<'a> {
     fn fetch(access: &Self::Accessor, world: &'a World) -> Self;
 }
 
-impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
+impl<T: ?Sized> SystemData<'_> for PhantomData<T> {
     fn setup(_: &mut World) {}
 
     fn fetch(_: &World) -> Self {
@@ -379,11 +379,11 @@ impl<'a, T: ?Sized> SystemData<'a> for PhantomData<T> {
     }
 
     fn reads() -> Vec<ResourceId> {
-        vec![]
+        Vec::new()
     }
 
     fn writes() -> Vec<ResourceId> {
-        vec![]
+        Vec::new()
     }
 }
 

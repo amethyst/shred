@@ -82,8 +82,7 @@
 //! `ParSeq`. Using it is bit trickier, but it allows dispatching without any
 //! virtual function calls.
 
-#![deny(unused_must_use, clippy::disallowed_types)]
-#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unused_must_use, clippy::disallowed_types, unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
 
 /// Re-exports from [`atomic_refcell`]

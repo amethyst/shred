@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use rayon::{join, ThreadPool};
+use rayon::{ThreadPool, join};
 
 use crate::{
     dispatch::util::check_intersection,
@@ -68,7 +68,7 @@ macro_rules! seq {
     };
 }
 
-impl<'a> System<'a> for Nil {
+impl System<'_> for Nil {
     type SystemData = ();
 
     fn run(&mut self, _: Self::SystemData) {}
@@ -235,7 +235,7 @@ where
     }
 }
 
-impl<'a, P, T> RunNow<'a> for ParSeq<P, T>
+impl<P, T> RunNow<'_> for ParSeq<P, T>
 where
     P: Borrow<ThreadPool>,
     T: for<'b> RunWithPool<'b>,
@@ -391,7 +391,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{atomic::*, Arc};
+    use std::sync::{Arc, atomic::*};
 
     fn new_tp() -> ThreadPool {
         use rayon::ThreadPoolBuilder;
@@ -412,7 +412,7 @@ mod tests {
 
         struct A(Arc<AtomicUsize>);
 
-        impl<'a> System<'a> for A {
+        impl System<'_> for A {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {
@@ -440,7 +440,7 @@ mod tests {
 
         struct A(Arc<AtomicUsize>);
 
-        impl<'a> System<'a> for A {
+        impl System<'_> for A {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {

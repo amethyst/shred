@@ -1,6 +1,6 @@
 use std::{
     borrow::Borrow,
-    sync::{mpsc, Arc, RwLock},
+    sync::{Arc, RwLock, mpsc},
 };
 
 use crate::{
@@ -32,7 +32,7 @@ pub struct AsyncDispatcher<'a, R> {
     thread_pool: Arc<RwLock<ThreadPoolWrapper>>,
 }
 
-impl<'a, R> AsyncDispatcher<'a, R>
+impl<R> AsyncDispatcher<'_, R>
 where
     R: Borrow<World> + Send + Sync + 'static,
 {

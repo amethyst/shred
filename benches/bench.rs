@@ -6,7 +6,7 @@ use std::ops::{Index, IndexMut};
 
 use cgmath::Vector3;
 use shred::*;
-use test::{black_box, Bencher};
+use test::{Bencher, black_box};
 
 #[derive(Debug)]
 struct VecStorage<T> {

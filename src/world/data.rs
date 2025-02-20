@@ -21,7 +21,7 @@ pub struct Read<'a, T: 'a, F = DefaultProvider> {
     phantom: PhantomData<F>,
 }
 
-impl<'a, T, F> Deref for Read<'a, T, F>
+impl<T, F> Deref for Read<'_, T, F>
 where
     T: Resource,
 {
@@ -76,7 +76,7 @@ pub struct Write<'a, T: 'a, F = DefaultProvider> {
     phantom: PhantomData<F>,
 }
 
-impl<'a, T, F> Deref for Write<'a, T, F>
+impl<T, F> Deref for Write<'_, T, F>
 where
     T: Resource,
 {
@@ -87,7 +87,7 @@ where
     }
 }
 
-impl<'a, T, F> DerefMut for Write<'a, T, F>
+impl<T, F> DerefMut for Write<'_, T, F>
 where
     T: Resource,
 {

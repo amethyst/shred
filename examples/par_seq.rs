@@ -23,12 +23,14 @@ struct SysA;
 struct SysB;
 struct SysC;
 struct SysD;
+#[allow(dead_code)]
 struct SysWithLifetime<'a>(&'a u8);
+#[allow(dead_code)]
 struct SysLocal(*const u8);
 
 impl_sys!(SysA SysB SysC SysD SysLocal);
 
-impl<'a, 'b> System<'a> for SysWithLifetime<'b> {
+impl<'a> System<'a> for SysWithLifetime<'_> {
     type SystemData = Read<'a, u64>;
 
     fn run(&mut self, nr: Read<'a, u64>) {
