@@ -59,20 +59,21 @@ jobs:
           command: test
           args: --verbose
 
-  miri:
-    name: "Miri"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Miri
-        run: |
-          rustup toolchain install nightly --component miri
-          rustup override set nightly
-          cargo miri setup
-      - name: Test with Miri
-        # Miri currently reports leaks in some tests so we disable that check
-        # here (might be due to ptr-int-ptr in crossbeam-epoch so might be
-        # resolved in future versions of that crate).
-        #
-        # crossbeam-epoch doesn't pass with stacked borrows https://github.com/crossbeam-rs/crossbeam/issues/545
-        run: MIRIFLAGS="-Zmiri-ignore-leaks -Zmiri-tree-borrows" cargo miri test
+  # Can't run miri right now https://github.com/crossbeam-rs/crossbeam/issues/1181
+  #miri:
+  #  name: "Miri"
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - uses: actions/checkout@v3
+  #    - name: Install Miri
+  #      run: |
+  #        rustup toolchain install nightly --component miri
+  #        rustup override set nightly
+  #        cargo miri setup
+  #    - name: Test with Miri
+  #      # Miri currently reports leaks in some tests so we disable that check
+  #      # here (might be due to ptr-int-ptr in crossbeam-epoch so might be
+  #      # resolved in future versions of that crate).
+  #      #
+  #      # crossbeam-epoch doesn't pass with stacked borrows https://github.com/crossbeam-rs/crossbeam/issues/545
+  #      run: MIRIFLAGS="-Zmiri-ignore-leaks -Zmiri-tree-borrows" cargo miri test
