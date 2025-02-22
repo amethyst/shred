@@ -1,4 +1,6 @@
-use shred::{DispatcherBuilder, Read, ResourceId, System, SystemData, World, Write};
+#[cfg(not(feature = "shred-derive"))]
+use shred::ResourceId;
+use shred::{DispatcherBuilder, Read, System, SystemData, World, Write};
 
 #[derive(Debug, Default)]
 struct ResA;
@@ -13,6 +15,7 @@ struct Data<'a> {
     b: Write<'a, ResB>,
 }
 
+#[allow(dead_code)]
 struct EmptySystem(*mut i8); // System is not thread-safe
 
 impl<'a> System<'a> for EmptySystem {

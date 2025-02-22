@@ -13,7 +13,7 @@ pub struct SendDispatcher<'a> {
     pub(super) thread_pool: ::std::sync::Arc<::std::sync::RwLock<ThreadPoolWrapper>>,
 }
 
-impl<'a> SendDispatcher<'a> {
+impl SendDispatcher<'_> {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
     pub fn setup(&mut self, world: &mut World) {
@@ -104,7 +104,7 @@ impl<'a> SendDispatcher<'a> {
     }
 }
 
-impl<'a, 'b> RunNow<'a> for SendDispatcher<'b> {
+impl RunNow<'_> for SendDispatcher<'_> {
     fn run_now(&mut self, world: &World) {
         self.dispatch(world);
     }

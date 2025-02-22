@@ -99,7 +99,7 @@ impl<'a> System<'a> for DummySysMut {
 
 struct Whatever<'a>(&'a i32);
 
-impl<'a, 'b> System<'a> for Whatever<'b> {
+impl System<'_> for Whatever<'_> {
     type SystemData = ();
 
     fn run(&mut self, _: Self::SystemData) {

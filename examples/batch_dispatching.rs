@@ -53,13 +53,14 @@ fn main() {
 // Resources
 
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct PotatoStore(i32);
 
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct TomatoStore(f32);
 
 /// System that says "Hello!"
-
 pub struct SayHelloSystem;
 
 impl<'a> System<'a> for SayHelloSystem {
@@ -71,7 +72,6 @@ impl<'a> System<'a> for SayHelloSystem {
 }
 
 /// System that says "Buy Potato"
-
 pub struct BuyPotatoSystem;
 
 impl<'a> System<'a> for BuyPotatoSystem {
@@ -83,7 +83,6 @@ impl<'a> System<'a> for BuyPotatoSystem {
 }
 
 /// System that says "Buy Tomato"
-
 pub struct BuyTomatoSystem;
 
 impl<'a> System<'a> for BuyTomatoSystem {

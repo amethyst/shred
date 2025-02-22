@@ -4,6 +4,7 @@
 //! language.
 //!
 //! It does that by implementing `DynamicSystemData` and using `MetaTable`.
+#![allow(clippy::disallowed_names)]
 
 extern crate shred;
 
@@ -11,9 +12,9 @@ extern crate shred;
 use ahash::AHashMap as HashMap;
 
 use shred::{
-    cell::{AtomicRef, AtomicRefMut},
     Accessor, AccessorCow, CastFrom, DispatcherBuilder, DynamicSystemData, MetaTable, Read,
     Resource, ResourceId, System, SystemData, World,
+    cell::{AtomicRef, AtomicRefMut},
 };
 
 struct Dependencies {
@@ -188,8 +189,8 @@ fn create_script_sys(res: &World) -> DynamicSystem {
         input.writes[0].call_method("foo");
     }
 
-    let reads = vec!["Bar"];
-    let writes = vec!["Foo"];
+    let reads = ["Bar"];
+    let writes = ["Foo"];
 
     // -- how we create the system --
     let table = res.fetch::<ResourceTable>();

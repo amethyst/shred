@@ -6,10 +6,10 @@ use ahash::AHashMap as HashMap;
 use crate::dispatch::dispatcher::ThreadPoolWrapper;
 use crate::{
     dispatch::{
+        BatchAccessor, BatchController, Dispatcher,
         batch::BatchControllerSystem,
         dispatcher::{SystemId, ThreadLocal},
         stage::StagesBuilder,
-        BatchAccessor, BatchController, Dispatcher,
     },
     system::{RunNow, System, SystemData},
 };
@@ -448,7 +448,7 @@ impl<'b> DispatcherBuilder<'static, 'b> {
     }
 }
 
-impl<'a, 'b> fmt::Debug for DispatcherBuilder<'a, 'b> {
+impl fmt::Debug for DispatcherBuilder<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.stages_builder.write_par_seq(f, &self.map)
     }

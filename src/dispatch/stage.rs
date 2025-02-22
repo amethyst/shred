@@ -2,11 +2,11 @@
 //! words:
 //!
 //! 1) A *stage* is a part of the dispatching which contains work that can be
-//! done in parallel
+//!    done in parallel
 //!
 //! 2) In each stage, there's a *group*. A group is a list of systems, which are
-//! executed in order. Thus, systems of a group may conflict with each other,
-//! but groups of a stage may not.
+//!    executed in order. Thus, systems of a group may conflict with each other,
+//!    but groups of a stage may not.
 //!
 //! So the actual dispatching works like this (pseudo code):
 //!
@@ -29,9 +29,9 @@
 //! say:
 //!
 //! > If a system only conflicts with one group of a stage, it gets executed
-//! after all the other systems of this group, but only if by doing this, the
-//! running times of the groups of this stage get closer to each other (called
-//! balanced in code).
+//! > after all the other systems of this group, but only if by doing this, the
+//! > running times of the groups of this stage get closer to each other (called
+//! > balanced in code).
 
 use std::fmt;
 
@@ -81,7 +81,7 @@ pub struct Stage<'a> {
     groups: GroupVec<ArrayVec<SystemExecSend<'a>, MAX_SYSTEMS_PER_GROUP>>,
 }
 
-impl<'a> Stage<'a> {
+impl Stage<'_> {
     fn new() -> Self {
         Default::default()
     }
@@ -236,7 +236,7 @@ impl<'a> StagesBuilder<'a> {
                     let system: &SystemId = system;
 
                     let mut name = (*map.get(system).unwrap()).to_string();
-                    name = name.replace(|c| c == ' ' || c == '-' || c == '/', "_");
+                    name = name.replace([' ', '-', '/'], "_");
 
                     writeln!(f, "\t\t\t{},", name)?;
                 }
@@ -558,7 +558,7 @@ mod tests {
 
         struct Sys;
 
-        impl<'a> System<'a> for Sys {
+        impl System<'_> for Sys {
             type SystemData = ();
 
             fn run(&mut self, _: Self::SystemData) {}

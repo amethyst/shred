@@ -1,7 +1,7 @@
 use smallvec::SmallVec;
 
 use crate::{
-    dispatch::{stage::Stage, SendDispatcher},
+    dispatch::{SendDispatcher, stage::Stage},
     system::RunNow,
     world::World,
 };
@@ -18,7 +18,7 @@ pub struct Dispatcher<'a, 'b> {
     thread_local: ThreadLocal<'b>,
 }
 
-impl<'a, 'b> Dispatcher<'a, 'b> {
+impl<'a> Dispatcher<'a, '_> {
     /// Sets up all the systems which means they are gonna add default values
     /// for the resources they need.
     pub fn setup(&mut self, world: &mut World) {
@@ -119,7 +119,7 @@ impl<'a, 'b> Dispatcher<'a, 'b> {
     }
 }
 
-impl<'a, 'b, 'c> RunNow<'a> for Dispatcher<'b, 'c> {
+impl RunNow<'_> for Dispatcher<'_, '_> {
     fn run_now(&mut self, world: &World) {
         self.dispatch(world);
     }
@@ -194,7 +194,7 @@ mod tests {
 
     struct Panic;
 
-    impl<'a> System<'a> for Panic {
+    impl System<'_> for Panic {
         type SystemData = ();
 
         fn run(&mut self, _: Self::SystemData) {

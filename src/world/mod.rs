@@ -14,8 +14,8 @@ use std::{
 
 use ahash::AHashMap as HashMap;
 
-use crate::cell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use crate::SystemData;
+use crate::cell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 
 use self::entry::create_entry;
 
@@ -37,7 +37,7 @@ pub struct Fetch<'a, T: 'a> {
     phantom: PhantomData<&'a T>,
 }
 
-impl<'a, T> Deref for Fetch<'a, T>
+impl<T> Deref for Fetch<'_, T>
 where
     T: Resource,
 {
@@ -48,7 +48,7 @@ where
     }
 }
 
-impl<'a, T> Clone for Fetch<'a, T> {
+impl<T> Clone for Fetch<'_, T> {
     fn clone(&self) -> Self {
         Fetch {
             inner: AtomicRef::clone(&self.inner),
@@ -70,7 +70,7 @@ pub struct FetchMut<'a, T: 'a> {
     phantom: PhantomData<&'a mut T>,
 }
 
-impl<'a, T> Deref for FetchMut<'a, T>
+impl<T> Deref for FetchMut<'_, T>
 where
     T: Resource,
 {
@@ -81,7 +81,7 @@ where
     }
 }
 
-impl<'a, T> DerefMut for FetchMut<'a, T>
+impl<T> DerefMut for FetchMut<'_, T>
 where
     T: Resource,
 {
@@ -181,10 +181,10 @@ impl ResourceId {
 /// aware of:
 ///
 /// 1. There are many utility methods Specs provides. To use them, you need to
-/// import `specs::WorldExt`.
+///    import `specs::WorldExt`.
 /// 2. You should not use [World::empty], but rather `specs::WorldExt::new`. The
-/// latter can simply be called using `World::new()`, as long as `WorldExt`
-/// is imported.
+///    latter can simply be called using `World::new()`, as long as `WorldExt`
+///    is imported.
 ///
 /// # Resource Ids
 ///
