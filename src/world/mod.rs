@@ -735,7 +735,7 @@ mod tests {
 
     #[allow(unused)]
     #[test]
-    #[should_panic(expected = "already immutably borrowed")]
+    #[should_panic(expected = "shred::world::tests::Res: already borrowed")]
     fn read_write_fails() {
         let mut world = World::empty();
         world.insert(Res);
