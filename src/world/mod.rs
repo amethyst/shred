@@ -426,9 +426,15 @@ impl World {
         T: Resource,
     {
         let res_id = ResourceId::new::<T>();
+        let resource = self.resources.get(&res_id)?;
 
-        self.resources.get(&res_id).map(|r| Fetch {
-            inner: AtomicRef::map(r.borrow(), Box::as_ref),
+        let borrow = match resource.try_borrow() {
+            Ok(res) => res,
+            Err(e) => panic!("{}: {e}", std::any::type_name::<T>())
+        };
+
+        Some(Fetch {
+            inner: AtomicRef::map(borrow, Box::as_ref),
             phantom: PhantomData,
         })
     }
@@ -476,9 +482,14 @@ impl World {
         T: Resource,
     {
         let res_id = ResourceId::new::<T>();
+        let resource = self.resources.get(&res_id)?;
 
-        self.resources.get(&res_id).map(|r| FetchMut {
-            inner: AtomicRefMut::map(r.borrow_mut(), Box::as_mut),
+        let borrowed_res = match resource.try_borrow_mut() {
+            Ok(v) => v,
+            Err(e) => panic!("{}: {e}", std::any::type_name::<T>())
+        };
+        Some(FetchMut {
+            inner: AtomicRefMut::map(borrowed_res, Box::as_mut),
             phantom: PhantomData,
         })
     }
@@ -724,7 +735,7 @@ mod tests {
 
     #[allow(unused)]
     #[test]
-    #[should_panic(expected = "already immutably borrowed")]
+    #[should_panic(expected = "shred::world::tests::Res: already borrowed")]
     fn read_write_fails() {
         let mut world = World::empty();
         world.insert(Res);
